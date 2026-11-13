@@ -1,3 +1,4 @@
+import {drawScenery} from './scenery.js';
 const canvas=document.querySelector('#world'),c=canvas.getContext('2d');
 const $=id=>document.getElementById(id);let W,H,dpr,started=false,feeding=false,seated=false,sunset=false,selected=null,feedCount=0,friends=new Set(),t=0,last=0,toastUntil=0,paused=false;
 let seed=1731;const rnd=()=>((seed=seed*16807%2147483647)-1)/2147483646,range=(a,b)=>a+rnd()*(b-a),clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -23,6 +24,7 @@ function background(){const sky=c.createLinearGradient(0,0,0,H*.58);sky.addColor
  barn(W*.84-cam.x*1.1,H*.44,W<700?.55:.9);tree(W*.09-cam.x*.4,H*.45,.8);tree(W*.13-cam.x*.5,H*.46,.55);tree(W*.93-cam.x*.4,H*.45,.65);
  for(let i=0;i<26;i++){const x=-30+i*(W+60)/25,y=H*.50+Math.sin(i*.25)*H*.023;const next=x+(W+60)/25;c.strokeStyle='#dad7b5';c.lineWidth=3;c.beginPath();c.moveTo(x,y-21);c.lineTo(x,y+6);c.moveTo(x,y-14);c.lineTo(next,y-14+Math.cos(i*.25)*2);c.moveTo(x,y-3);c.lineTo(next,y-3);c.stroke();}
  for(const g of grass){const p=project(g.x,g.z);if(!p||p.x<-20||p.x>W+20||p.y<H*.50||p.y>H+20)continue;const h=g.h*p.s,wind=Math.sin(t*1.4+g.p+g.x*.3)*h*.5;c.strokeStyle=g.flower?'#d9dcb27a':g.p>3?'#456b3980':'#bacb8275';c.lineWidth=Math.max(.6,p.s*.015);c.beginPath();c.moveTo(p.x,p.y);c.quadraticCurveTo(p.x+wind,p.y-h*.55,p.x+wind*.8,p.y-h);c.stroke();if(g.flower)ellipse(p.x+wind*.8,p.y-h,Math.max(1,p.s*.025),Math.max(1,p.s*.02),'#eee8ba');}
+ drawScenery(c,W,H,t,sunset,cam.x);
 }
 function barn(x,y,s){c.save();c.translate(x,y);c.scale(s,s);ellipse(0,20,70,9,'#4c66332b');path([[-46,-38],[45,-38],[45,22],[-46,22]],'#d3c8a6');path([[-60,-38],[0,-77],[58,-38]],sunset?'#76604d':'#7d6650');c.fillStyle='#656e55';c.fillRect(-14,-15,26,37);c.fillStyle='#ebe5cb';c.fillRect(-34,-21,13,13);c.fillRect(24,-21,13,13);c.strokeStyle='#c8c6a7';c.lineWidth=2;c.strokeRect(-13,-14,24,35);c.restore();}
 function tree(x,y,s){c.save();c.translate(x,y);c.scale(s,s);c.fillStyle='#777458';c.fillRect(-3,-37,6,42);for(let i=0;i<7;i++)ellipse(Math.sin(i*2.4)*17,-40+Math.cos(i*2.4)*13,23,20,i%2?'#6f8a67':'#789574');c.restore();}
