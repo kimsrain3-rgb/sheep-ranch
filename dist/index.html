@@ -1,0 +1,12 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#e9ead9"><title>바람목장 · 양에게 건초를</title><link rel="stylesheet" href="style.css"></head><body>
+<canvas id="world" aria-label="양들이 풀을 뜯는 목장. 풀밭을 누르면 이동합니다."></canvas>
+<header><a class="brand" href="./"><span class="logo">❋</span><span>바람목장<small>THE SLOW MEADOW</small></span></a><div class="top-actions"><button id="sound" aria-pressed="false">♫ <span>소리 켜기</span></button><button id="help" aria-label="조작 안내">?</button></div></header>
+<section id="welcome"><div class="eyebrow">오늘은, 조금 느리게.</div><h1>마음이 쉬어가는<br>초록빛 오후.</h1><p>풀밭을 걷고, 양에게 건초를 건네세요.<br>아무것도 하지 않아도 괜찮은 곳.</p><button id="start">목장에 들어가기 <span>↗</span></button><div class="welcome-note">설치 없이 즐기는 작은 목장 산책</div></section>
+<div class="place"><span class="live-dot"></span> 바람 부는 언덕 <span class="divider">/</span> <span id="clock">오후 3:24</span></div>
+<div id="sheep-label" hidden><strong id="sheep-name"></strong><span id="sheep-mood"></span></div>
+<div id="toast" role="status">풀밭에서 기다리는 양들을 만나보세요.</div>
+<section id="bottom"><div class="stats"><span class="stat-icon">♧</span><div><small>오늘 나눈 건초</small><strong><span id="fed-count">0</span> <i>번</i></strong></div><div class="stat-rule"></div><div><small>다가온 친구</small><strong><span id="friend-count">0</span> <i>/ 12</i></strong></div></div>
+<div class="action-bar"><button id="feed" class="feed" disabled aria-pressed="false"><span class="hay-icon">≋</span><span><strong>건초 내밀기</strong><small>양들이 다가올 거예요</small></span><kbd>F</kbd></button><button id="sit" disabled><span class="bench-icon">⌑</span><span>언덕에 앉기</span></button><button id="time" aria-label="노을로 바꾸기"><span>☀</span><span id="time-label">오후</span></button></div>
+<div class="hints"><span id="move-hint">풀밭 클릭 · 터치로 걷기</span><span>W A S D 이동</span><span>건초는 언제든 무료로</span></div></section>
+<div id="help-panel" hidden><section role="dialog" aria-modal="true" aria-labelledby="help-title"><button id="close-help" aria-label="안내 닫기">×</button><small>WELCOME TO THE MEADOW</small><h2 id="help-title">천천히, 마음 가는 대로.</h2><p>풀밭을 클릭하거나 터치하면 그곳으로 걸어갑니다. 방향키와 WASD로도 움직일 수 있어요.</p><p><b>건초 내밀기</b>를 켜면 양들이 다가옵니다. 가까워진 양은 스스로 건초를 먹어요. 양을 누르면 쓰다듬을 수 있어요.</p><p><b>언덕에 앉기</b>로 잠시 쉬거나, 해 아이콘을 눌러 노을을 만나보세요.</p><button id="help-done">알겠어요</button></section></div>
+<script type="module" src="app.js"></script></body></html>
