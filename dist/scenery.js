@@ -1,6 +1,6 @@
-// Scenic herds stay on distant hills; the twelve interactive sheep remain independent.
+// Distant sheep now belong to the same fifty-animal interactive flock.
 let seed=491;const random=()=>((seed=seed*16807%2147483647)-1)/2147483646;
-const distantSheep=Array.from({length:32},(_,i)=>({x:.10+random()*.55,y:.405+random()*.07,s:5+random()*5,phase:random()*6.28,dir:i%3?1:-1}));
+const distantSheep=Array.from({length:0},(_,i)=>({x:.10+random()*.55,y:.405+random()*.07,s:5+random()*5,phase:random()*6.28,dir:i%3?1:-1}));
 const cows=Array.from({length:9},(_,i)=>({x:.64+random()*.31,y:.485+random()*.075,s:12+random()*8,phase:random()*6.28,dir:i%2?1:-1})).sort((a,b)=>a.y-b.y);
 const flowers=Array.from({length:240},()=>({x:random(),y:random(),h:random(),p:random()*6.28}));
 const treeDots=Array.from({length:35},()=>({x:(random()-.5)*1.1,y:(random()-.5)*.8,r:.12+random()*.14}));
@@ -13,7 +13,7 @@ export function drawScenery(c,W,H,t,sunset,camX){
   ell(0,-66,32,28,tone?'#68815c':'#637f52');for(const a of treeDots){const cols=sunset?['#7d8b59','#718152','#929b64']:['#769653','#668849','#8ca968'];ell(a.x*55,-66+a.y*45,a.r*65,a.r*53,cols[Math.floor((a.x+.6)*7)%3]);}c.restore();
  }
  // Orchard and hedgerows connect the distant pasture to the farm buildings.
- for(let i=0;i<18;i++){const x=W*(.02+i*.053)-camX*.3,y=H*(.425+Math.sin(i*.7)*.012);if(i>12&&i<17)continue;oak(x,y,.36+Math.sin(i*1.4)*.06,i%2);}
+ for(let i=0;i<30;i++){const x=W*(.01+i*.034)-camX*.3,y=H*(.425+Math.sin(i*.7)*.012);if(i>12&&i<17)continue;oak(x,y,.36+Math.sin(i*1.4)*.06,i%2);}
  // Fine contour fences on the far hillside.
  for(let row=0;row<2;row++){const y=H*(.416+row*.033);for(let i=0;i<17;i++){let x=W*(.06+i*.035)-camX*.2,yy=y+Math.sin(i*.3+row)*5;stroke([[x,yy-8],[x,yy+3]],'#d8dbbd',1.3);stroke([[x,yy-4],[x+W*.035,yy-4+Math.cos(i*.3+row)*1.5]],'#d8dbbd',1);}}
  function farSheep(a){const x=W*a.x-camX*.25+Math.sin(t*.07+a.phase)*8,y=H*a.y,s=a.s*Math.min(1,W/850+.25);c.save();c.translate(x,y);c.scale(s*a.dir,s);ell(0,0,1.1,.17,'#3a543122');for(const xx of [-.65,-.35,.4,.65])stroke([[xx,-.7],[xx+Math.sin(t*1.5+a.phase)*.045,0]],'#827e64',.11);ell(0,-.83,.96,.57,'#eee9d2');for(let i=0;i<7;i++)ell(Math.sin(i*2.4)*.58,-.86+Math.cos(i*2.4)*.25,.34,.29,i%2?'#f5efd9':'#e2ddc5');const grazing=Math.sin(t*.3+a.phase)>.15;ell(.9,grazing?-.35:-.9,.23,.3,'#958f75');ell(.88,grazing?-.55:-1.15,.24,.08,'#c5bda0');c.restore();}
@@ -30,8 +30,8 @@ export function drawScenery(c,W,H,t,sunset,camX){
  // The small windmill turns slowly beside the barns.
  const mx=W*.78-camX*.4,my=H*.44,ms=W<700?.45:.7;c.save();c.translate(mx,my);c.scale(ms,ms);stroke([[-9,10],[0,-65],[10,10]],'#9b9978',4);stroke([[-6,-10],[7,-10]],'#9b9978',3);c.translate(0,-64);c.rotate(t*.16);for(let i=0;i<4;i++){c.rotate(Math.PI/2);poly([[2,3],[7,-26],[18,-31],[12,-2]],'#dedbc2');}ell(0,0,4,4,'#8d8b6b');c.restore();
  // A grove in the left pasture, not scattered isolated trees.
- for(const [x,y,s] of [[.035,.61,1.45],[.09,.60,1.18],[.16,.58,.95],[.20,.57,.7],[.035,.58,1.2]])oak(W*x-camX*1.5,H*y,s*(W<700?.65:1));
- for(const [x,y,s] of [[.97,.65,1.8],[1.02,.7,2.1],[.95,.60,1.1]])oak(W*x-camX*1.5,H*y,s*(W<700?.6:1));
+ for(const [x,y,s] of [[.01,.55,1.1],[.05,.55,1.0],[.11,.54,.86],[.18,.54,.72],[.23,.53,.6],[.035,.61,1.45],[.09,.60,1.18],[.16,.58,.95],[.20,.57,.7],[.035,.58,1.2]])oak(W*x-camX*1.5,H*y,s*(W<700?.65:1));
+ for(const [x,y,s] of [[.93,.55,.85],[.97,.56,1.0],[1.01,.58,1.4],[.97,.65,1.8],[1.02,.7,2.1],[.95,.60,1.1]])oak(W*x-camX*1.5,H*y,s*(W<700?.6:1));
  // Pond with a stony bank, moving glints and reeds.
  const px=W*.17-camX*1.25,py=H*.73,pw=Math.min(W*.145,185),ph=H*.043;
  ell(px,py+4,pw+14,ph+10,'#768856');ell(px,py,pw+6,ph+4,'#b6b69a');const water=c.createLinearGradient(0,py-ph,0,py+ph);water.addColorStop(0,sunset?'#9cab96':'#8faea5');water.addColorStop(1,sunset?'#d2c39c':'#c1d3b5');ell(px,py,pw,ph,water);
