@@ -65,15 +65,11 @@ export function drawInteraction(c,controller,player,project,time){
     c.fill();
   }
   else if(active.kind==='tug'){
-    const hem={
-      x:pp.x+pp.s*.3,y:pp.y-pp.s*.65
-    },pull=Math.sin(time*5)*pp.s*.045;
-    c.strokeStyle='#c39b50';
-    c.lineWidth=pp.s*.065;
-    c.beginPath();
-    c.moveTo(hem.x,hem.y);
-    c.quadraticCurveTo((hem.x+head.x)/2,hem.y+pull,head.x,head.y+ap.s*a.size*.3);
-    c.stroke();
+    // A small fold attached to the coat hem, never a long connecting stroke.
+    const foldSide=active.tugSide??side,pull=.012+Math.sin(active.time*5)*.012;
+    c.translate(pp.x,pp.y);c.scale(pp.s,pp.s);
+    c.fillStyle='#d5ae5e';c.beginPath();
+    c.moveTo(foldSide*.20,-.72);c.lineTo(foldSide*(.34+pull),-.65);c.lineTo(foldSide*.22,-.57);c.closePath();c.fill();
   }
   c.restore();
 }

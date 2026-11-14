@@ -119,8 +119,7 @@ export class Flock {
       a.timer-=dt;
       a.tugCooldown-=dt;
       if(a.lock){
-        a.walking=false;
-        this.head(a,dt,true);
+        if(a.lock!=='tug'){a.walking=false;this.head(a,dt,true);}
         continue;
       }
       if(feeding&&a.cool===0){

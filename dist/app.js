@@ -1,12 +1,12 @@
-import { Flock } from './game/flock.js';
-import { Interactions } from './game/interactions.js';
+import { Flock } from './game/flock.js?v=short-tug';
+import { Interactions } from './game/interactions.js?v=short-tug';
 import { Companions } from './game/companions.js';
 import { MeadowAudio } from './game/audio.js';
 import { CONFIG,keepDry } from './game/config.js';
 import { drawSheep as renderSheep } from './render/sheep.js';
 import { drawCompanion } from './render/companions.js?v=clean-mouth';
 import { makeVegetation,drawVegetation,drawHayPile,drawRipples } from './render/details.js';
-import { drawInteraction } from './render/interactions.js';
+import { drawInteraction } from './render/interactions.js?v=short-tug';
 import { MeadowView } from './orbit.js';
 import { drawVisitor,drawHammock,visitorPose } from './visitor.js?v=life1';
 import { drawPasture,trees,drawWindmill } from './pasture.js';
@@ -205,7 +205,7 @@ function render(){
   });
   if(started&&!hammocking)layers.push({
     x:player.x,z:player.z,draw:()=>drawVisitor(c,project(player.x,player.z),{
-      time:t,walking:player.walking,seated,feeding,reaching:!!interaction.active,pose:interaction.active?.phase==='playing'?visitorPose(interaction.active.animal.x-player.x,interaction.active.animal.z-player.z,view.yaw):visitorPose(player.headingX??0,player.headingZ??1,view.yaw)
+      time:t,walking:player.walking,seated,feeding,reaching:!!interaction.active&&interaction.active.kind!=='tug',pose:interaction.active?.phase==='playing'?visitorPose(interaction.active.animal.x-player.x,interaction.active.animal.z-player.z,view.yaw):visitorPose(player.headingX??0,player.headingZ??1,view.yaw)
     })
   });
   for(const a of trees)layers.push({

@@ -43,7 +43,8 @@ export class Interactions {
     this.request('tug',animal,player,view);
     player.tx=player.x;
     player.tz=player.z;
-    this.active.phase='playing';
+    this.active.phase='tug-approach';
+    this.active.tugSide=(animal.x-player.x)*Math.cos(view.yaw)-(animal.z-player.z)*Math.sin(view.yaw)>=0?1:-1;
     return true;
   }
   cancel(view){
@@ -96,6 +97,26 @@ export class Interactions {
     }
     if(!active)return;
     active.time+=dt;
+    if(active.kind==='tug'){
+      // Bring the mouth to the coat. Never stretch the coat across an empty gap.
+      const a=active.animal,side=active.tugSide,rightX=Math.cos(view.yaw),rightZ=-Math.sin(view.yaw);
+      const offset=.34+.83*a.size;
+      const target={x:player.x+side*rightX*offset,z:player.z+side*rightZ*offset};
+      const dx=target.x-a.x,dz=target.z-a.z,d=Math.hypot(dx,dz);
+      if(active.phase==='tug-approach'){
+        const step=Math.min(d,dt*.85);if(d>.001){a.x+=dx/d*step;a.z+=dz/d*step;}
+        a.walking=d>.03;
+        const blend=1-Math.exp(-dt*10);a.headX+=(-side*.83-a.headX)*blend;a.headY+=(-.65/a.size-.3-a.headY)*blend;
+        if(d<.04){active.phase='playing';active.time=0;}
+        else if(active.time>3)this.cancel(view);
+      }else{
+        const nudge=Math.sin(active.time*5)*.015;
+        a.x=target.x+side*rightX*nudge;a.z=target.z+side*rightZ*nudge;
+        a.headX=-side*.83;a.headY=-.65/a.size-.3;a.walking=false;
+        if(active.time>=CONFIG.durations.tug)this.cancel(view);
+      }
+      return;
+    }
     if(active.phase==='approach'){
       if(distance(player,active.animal)<1.7){
         active.phase='playing';
@@ -130,7 +151,7 @@ export class Interactions {
   }
   cameraTarget(player){
     const a=this.active;
-    return a?.phase==='playing'?{
+    return a?.phase==='playing'&&a.kind!=='tug'?{
       x:(player.x+a.animal.x)/2,z:(player.z+a.animal.z)/2
     }
     :player;
