@@ -1,5 +1,5 @@
-import {petArmPose} from './pet-pose.js?v=side-pet';
-import {drawMilkBottle} from './milk-pose.js?v=side-pet';
+import {petArmPose} from './pet-pose.js?v=night-barn';
+import {drawMilkBottle} from './milk-pose.js?v=night-barn';
 export function drawInteraction(c,controller,player,project,time){
   const active=controller.active,pp=project(player.x,player.z);
   if(!pp)return;

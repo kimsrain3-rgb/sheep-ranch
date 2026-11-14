@@ -1,7 +1,7 @@
 import {
   CONFIG,distance,keepDry,seededRandom
-} from './config.js?v=living-meadow';
-import {dryRoute} from './navigation.js?v=living-meadow';
+} from './config.js?v=night-barn';
+import {dryRoute} from './navigation.js?v=night-barn';
 export class Companions {
   constructor(random=seededRandom(8703)){
     this.random=random;

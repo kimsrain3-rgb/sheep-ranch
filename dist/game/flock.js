@@ -1,6 +1,6 @@
 import {
   CONFIG,clamp,distance,keepDry,seededRandom
-} from './config.js?v=living-meadow';
+} from './config.js?v=night-barn';
 const NAMES=['구름이','솜이','보리','몽실이','두부','우유','콩이','단추','포근이','밀크','달이','풀잎이'];
 const STATIONARY=new Set(['sleep','drinking','nursing','nurse-wait','hay-eat','pet','milk','tug']);
 export class Flock {

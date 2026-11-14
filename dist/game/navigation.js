@@ -1,4 +1,4 @@
-import {CONFIG,keepDry} from './config.js?v=living-meadow';
+import {CONFIG,keepDry} from './config.js?v=night-barn';
 // Small visibility graph around the pond, shared by shelter routes.
 export function dryRoute(from,to){
   const p=CONFIG.pond,normalize=a=>({x:(a.x-p.x)/p.rx,z:(a.z-p.z)/p.rz});

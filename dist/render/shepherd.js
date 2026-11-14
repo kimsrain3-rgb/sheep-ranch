@@ -1,5 +1,5 @@
 import {gaitLegs,armSwing} from '../game/gait.js';
-import {visitorPose} from '../visitor.js?v=forward-gait';
+import {visitorPose} from '../visitor.js?v=night-barn';
 export function drawShepherdBoy(c,p,boy,yaw=0){
   boy.screen=null;if(!p)return;
   const size=p.s*.94;

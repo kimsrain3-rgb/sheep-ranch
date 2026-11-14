@@ -1,4 +1,4 @@
-import {WEATHER_NAMES} from './game/weather.js?v=living-meadow';
+import {WEATHER_NAMES} from './game/weather.js?v=night-barn';
 export function setupMeadowPanel({weather,bond,flock,getSelected,onMessage,onPause,onFind}){
   const $=id=>document.getElementById(id),dialog=$('meadow-panel');let candidate=null,searchVersion=0,returnFocus=null;
   const status=text=>$('weather-status').textContent=text;

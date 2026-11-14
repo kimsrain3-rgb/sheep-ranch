@@ -1,4 +1,4 @@
-import {browserStorage} from './persistence.js?v=living-meadow';
+import {browserStorage} from './persistence.js?v=night-barn';
 // Weather owns network/time only. Rendering and animal behavior consume its snapshot.
 const KOREAN_CITIES={서울:'Seoul',양주:'Yangju',의정부:'Uijeongbu',동두천:'Dongducheon',포천:'Pocheon',파주:'Paju',고양:'Goyang',남양주:'Namyangju',수원:'Suwon',성남:'Seongnam',용인:'Yongin',부천:'Bucheon',안양:'Anyang',안산:'Ansan',화성:'Hwaseong',평택:'Pyeongtaek',김포:'Gimpo',인천:'Incheon',부산:'Busan',대구:'Daegu',대전:'Daejeon',광주:'Gwangju',울산:'Ulsan',세종:'Sejong',춘천:'Chuncheon',원주:'Wonju',강릉:'Gangneung',속초:'Sokcho',청주:'Cheongju',충주:'Chungju',천안:'Cheonan',아산:'Asan',전주:'Jeonju',군산:'Gunsan',익산:'Iksan',목포:'Mokpo',여수:'Yeosu',순천:'Suncheon',포항:'Pohang',경주:'Gyeongju',구미:'Gumi',안동:'Andong',창원:'Changwon',김해:'Gimhae',진주:'Jinju',거제:'Geoje',제주:'Jeju',서귀포:'Seogwipo'};
 export function citySearchTerm(name){const korean=Object.keys(KOREAN_CITIES).find(key=>name===key||name===key+'시'||name===key+'특별시'||name===key+'광역시');return {term:korean?KOREAN_CITIES[korean]:name,korean:!!korean};}
@@ -43,11 +43,11 @@ export class MeadowWeather{
     const generation=this.generation;this.pending=true;this.status='지역 날씨를 확인하고 있어요.';
     const location=this.location;
     try{
-      const url=new URL('https://api.open-meteo.com/v1/forecast');url.search=new URLSearchParams({latitude:String(location.latitude),longitude:String(location.longitude),current:'weather_code,cloud_cover,is_day',timezone:'auto',forecast_days:'1'});
+      const url=new URL('https://api.open-meteo.com/v1/forecast');url.search=new URLSearchParams({latitude:String(location.latitude),longitude:String(location.longitude),current:'weather_code,cloud_cover,is_day',daily:'sunrise,sunset',timeformat:'unixtime',timezone:'auto',forecast_days:'1'});
       const response=await this.fetcher(url,{signal:AbortSignal.timeout(10000)});if(!response.ok)throw new Error('weather');
       const data=await response.json();if(!Number.isFinite(data.current?.weather_code))throw new Error('weather data');
       if(generation!==this.generation)return;
-      this.current={kind:weatherKind(data.current.weather_code),cloud:data.current.cloud_cover,isDay:data.current.is_day!==0,receivedAt:this.now()};
+      this.current={kind:weatherKind(data.current.weather_code),cloud:data.current.cloud_cover,isDay:data.current.is_day!==0,receivedAt:this.now(),sunrise:Number(data.daily?.sunrise?.[0])*1000,sunset:Number(data.daily?.sunset?.[0])*1000};
       if(data.timezone)this.location.timezone=data.timezone;
       this.status=`${location.name} · ${WEATHER_NAMES[this.current.kind]} · 15분마다 갱신`;
       this.nextFetch=this.now()+15*60*1000;
@@ -60,6 +60,6 @@ export class MeadowWeather{
   snapshot(){
     const clock=localClock(new Date(this.now()),this.location?.timezone),fresh=this.current&&this.now()-this.current.receivedAt<60*60*1000;
     const kind=this.preview==='live'?(fresh?this.current.kind:'clear'):this.preview;
-    return {...clock,kind,wet:kind==='rain'||kind==='snow',cloud:kind==='clear'?.1:kind==='clouds'?.45:.9,live:this.preview==='live'&&!!fresh,preview:this.preview!=='live',location:this.location?.name||'',label:WEATHER_NAMES[kind],night:this.preview==='live'&&fresh?!this.current.isDay:clock.night};
+    return {...clock,kind,wet:kind==='rain'||kind==='snow',cloud:kind==='clear'?.1:kind==='clouds'?.45:.9,live:this.preview==='live'&&!!fresh,preview:this.preview!=='live',location:this.location?.name||'',label:WEATHER_NAMES[kind],sunrise:this.current?.sunrise,sunset:this.current?.sunset,night:fresh&&Number.isFinite(this.current.sunrise)&&Number.isFinite(this.current.sunset)?this.now()<this.current.sunrise||this.now()>=this.current.sunset:this.preview==='live'&&fresh?!this.current.isDay:clock.night};
   }
 }

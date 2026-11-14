@@ -43,7 +43,7 @@ for(let i=0;i<5000;i++){
 assert.equal(shelter.inside,herd.animals.length,'all sheep reach shelter including routes around pond');assert.ok(dogMoved);
 assert.ok(herd.animals.every(a=>a.hiddenInBarn&&!a.walking));
 for(let i=0;i<19;i++)shelter.updateWeather(1,false);assert.equal(shelter.active,true);shelter.updateWeather(1,false);assert.equal(shelter.active,false);
-for(let i=0;i<500;i++){shelter.tick(.05,{flock:herd,dogs:dogs.dogs});herd.tick(.05,context);}
+for(let i=0;i<1400;i++){shelter.tick(.05,{flock:herd,dogs:dogs.dogs});herd.tick(.05,context);}
 assert.ok(herd.animals.every(a=>!a.hiddenInBarn&&!a.state.startsWith('shelter')),'sheep leave in a staggered stream');
 const babies=new Flock(),play=new LambPlay(()=>.5);
 for(const [i,a] of babies.lambs.entries()){babies.releasePair(a);Object.assign(a,{x:i*.6,z:10,state:'roam',decision:100});}

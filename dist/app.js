@@ -1,25 +1,28 @@
-import {ShepherdBoy} from './game/shepherd.js?v=boy-shepherd';
-import {drawShepherdBoy} from './render/shepherd.js?v=shepherd-staff';
-import {MeadowWeather} from './game/weather.js?v=living-meadow';
-import {SheepBond} from './game/bond.js?v=living-meadow';
-import {WeatherShelter} from './game/shelter.js?v=living-meadow';
-import {LambPlay} from './game/lamb-play.js?v=living-meadow';
-import {drawShelter} from './render/shelter.js?v=living-meadow';
-import {drawWeather,drawFriendBadge} from './render/weather.js?v=living-meadow';
-import {setupMeadowPanel} from './meadow-panel.js?v=living-meadow';
+import {BarnVisit} from './game/barn.js?v=night-barn';
+import {drawBarnInterior} from './render/barn.js?v=night-barn';
+import {setupShepherdChat} from './shepherd-chat.js?v=night-barn';
+import {ShepherdBoy} from './game/shepherd.js?v=night-barn';
+import {drawShepherdBoy} from './render/shepherd.js?v=night-barn';
+import {MeadowWeather} from './game/weather.js?v=night-barn';
+import {SheepBond} from './game/bond.js?v=night-barn';
+import {WeatherShelter} from './game/shelter.js?v=night-barn';
+import {LambPlay} from './game/lamb-play.js?v=night-barn';
+import {drawShelter} from './render/shelter.js?v=night-barn';
+import {drawWeather,drawFriendBadge} from './render/weather.js?v=night-barn';
+import {setupMeadowPanel} from './meadow-panel.js?v=night-barn';
 import { isCompactViewport } from './game/layout.js';
-import { Flock } from './game/flock.js?v=living-meadow';
-import { Interactions } from './game/interactions.js?v=side-pet';
-import { Companions } from './game/companions.js?v=shepherd-staff';
-import { MeadowAudio } from './game/audio.js?v=recorded-sheep';
-import { CONFIG,keepDry } from './game/config.js?v=living-meadow';
-import { drawSheep as renderSheep } from './render/sheep.js?v=living-meadow';
-import { drawCompanion } from './render/companions.js?v=clean-mouth';
+import { Flock } from './game/flock.js?v=night-barn';
+import { Interactions } from './game/interactions.js?v=night-barn';
+import { Companions } from './game/companions.js?v=night-barn';
+import { MeadowAudio } from './game/audio.js?v=night-barn';
+import { CONFIG,keepDry } from './game/config.js?v=night-barn';
+import { drawSheep as renderSheep } from './render/sheep.js?v=night-barn';
+import { drawCompanion } from './render/companions.js?v=night-barn';
 import { makeVegetation,drawVegetation,drawHayPile,drawRipples } from './render/details.js';
-import { drawInteraction } from './render/interactions.js?v=side-pet';
+import { drawInteraction } from './render/interactions.js?v=night-barn';
 import { MeadowView } from './orbit.js';
-import { drawVisitor,drawHammock,visitorPose } from './visitor.js?v=side-pet';
-import { drawPasture,trees,drawWindmill } from './pasture.js?v=living-meadow';
+import { drawVisitor,drawHammock,visitorPose } from './visitor.js?v=night-barn';
+import { drawPasture,trees,drawWindmill } from './pasture.js?v=night-barn';
 const canvas=document.querySelector('#world'),c=canvas.getContext('2d');
 const $=id=>document.getElementById(id);
 let W,H,dpr,started=false,feeding=false,seated=false,hammocking=false,walkingToHammock=false,sunset=false,selected=null,feedCount=0,friends=new Set(),t=0,last=0,toastUntil=0,paused=false;
@@ -29,14 +32,17 @@ const player={
   x:0,z:0,tx:0,tz:0
 },keys=new Set();
 let marker=null;
-const view=new MeadowView();
+const outdoorView=new MeadowView(),indoorView=new MeadowView();
+indoorView.zoom=1.4;indoorView.pitch=.38;
+let view=outdoorView;
 let following=true;
 const flock=new Flock(rnd),sheep=flock.animals,lambs=flock.lambs;
 const interaction=new Interactions(flock),companions=new Companions(),audioSystem=new MeadowAudio();
 const weather=new MeadowWeather(),bond=new SheepBond(),shelter=new WeatherShelter(),lambPlay=new LambPlay(rnd);
 let atmosphere=weather.snapshot(),environmentTimer=0;
 bond.apply(flock);
-const shepherd=new ShepherdBoy();
+const shepherd=new ShepherdBoy(),barnVisit=new BarnVisit();
+let chat=null;
 const grass=makeVegetation();
 const particles=[];
 function notify(text){
@@ -140,19 +146,19 @@ function update(dt){
   if(environmentTimer<=0){
     atmosphere=weather.snapshot();environmentTimer=.5;sunset=atmosphere.dusk&&!atmosphere.night;
     $('clock').textContent=atmosphere.text;
-    canvas.setAttribute('aria-label',`양들이 지내는 목장. ${atmosphere.preview?'감상용 ':atmosphere.live?'지역 날씨 ':''}${atmosphere.label}. 축사에서 쉬는 양 ${shelter.inside}마리. 뛰노는 새끼 양 ${lambPlay.groups.length*2}마리. 소년 목동이 양들을 살피고 있어요. 목동을 누르면 인사합니다. 풀밭을 누르면 이동합니다.`);
+    canvas.setAttribute('aria-label',`${barnVisit.inside?'축사 실내. 중앙 통로를 걸으며 쉬는 양들을 볼 수 있어요.':'양들이 지내는 목장.'} ${atmosphere.preview?'감상용 ':atmosphere.live?'지역 날씨 ':''}${atmosphere.label}. 축사에서 쉬는 양 ${shelter.inside}마리. 뛰노는 새끼 양 ${lambPlay.groups.length*2}마리. 소년 목동이 양들을 살피고 있어요. 목동을 누르면 인사합니다. 풀밭을 누르면 이동합니다.`);
     $('weather-label').textContent=atmosphere.preview?`${atmosphere.label} · 감상용`:atmosphere.live?`${atmosphere.location} · ${atmosphere.label}`:'바람목장 · 지역 날씨 미연결';
   }
-  if(shelter.updateWeather(dt,atmosphere.wet)){
-    if(shelter.active){interaction.cancel(view);interaction.mode='pet';interaction.supplyTrip=false;if(feeding)feed();notify('비와 눈을 피해 개들이 양들을 축사로 안내해요.');}
+  if(shelter.updateWeather(dt,atmosphere.wet,atmosphere.night)){
+    if(shelter.active){interaction.cancel(view);interaction.mode='pet';interaction.supplyTrip=false;if(feeding)feed();notify(shelter.reason==='night'?'해가 졌어요. 목동과 개가 양들을 축사로 안내해요.':'개들이 양들을 축사로 안내해요.');}
     else notify('하늘이 개었어요. 양들이 차례로 풀밭에 나와요.');
   }
   let dx=Number(keys.has('d')||keys.has('arrowright'))-Number(keys.has('a')||keys.has('arrowleft')),dz=Number(keys.has('w')||keys.has('arrowup'))-Number(keys.has('s')||keys.has('arrowdown'));
   player.walking=false;
   if(started&&!seated&&!hammocking&&interaction.active?.phase!=='playing'&&(dx||dz)){
     const wx=dx*Math.cos(view.yaw)+dz*Math.sin(view.yaw),wz=-dx*Math.sin(view.yaw)+dz*Math.cos(view.yaw);
-    player.tx=clamp(player.x+wx*3,-55,55);
-    player.tz=clamp(player.z+wz*3,-55,145);
+    if(barnVisit.inside)barnVisit.walkTo({x:player.x+wx*3,z:player.z+wz*3},player);
+    else{player.tx=clamp(player.x+wx*3,-55,55);player.tz=clamp(player.z+wz*3,-55,145);}
     marker=null;
   }
   if(!seated&&!hammocking&&interaction.active?.phase!=='playing'){
@@ -165,29 +171,38 @@ function update(dt){
       const move=Math.min(d,dt*3.2);
       player.x+=x/d*move;
       player.z+=z/d*move;
-      keepDry(player);
+      if(!barnVisit.inside)keepDry(player);
     }
     else marker=null;
   }
   if(walkingToHammock&&Math.hypot(player.x-CONFIG.hammock.x,player.z-CONFIG.hammock.z)<=.08)lieInHammock();
+  const transition=barnVisit.tick(player);
+  if(transition){
+    interaction.cancel(view);keys.clear();selected=null;marker=null;feeding=false;
+    view=barnVisit.inside?indoorView:outdoorView;document.body.classList.toggle('in-barn',barnVisit.inside);
+    $('barn-leave').hidden=!barnVisit.inside;$('barn-room-status').hidden=!barnVisit.inside;
+    notify(barnVisit.inside?'축사 안으로 들어왔어요. 중앙 통로를 걸어보세요.':'축사 문을 나왔어요.');
+  }
+  if(barnVisit.inside)$('barn-room-status').textContent=`큰 양들의 축사 · 쉬는 양 ${shelter.inside} / ${sheep.length}`;
+  const worldPlayer=barnVisit.inside?barnVisit.outside:player;
   // All painted scenery and world objects share one camera transform.
   interaction.tick(dt,{
     player,view,width:W,height:H,onMessage:notify,onMilk:onFed
   });
   shelter.tick(dt,{flock,dogs:companions.dogs,yaw:view.yaw});
   flock.tick(dt,{
-    player,feeding,yaw:view.yaw,hayPiles:interaction.hayPiles,
-    canTug:started&&!shelter.active&&!walkingToHammock&&!interaction.busy&&!seated&&!hammocking&&interaction.mode!=='milk',
-    onFed,onBaa:a=>audioSystem.baa(a,player,view.yaw),
+    player:worldPlayer,feeding:feeding&&!barnVisit.inside,yaw:outdoorView.yaw,hayPiles:interaction.hayPiles,
+    canTug:started&&!barnVisit.inside&&!barnVisit.trip&&!shelter.active&&!walkingToHammock&&!interaction.busy&&!seated&&!hammocking&&interaction.mode!=='milk',
+    onFed,onBaa:a=>{if(!barnVisit.inside)audioSystem.baa(a,worldPlayer,outdoorView.yaw);},
     onTug:a=>{
       if(interaction.startTug(a,player,view))notify('장난꾸러기가 옷자락을 살짝 당겨요.');
     }
   });
-  bond.tick(dt,{flock,player,active:interaction.active,feeding,yaw:view.yaw,available:started&&!shelter.active&&!hammocking&&!seated&&!walkingToHammock,notify});
+  bond.tick(dt,{flock,player:worldPlayer,active:interaction.active,feeding,yaw:view.yaw,available:started&&!barnVisit.inside&&!barnVisit.trip&&!shelter.active&&!hammocking&&!seated&&!walkingToHammock,notify});
   lambPlay.tick(dt,{flock,feeding,sheltering:shelter.active,yaw:view.yaw});
-  if(started)shepherd.tick(dt,{player,sheep,sheltering:shelter.active});
+  if(started)shepherd.tick(dt,{player:worldPlayer,sheep,sheltering:shelter.active});
   companions.tick(dt,{
-    player,sheep,yaw:view.yaw,sheltering:shelter.active,shepherd
+    player:worldPlayer,sheep,yaw:outdoorView.yaw,sheltering:shelter.active,shepherd
   });
   updateCareUI();
   for(const p of particles){
@@ -205,8 +220,8 @@ function onFed(a){
 }
 function updateCareUI(){
   updateViewLabel();
-  $('care-cancel').hidden=!walkingToHammock&&!interaction.busy&&interaction.mode!=='milk'&&!interaction.supplyTrip;
-  $('care-cancel').textContent=walkingToHammock?'해먹 가기 취소':interaction.busy?'교감 마치기':interaction.supplyTrip?'창고 가기 취소':'우유 주기 마치기';
+  $('care-cancel').hidden=barnVisit.inside||(!barnVisit.trip&&!walkingToHammock&&!interaction.busy&&interaction.mode!=='milk'&&!interaction.supplyTrip);
+  $('care-cancel').textContent=barnVisit.trip==='enter'?'축사 가기 취소':walkingToHammock?'해먹 가기 취소':interaction.busy?'교감 마치기':interaction.supplyTrip?'창고 가기 취소':'우유 주기 마치기';
   if(interaction.carrying){
     $('feed').querySelector('strong').textContent='건초 내려놓기';
     $('feed').disabled=hammocking;
@@ -219,6 +234,7 @@ function updateCareUI(){
   $('hay').textContent=interaction.carrying?'건초를 들고 있어요':'창고에서 건초 가져오기';
 }
 function render(){
+  if(barnVisit.inside){renderInsideBarn();return;}
   centerView();
   c.setTransform(dpr,0,0,dpr,0,0);
   c.clearRect(0,0,W,H);
@@ -236,7 +252,7 @@ function render(){
       time:t,occupied:hammocking,sunset
     })
   });
-  layers.push({x:CONFIG.barn.x,z:CONFIG.barn.entrance.z,draw:()=>drawShelter(c,project(CONFIG.barn.x,CONFIG.barn.entrance.z),{inside:shelter.inside,total:sheep.length,wet:shelter.active,snow:atmosphere.kind==='snow',night:atmosphere.night,time:t})});
+  layers.push({x:CONFIG.barn.x,z:CONFIG.barn.entrance.z,draw:()=>{barnVisit.screen=drawShelter(c,project(CONFIG.barn.x,CONFIG.barn.entrance.z),{inside:shelter.inside,total:sheep.length,wet:shelter.active,snow:atmosphere.kind==='snow',night:atmosphere.night,time:t});}});
   if(started&&!hammocking)layers.push({
     x:player.x,z:player.z,focused:!!petFocus,draw:()=>drawVisitor(c,project(player.x,player.z),{
       time:t,walking:player.walking,seated,feeding,petting:interaction.active?.kind==='pet'&&interaction.active.phase==='playing',milking:interaction.active?.kind==='milk'&&interaction.active.phase==='playing',lambSize:interaction.active?.animal.size,pose:interaction.active?.phase==='playing'?visitorPose(interaction.active.animal.x-player.x,interaction.active.animal.z-player.z,view.yaw):visitorPose(player.headingX??0,player.headingZ??1,view.yaw)
@@ -326,12 +342,15 @@ function start(){
   $('hammock').disabled=false;
   $('milk').disabled=false;
   $('hay').disabled=false;
+  $('barn-enter').disabled=false;
   if(!isCompactViewport(W,H))notify('좌우로 밀어 360° 회전 · 두 손가락으로 확대 · 짧게 눌러 걷기');
   else $('toast').style.opacity=0;
   notify('양을 누르면 가까이서 쓰다듬어요. 우유와 건초는 메뉴에 있어요.');
 }
 $('start').onclick=start;
 function feed(){
+  if(barnVisit.inside){notify('양들이 축사에서 쉬고 있어요.');return;}
+  cancelBarnTrip();
   cancelHammockWalk();
   if(interaction.carrying){
     if(interaction.dropHay(player))notify('건초를 펼쳐 놓았어요. 양들이 찾아올 거예요.');
@@ -356,6 +375,8 @@ function feed(){
 }
 $('feed').onclick=feed;
 $('sit').onclick=()=>{
+  if(barnVisit.inside){notify('축사 밖에서 할 수 있어요.');return;}
+  cancelBarnTrip();
   if(hammocking)return;
   cancelHammockWalk();
   interaction.cancel(view);
@@ -392,6 +413,8 @@ function lieInHammock(){
   notify('해먹에 누웠어요. 바람과 양떼를 바라보며 쉬어가요.');
 }
 $('hammock').onclick=()=>{
+  if(barnVisit.inside){notify('축사 밖에서 할 수 있어요.');return;}
+  cancelBarnTrip();
   if(!started)start();
   if(walkingToHammock){
     cancelHammockWalk();
@@ -438,12 +461,20 @@ function tapWorld(screenX,screenY){
     x,y
   }
   =view.toWorld(screenX,screenY);
+  if(barnVisit.inside){
+    const hit=barnVisit.visibleAnimals.find(a=>a.screen&&Math.abs(x-a.screen.x)<a.screen.w*.5&&y<a.screen.y+8&&y>a.screen.y-a.screen.h);
+    if(hit){notify(`${hit.name}가 포근한 짚 위에서 쉬고 있어요.`);return;}
+    const ground=view.ground(x,y,W,H);if(ground){barnVisit.walkTo(ground,player);marker={x:player.tx,z:player.tz};}return;
+  }
+  const building=barnVisit.screen;
+  if(building&&Math.abs(x-building.x)<building.w*.5&&y<building.y+15&&y>building.y-building.h){goBarn();return;}
+  cancelBarnTrip();
   const hit=[...sheep,shepherd].sort((a,b)=>(project(a.x,a.z)?.depth??Infinity)-(project(b.x,b.z)?.depth??Infinity)).find(a=>{
     const p=a.screen;return p&&Math.abs(x-p.x)<p.w*.5&&y<p.y+8&&y>p.y-p.h;
   });
   if(hit===shepherd){
     interaction.cancel(view);interaction.supplyTrip=false;interaction.mode='pet';keys.clear();player.tx=player.x;player.tz=player.z;marker=null;selected=null;
-    shepherd.greet(player);notify(shelter.active?'목동: 양들이 축사에 잘 들어가는지 살펴보고 있어요.':'목동: 안녕하세요! 오늘도 양들과 편히 쉬어가세요.');return;
+    shepherd.greet(player);chat?.open();return;
   }
   if(hit){
     if(shelter.active){notify('양들이 축사로 들어가 쉬고 있어요. 하늘이 개면 다시 만나요.');return;}
@@ -559,9 +590,9 @@ addEventListener('blur',()=>{
   pointers.clear();gesture=null;
 });
 addEventListener('keydown',e=>{
-  if(paused)return;const k=e.key.toLowerCase();if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright','f'].includes(k)){
+  if(paused||['INPUT','TEXTAREA','SELECT'].includes(e.target?.tagName))return;const k=e.key.toLowerCase();if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright','f'].includes(k)){
     e.preventDefault();if(!started)start();if(k!=='f'){
-      cancelHammockWalk();
+      cancelHammockWalk();cancelBarnTrip();
       interaction.cancel(view);interaction.supplyTrip=false;
     }
     if(k==='f'){
@@ -598,6 +629,8 @@ function ensureSound(){
 // Entry starts sound. If a browser blocks it, the next normal tap retries it.
 addEventListener('pointerdown',()=>{if(started&&!audioSystem.enabled)ensureSound();},{capture:true});
 $('milk').onclick=()=>{
+  if(barnVisit.inside){notify('축사 밖에서 할 수 있어요.');return;}
+  cancelBarnTrip();
   if(shelter.active){notify('새끼 양들이 축사에서 쉬고 있어요.');return;}
   cancelHammockWalk();
   if(hammocking||seated){
@@ -621,6 +654,8 @@ $('milk').onclick=()=>{
   updateCareUI();
 };
 $('hay').onclick=()=>{
+  if(barnVisit.inside){notify('축사 밖에서 할 수 있어요.');return;}
+  cancelBarnTrip();
   cancelHammockWalk();
   if(hammocking||seated){
     notify('일어난 뒤 창고에 갈 수 있어요.');
@@ -633,6 +668,7 @@ $('hay').onclick=()=>{
   updateCareUI();
 };
 $('care-cancel').onclick=()=>{
+  cancelBarnTrip();
   cancelHammockWalk();
   interaction.cancel(view);
   interaction.mode='pet';
@@ -648,9 +684,42 @@ if(typeof document.querySelectorAll==='function')setupMeadowPanel({
   weather,bond,flock,getSelected:()=>selected,onMessage:notify,onPause:open=>{paused=open;keys.clear();if(!open){environmentTimer=0;bond.save();}},
   onFind:animal=>{
     if(!started)start();
+    if(barnVisit.inside){notify('내 양은 축사에서 쉬고 있어요.');return;}
+    cancelBarnTrip();
     if(shelter.active||animal.hiddenInBarn){notify('내 양도 축사에서 쉬고 있어요.');return;}
     if(hammocking||seated){notify('자리에서 일어난 뒤 만나러 가요.');return;}
     cancelHammockWalk();if(feeding)feed();selected=animal;interaction.mode='pet';keys.clear();notify(interaction.request('pet',animal,player,view).message);
   }
 });
 addEventListener('pagehide',()=>bond.save());
+
+function cancelBarnTrip(){if(!barnVisit.inside&&barnVisit.trip==='enter')barnVisit.cancel(player);}
+function goBarn(){
+  if(!started)start();
+  if(barnVisit.inside)return '이미 축사 안에 있어요. 통로를 걸으며 양들을 살펴보세요.';
+  if(hammocking||seated){const text='자리에서 일어난 뒤 축사로 가요.';notify(text);return text;}
+  cancelHammockWalk();interaction.cancel(view);interaction.mode='pet';interaction.supplyTrip=false;if(feeding)feed();keys.clear();selected=null;
+  barnVisit.request(player);marker={...CONFIG.barn.entrance};notify('축사 문까지 걸어가요. 도착하면 안으로 들어갑니다.');return '축사 문까지 걸어가요. 도착하면 안으로 들어갈게요.';
+}
+function renderInsideBarn(){
+  centerView();c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,W,H);
+  drawBarnInterior(c,W,H,project,{night:atmosphere.night,inside:shelter.inside,total:sheep.length});drawMarker();
+  const inside=barnVisit.animals(flock),layers=inside.map(a=>({depth:project(a.x,a.z)?.depth||0,draw:()=>drawSheep(a)}));
+  layers.push({depth:project(player.x,player.z)?.depth||0,draw:()=>drawVisitor(c,project(player.x,player.z),{time:t,walking:player.walking,pose:visitorPose(player.headingX??0,player.headingZ??1,view.yaw)})});
+  layers.sort((a,b)=>b.depth-a.depth).forEach(a=>a.draw());$('sheep-label').hidden=true;
+  if(t>toastUntil)$('toast').style.opacity=0;
+}
+$('barn-enter').onclick=goBarn;
+$('barn-leave').onclick=()=>{barnVisit.requestExit(player);keys.clear();notify('문까지 걸어가 밖으로 나가요.');};
+if(typeof document.querySelectorAll==='function')chat=setupShepherdChat({
+  snapshot:()=>({time:atmosphere.text,weather:atmosphere.label,weatherSource:atmosphere.preview?'preview':atmosphere.live?'live':'local',location:weather.location?.name||'',night:atmosphere.night,total:sheep.length,lambs:lambs.length,inside:shelter.inside,playingLambs:lambPlay.groups.length*2,dogs:companions.dogs.length,feeding,shelterReason:shelter.active?shelter.reason:'',inBarn:barnVisit.inside,friend:flock.adults.find(a=>a.id===bond.friendId)?.name||null}),
+  onOpen:()=>keys.clear(),
+  execute:action=>{
+    if(action==='enter_barn')return goBarn();
+    if(action==='leave_barn'){if(!barnVisit.inside)return '지금은 목장 밖 풍경을 보고 있어요.';barnVisit.requestExit(player);return '축사 문으로 걸어가 밖으로 나갈게요.';}
+    if(action==='gather'){shelter.manual=true;return '네, 양들을 축사로 안내할게요. 목동과 개가 문 주변을 살피고 양들이 차례로 들어갑니다.';}
+    if(action==='release'){if(atmosphere.night||atmosphere.wet)return '지금은 어둡거나 궂은 날씨라 양들이 축사에서 쉬는 게 좋아요. 밝아지고 하늘이 개면 내보낼게요.';shelter.manual=false;return '네, 양들을 차례로 풀밭으로 내보낼게요.';}
+    if(action==='inspect'){if(shelter.active)return '양들이 축사로 들어오는지 문 앞에서 살펴볼게요.';shepherd.timer=0;shepherd.state='watch';shepherd.route=[];return '네, 양들과 축사 주변을 천천히 둘러볼게요.';}
+    return '';
+  }
+});

@@ -1,0 +1,9 @@
+
+dist/server/
+dist/.openai/
+.env
+.env.*
+!.env.example
+project-history.bundle
+.sites-checkout/
+.sites-runtime/

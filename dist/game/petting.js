@@ -1,4 +1,4 @@
-import {keepDry,distance} from './config.js?v=living-meadow';
+import {keepDry,distance} from './config.js?v=night-barn';
 export const angleDelta=(to,from)=>Math.atan2(Math.sin(to-from),Math.cos(to-from));
 export function petStand(animal,player){
   const gap=.45+1.05*animal.size;

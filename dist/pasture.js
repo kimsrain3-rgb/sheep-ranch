@@ -1,4 +1,4 @@
-import {CONFIG} from './game/config.js?v=living-meadow';
+import {CONFIG} from './game/config.js?v=night-barn';
 let seed=981;const rnd=()=>((seed=seed*16807%2147483647)-1)/2147483646;
 export const trees=Array.from({length:105},(_,i)=>{const a=rnd()*Math.PI*2,r=34+rnd()*85;return {x:Math.sin(a)*r,z:Math.cos(a)*r,size:1.1+rnd()*1.1,phase:rnd()*6.28};});
 export function drawPasture(c,W,H,t,sunset,view,project,ellipse,path,weather={}){

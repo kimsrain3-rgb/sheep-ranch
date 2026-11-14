@@ -1,5 +1,5 @@
-import {CONFIG,distance} from './config.js?v=living-meadow';
-import {dryRoute} from './navigation.js?v=living-meadow';
+import {CONFIG,distance} from './config.js?v=night-barn';
+import {dryRoute} from './navigation.js?v=night-barn';
 // The NPC owns only its own movement. It never locks sheep or changes care records.
 export class ShepherdBoy{
   constructor(){

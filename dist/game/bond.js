@@ -1,4 +1,4 @@
-import {browserStorage} from './persistence.js?v=living-meadow';
+import {browserStorage} from './persistence.js?v=night-barn';
 // Stable animal IDs and versioned, browser-local records. No login or shared ownership.
 export class SheepBond{
   constructor({storage=browserStorage()}={}){

@@ -1,5 +1,5 @@
 import {gaitLegs,armSwing} from './game/gait.js';
-import {drawKneelingVisitor} from './render/milk-pose.js?v=side-pet';
+import {drawKneelingVisitor} from './render/milk-pose.js?v=night-barn';
 // World heading is resolved relative to the orbit camera, including while standing.
 export function visitorPose(dx=0,dz=1,yaw=0){
  const side=dx*Math.cos(yaw)-dz*Math.sin(yaw),away=dx*Math.sin(yaw)+dz*Math.cos(yaw);

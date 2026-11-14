@@ -1,7 +1,7 @@
-import {petStand,petCameraYaw,petZoom,angleDelta} from './petting.js?v=side-pet';
+import {petStand,petCameraYaw,petZoom,angleDelta} from './petting.js?v=night-barn';
 import {
   CONFIG,distance,keepDry
-} from './config.js?v=living-meadow';
+} from './config.js?v=night-barn';
 export class Interactions {
   constructor(flock){
     this.flock=flock;
