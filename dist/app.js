@@ -8,7 +8,7 @@ import { drawCompanion } from './render/companions.js?v=clean-mouth';
 import { makeVegetation,drawVegetation,drawHayPile,drawRipples } from './render/details.js';
 import { drawInteraction } from './render/interactions.js?v=kneeling-milk';
 import { MeadowView } from './orbit.js';
-import { drawVisitor,drawHammock,visitorPose } from './visitor.js?v=kneeling-milk';
+import { drawVisitor,drawHammock,visitorPose } from './visitor.js?v=forward-gait';
 import { drawPasture,trees,drawWindmill } from './pasture.js';
 const canvas=document.querySelector('#world'),c=canvas.getContext('2d');
 const $=id=>document.getElementById(id);
