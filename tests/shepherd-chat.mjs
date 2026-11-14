@@ -1,8 +1,11 @@
 import assert from 'node:assert/strict';
 import {handleShepherd} from '../server/shepherd-api.js';
+import {parseShepherdIntent} from '../dist/shepherd-chat.js';
 
 const origin='http://localhost:4173';
-const state={time:'오후 6:00',weather:'맑음',weatherSource:'live',location:'양주',total:62,lambs:12,inside:3,playingLambs:2,dogs:2};
+const state={time:'오후 6:00',weather:'맑음',weatherSource:'live',location:'양주',total:62,lambs:12,inside:3,chickens:10,chickensInside:4,playingLambs:2,dogs:2};
+assert.equal(parseShepherdIntent('닭도 모아줘'),'gather');
+assert.equal(parseShepherdIntent('닭을 밖으로 내보내'),'release');
 const request=(message,extra={})=>new Request(origin+'/api/shepherd',{
   method:'POST',headers:{origin,'content-type':'application/json'},
   body:JSON.stringify({messages:[{role:'user',content:message}],state,...extra})
@@ -19,6 +22,7 @@ assert.match(data.reply,/양주/);
 assert.match(data.reply,/62마리/);
 assert.match(data.reply,/어른 50마리, 새끼 12마리/);
 assert.match(data.reply,/축사 안에 3마리, 밖에 59마리/);
+assert.match(data.reply,/닭은 10마리 중 4마리/);
 assert.equal(calls,0);
 
 response=await handleShepherd(request('날씨가 어때?',{state:{...state,weatherSource:'local',location:'',shelterReason:'night'}}),{OPENAI_API_KEY:'test-only'},noFetch);

@@ -2,12 +2,12 @@ export const SHEPHERD_PERSONA=`너는 바람목장의 소년 목동 '하루'다.
 const buckets=new Map();
 const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json;charset=utf-8','cache-control':'no-store'}});
 const boundedCount=value=>Math.min(1000,Math.max(0,Math.floor(Number(value)||0)));
-const statusQuestion=text=>/(상태|몇\s*마리|마릿수|날씨|몇\s*시|시간|어디|왜.*(축사|안으로|밖으로)|축사.*(안|밖|들어))/.test(text);
+const statusQuestion=text=>/(상태|몇\s*마리|마릿수|날씨|몇\s*시|시간|어디|닭장|왜.*(축사|안으로|밖으로)|축사.*(안|밖|들어))/.test(text);
 export function shepherdStateReply(state){
  const adults=Math.max(0,state.total-state.lambs),outside=Math.max(0,state.total-state.inside);
  const weather=state.weatherSource==='live'?`${state.location||'연결된 지역'}의 날씨는 ${state.weather}`:state.weatherSource==='preview'?`화면에 미리보기 날씨 ${state.weather}이 표시돼요`:`화면에는 ${state.weather}이 표시돼요. 실제 지역 날씨는 연결되지 않았어요`;
- const reason=state.shelterReason==='night'?'밤이라 양들이 쉬러 들어가고 있어요.':state.shelterReason==='weather'?'비나 눈을 피해 양들이 들어가고 있어요.':state.shelterReason==='request'?'목장주님의 요청으로 양들을 안내하고 있어요.':'';
- return `목장주님, 지금은 ${state.time||'시간 확인 중'}이고 ${weather}. 양은 모두 ${state.total}마리(어른 ${adults}마리, 새끼 ${state.lambs}마리)예요. 축사 안에 ${state.inside}마리, 밖에 ${outside}마리가 있어요.${reason?' '+reason:''}${state.inBarn?' 목장주님은 지금 축사 안에 계세요.':''}${state.playingLambs?` 새끼 양 ${state.playingLambs}마리가 뛰놀고 있어요.`:''}`;
+ const reason=state.shelterReason==='night'?'밤이라 개들이 양은 축사로, 닭은 닭장으로 안내하고 있어요.':state.shelterReason==='weather'?'비나 눈을 피해 개들이 양과 닭을 각각 안으로 안내하고 있어요.':state.shelterReason==='request'?'목장주님의 요청으로 개들이 양과 닭을 모으고 있어요.':'';
+ return `목장주님, 지금은 ${state.time||'시간 확인 중'}이고 ${weather}. 양은 모두 ${state.total}마리(어른 ${adults}마리, 새끼 ${state.lambs}마리)예요. 축사 안에 ${state.inside}마리, 밖에 ${outside}마리가 있어요. 닭은 ${state.chickens}마리 중 ${state.chickensInside}마리가 축사 옆 닭장에 있어요.${reason?' '+reason:''}${state.inBarn?' 목장주님은 지금 축사 안에 계세요.':''}${state.playingLambs?` 새끼 양 ${state.playingLambs}마리가 뛰놀고 있어요.`:''}`;
 }
 export async function handleShepherd(request,env={},fetcher=fetch){
  const url=new URL(request.url);
@@ -26,11 +26,11 @@ export async function handleShepherd(request,env={},fetcher=fetch){
  const bucket=buckets.get(key)||{count:0,start:now};if(now-bucket.start>60000){bucket.count=0;bucket.start=now;}if(bucket.count>=6)return json({error:'RATE_LIMITED'},429);bucket.count++;buckets.set(key,bucket);
  if(buckets.size>5000)for(const [k,v] of buckets)if(now-v.start>120000)buckets.delete(k);
  const state=body.state&&typeof body.state==='object'?body.state:{};
- const context={time:String(state.time||'').slice(0,30),weather:String(state.weather||'').slice(0,30),weatherSource:['live','preview'].includes(state.weatherSource)?state.weatherSource:'local',location:String(state.location||'').slice(0,80),night:!!state.night,total:boundedCount(state.total),inside:boundedCount(state.inside),lambs:boundedCount(state.lambs),playingLambs:boundedCount(state.playingLambs),dogs:boundedCount(state.dogs),feeding:!!state.feeding,shelterReason:['night','weather','request'].includes(state.shelterReason)?state.shelterReason:'',inBarn:!!state.inBarn,friend:String(state.friend||'').slice(0,16)};
- context.lambs=Math.min(context.total,context.lambs);context.inside=Math.min(context.total,context.inside);context.playingLambs=Math.min(context.lambs,context.playingLambs);
+ const context={time:String(state.time||'').slice(0,30),weather:String(state.weather||'').slice(0,30),weatherSource:['live','preview'].includes(state.weatherSource)?state.weatherSource:'local',location:String(state.location||'').slice(0,80),night:!!state.night,total:boundedCount(state.total),inside:boundedCount(state.inside),lambs:boundedCount(state.lambs),chickens:boundedCount(state.chickens),chickensInside:boundedCount(state.chickensInside),playingLambs:boundedCount(state.playingLambs),dogs:boundedCount(state.dogs),feeding:!!state.feeding,shelterReason:['night','weather','request'].includes(state.shelterReason)?state.shelterReason:'',inBarn:!!state.inBarn,friend:String(state.friend||'').slice(0,16)};
+ context.lambs=Math.min(context.total,context.lambs);context.inside=Math.min(context.total,context.inside);context.chickensInside=Math.min(context.chickens,context.chickensInside);context.playingLambs=Math.min(context.lambs,context.playingLambs);
  if(statusQuestion(messages.at(-1).content)&&!body.receipt)return json({reply:shepherdStateReply(context),mode:'state'});
  try{
-  const response=await fetcher('https://api.openai.com/v1/responses',{method:'POST',headers:{'content-type':'application/json',authorization:`Bearer ${env.OPENAI_API_KEY}`},body:JSON.stringify({model:env.OPENAI_MODEL||'gpt-4.1-mini',store:false,instructions:SHEPHERD_PERSONA+'\n현재 목장 상태: '+JSON.stringify(context)+'\n검증된 게임 실행 결과: '+String(body.receipt||'없음').slice(0,500),input:messages,max_output_tokens:500,text:{format:{type:'json_schema',name:'shepherd_reply',strict:true,schema:{type:'object',properties:{reply:{type:'string'}},required:['reply'],additionalProperties:false}}}}),signal:AbortSignal.timeout(15000)});
+  const response=await fetcher('https://api.openai.com/v1/responses',{method:'POST',headers:{'content-type':'application/json',authorization:`Bearer ${env.OPENAI_API_KEY}`},body:JSON.stringify({model:env.OPENAI_MODEL||'gpt-4.1-mini',store:false,instructions:SHEPHERD_PERSONA+'\n양 축사 바로 옆에 별도의 닭장이 있다. 개들은 피신할 때 양을 축사로, 닭을 닭장으로 몰아넣는다. 닭장에는 방문자가 들어갈 수 없다.\n현재 목장 상태: '+JSON.stringify(context)+'\n검증된 게임 실행 결과: '+String(body.receipt||'없음').slice(0,500),input:messages,max_output_tokens:500,text:{format:{type:'json_schema',name:'shepherd_reply',strict:true,schema:{type:'object',properties:{reply:{type:'string'}},required:['reply'],additionalProperties:false}}}}),signal:AbortSignal.timeout(15000)});
   if(!response.ok)return json({error:'AI_UNAVAILABLE'},502);
   const data=await response.json(),text=(data.output||[]).flatMap(o=>o.content||[]).filter(c=>c.type==='output_text').map(c=>c.text).join('');
   let parsed;try{parsed=JSON.parse(text);}catch{return json({error:'AI_INVALID_OUTPUT'},502);}

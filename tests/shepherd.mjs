@@ -23,16 +23,17 @@ console.log('Shepherd boy: continuous dry patrol, no sheep mutations, wet-weathe
 
 const leader=new ShepherdBoy(),companions=new Companions(),owner={x:55,z:100};
 const escort=companions.dogs.find(a=>a.role==='escort');assert.ok(escort);assert.equal(companions.dogs.length,2);
-let maximumGap=0,herded=false;
+let dryMaximumGap=0,chickenHerded=false;
 for(let i=0;i<6000;i++){
   const wet=i>3000,old={x:escort.x,z:escort.z};
   leader.tick(.05,{player:owner,sheep,sheltering:wet});
   companions.tick(.05,{player:owner,sheep,yaw:i*.001,sheltering:wet,shepherd:leader});
   assert.ok(distance(old,escort)<=.05*2.7+.00001,'escort walks instead of teleporting');
-  assert.notEqual(escort.state,'herd','escort stays assigned to boy in rain');
-  maximumGap=Math.max(maximumGap,distance(escort,leader));
-  if(companions.dogs[0].state==='herd')herded=true;
+  if(!wet)dryMaximumGap=Math.max(dryMaximumGap,distance(escort,leader));
+  if(escort.state==='herd-chicken')chickenHerded=true;
 }
-assert.ok(maximumGap<5,`escort remains near boy through patrol and shelter trip: ${maximumGap}`);
+assert.ok(dryMaximumGap<5,`escort remains near boy on dry patrol: ${dryMaximumGap}`);
+assert.ok(chickenHerded,'escort dog helps move chickens during sheltering');
+assert.equal(companions.coopInside,CONFIG.chickens,'all chickens reach their coop');
 assert.ok(distance(escort,leader)<3);assert.equal(escort.state,'rest');assert.ok(distance(escort,owner)>50,'never follows the owner instead');
-console.log('One escort dog stays near the boy in dry and wet weather, walks continuously and rests nearby; second dog remains independent.');
+console.log('Escort dog follows the boy in dry weather, herds chickens into their coop, then returns to the boy.');

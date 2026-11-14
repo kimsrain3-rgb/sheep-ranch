@@ -1,20 +1,21 @@
 export function parseShepherdIntent(text){
   const s=String(text).replace(/\s+/g,'');
   if(/(상태|몇마리|마릿수|어디|날씨|몇시|시간|왜|언제|어떻게)/.test(s))return 'status';
-  if(/(밖으로|나가자|나갈래|나가줘)/.test(s)&&!/(양|방목)/.test(s))return 'leave_barn';
+  if(/(밖으로|나가자|나갈래|나가줘)/.test(s)&&!/(양|닭|방목)/.test(s))return 'leave_barn';
   if(/(축사|안으로).*(들어|가자|가줘|가볼|보러)/.test(s))return 'enter_barn';
-  if(/(양|방목).*(내보내|풀어|밖으로|방목해)/.test(s))return 'release';
-  if(/(양|축사).*(모아|몰아|넣어|데려|재워)|모아줘/.test(s))return 'gather';
+  if(/(양|닭|방목).*(내보내|풀어|밖으로|방목해)/.test(s))return 'release';
+  if(/(양|닭|축사|닭장).*(모아|몰아|넣어|데려|재워)|모아줘/.test(s))return 'gather';
   if(/(둘러|살펴|확인해|순찰)/.test(s))return 'inspect';
   return 'none';
 }
 export function localShepherdReply(text,state,receipt=''){
   if(receipt)return receipt;
   if(/안녕|반가|이름|누구/.test(text))return '안녕하세요, 목장주님! 저는 양들을 살피는 소년 목동 하루예요. 곁의 보리개와 목장을 둘러보고 있어요.';
-  if(parseShepherdIntent(text)==='status')return `지금은 ${state.time}, ${state.weather}이에요. 양 ${state.total}마리 중 ${state.inside}마리가 축사 안에서 쉬고 있어요.${state.night?' 해가 져서 나머지 양들도 안으로 안내하고 있어요.':''}`;
+  if(parseShepherdIntent(text)==='status')return `지금은 ${state.time}, ${state.weather}이에요. 양 ${state.total}마리 중 ${state.inside}마리가 축사에, 닭 ${state.chickens}마리 중 ${state.chickensInside}마리가 옆 닭장에 있어요.${state.night?' 해가 져서 개들이 나머지 동물들도 안으로 안내하고 있어요.':''}`;
   if(/쓰다듬|친해|내양|이름/.test(text))return '양을 자주 쓰다듬고 건초를 건네면 목장주님을 알아봐요. 내 양 메뉴에서 이름도 붙여줄 수 있어요.';
+  if(/닭장|닭/.test(text))return `닭장은 큰 양들의 축사 바로 옆에 있어요. 지금 닭 ${state.chickens}마리 중 ${state.chickensInside}마리가 안에서 쉬고 있어요. 개들이 닭을 그곳으로 안내합니다.`;
   if(/축사/.test(text))return '큰 축사는 목장 왼쪽에 있어요. “축사로 가자”라고 하시면 문까지 걸어가서 안을 둘러볼 수 있어요.';
-  return '지금은 목장 안내 모드예요. 양의 상태를 알려드리고, 양 모으기·순찰·축사 출입을 도와드릴 수 있어요. 자유로운 AI 대화는 아직 연결 전이에요.';
+  return '지금은 목장 안내 모드예요. 양과 닭의 상태를 알려드리고, 동물 모으기·순찰·축사 출입을 도와드릴 수 있어요. 자유로운 AI 대화는 아직 연결 전이에요.';
 }
 export function setupShepherdChat({snapshot,execute,onOpen=()=>{},fetcher=globalThis.fetch?.bind(globalThis)}){
   const $=id=>document.getElementById(id),panel=$('shepherd-chat'),log=$('shepherd-messages');let connected=false,busy=false,requestId=0;

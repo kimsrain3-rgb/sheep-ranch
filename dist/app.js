@@ -1,21 +1,21 @@
 import {BarnVisit} from './game/barn.js?v=night-barn';
 import {drawBarnInterior} from './render/barn.js?v=night-barn';
-import {setupShepherdChat} from './shepherd-chat.js?v=night-barn';
+import {setupShepherdChat} from './shepherd-chat.js?v=coop-herding';
 import {ShepherdBoy} from './game/shepherd.js?v=night-barn';
 import {drawShepherdBoy} from './render/shepherd.js?v=night-barn';
 import {MeadowWeather} from './game/weather.js?v=night-barn';
 import {SheepBond} from './game/bond.js?v=night-barn';
 import {WeatherShelter} from './game/shelter.js?v=night-barn';
 import {LambPlay} from './game/lamb-play.js?v=night-barn';
-import {drawShelter} from './render/shelter.js?v=night-barn';
+import {drawShelter,drawCoop} from './render/shelter.js?v=coop-herding';
 import {drawWeather,drawFriendBadge} from './render/weather.js?v=night-barn';
 import {setupMeadowPanel} from './meadow-panel.js?v=night-barn';
 import { isCompactViewport } from './game/layout.js';
 import { Flock } from './game/flock.js?v=night-barn';
 import { Interactions } from './game/interactions.js?v=night-barn';
-import { Companions } from './game/companions.js?v=night-barn';
+import { Companions } from './game/companions.js?v=coop-herding';
 import { MeadowAudio } from './game/audio.js?v=night-barn';
-import { CONFIG,keepDry } from './game/config.js?v=night-barn';
+import { CONFIG,keepDry } from './game/config.js?v=coop-herding';
 import { drawSheep as renderSheep } from './render/sheep.js?v=night-barn';
 import { drawCompanion } from './render/companions.js?v=night-barn';
 import { makeVegetation,drawVegetation,drawHayPile,drawRipples } from './render/details.js';
@@ -43,6 +43,7 @@ let atmosphere=weather.snapshot(),environmentTimer=0;
 bond.apply(flock);
 const shepherd=new ShepherdBoy(),barnVisit=new BarnVisit();
 let chat=null;
+let coopScreen=null;
 const grass=makeVegetation();
 const particles=[];
 function notify(text){
@@ -146,12 +147,12 @@ function update(dt){
   if(environmentTimer<=0){
     atmosphere=weather.snapshot();environmentTimer=.5;sunset=atmosphere.dusk&&!atmosphere.night;
     $('clock').textContent=atmosphere.text;
-    canvas.setAttribute('aria-label',`${barnVisit.inside?'축사 실내. 중앙 통로를 걸으며 쉬는 양들을 볼 수 있어요.':'양들이 지내는 목장.'} ${atmosphere.preview?'감상용 ':atmosphere.live?'지역 날씨 ':''}${atmosphere.label}. 축사에서 쉬는 양 ${shelter.inside}마리. 뛰노는 새끼 양 ${lambPlay.groups.length*2}마리. 소년 목동이 양들을 살피고 있어요. 목동을 누르면 인사합니다. 풀밭을 누르면 이동합니다.`);
+    canvas.setAttribute('aria-label',`${barnVisit.inside?'축사 실내. 중앙 통로를 걸으며 쉬는 양들을 볼 수 있어요.':'양들이 지내는 목장.'} ${atmosphere.preview?'감상용 ':atmosphere.live?'지역 날씨 ':''}${atmosphere.label}. 축사에서 쉬는 양 ${shelter.inside}마리, 옆 닭장에서 쉬는 닭 ${companions.coopInside}마리. 뛰노는 새끼 양 ${lambPlay.groups.length*2}마리. 소년 목동이 양들을 살피고 있어요. 목동을 누르면 대화합니다. 풀밭을 누르면 이동합니다.`);
     $('weather-label').textContent=atmosphere.preview?`${atmosphere.label} · 감상용`:atmosphere.live?`${atmosphere.location} · ${atmosphere.label}`:'바람목장 · 지역 날씨 미연결';
   }
   if(shelter.updateWeather(dt,atmosphere.wet,atmosphere.night)){
-    if(shelter.active){interaction.cancel(view);interaction.mode='pet';interaction.supplyTrip=false;if(feeding)feed();notify(shelter.reason==='night'?'해가 졌어요. 목동과 개가 양들을 축사로 안내해요.':'개들이 양들을 축사로 안내해요.');}
-    else notify('하늘이 개었어요. 양들이 차례로 풀밭에 나와요.');
+    if(shelter.active){interaction.cancel(view);interaction.mode='pet';interaction.supplyTrip=false;if(feeding)feed();notify(shelter.reason==='night'?'해가 졌어요. 개들이 양은 축사로, 닭은 닭장으로 안내해요.':'개들이 양은 축사로, 닭은 닭장으로 안내해요.');}
+    else notify('하늘이 개었어요. 양과 닭이 차례로 밖에 나와요.');
   }
   let dx=Number(keys.has('d')||keys.has('arrowright'))-Number(keys.has('a')||keys.has('arrowleft')),dz=Number(keys.has('w')||keys.has('arrowup'))-Number(keys.has('s')||keys.has('arrowdown'));
   player.walking=false;
@@ -253,6 +254,7 @@ function render(){
     })
   });
   layers.push({x:CONFIG.barn.x,z:CONFIG.barn.entrance.z,draw:()=>{barnVisit.screen=drawShelter(c,project(CONFIG.barn.x,CONFIG.barn.entrance.z),{inside:shelter.inside,total:sheep.length,wet:shelter.active,snow:atmosphere.kind==='snow',night:atmosphere.night,time:t});}});
+  layers.push({x:CONFIG.coop.x,z:CONFIG.coop.entrance.z,draw:()=>{coopScreen=drawCoop(c,project(CONFIG.coop.x,CONFIG.coop.entrance.z),{inside:companions.coopInside,total:companions.chickens.length,snow:atmosphere.kind==='snow',night:atmosphere.night});}});
   if(started&&!hammocking)layers.push({
     x:player.x,z:player.z,focused:!!petFocus,draw:()=>drawVisitor(c,project(player.x,player.z),{
       time:t,walking:player.walking,seated,feeding,petting:interaction.active?.kind==='pet'&&interaction.active.phase==='playing',milking:interaction.active?.kind==='milk'&&interaction.active.phase==='playing',lambSize:interaction.active?.animal.size,pose:interaction.active?.phase==='playing'?visitorPose(interaction.active.animal.x-player.x,interaction.active.animal.z-player.z,view.yaw):visitorPose(player.headingX??0,player.headingZ??1,view.yaw)
@@ -277,7 +279,7 @@ function render(){
     }
   });
   layers.push({x:shepherd.x,z:shepherd.z,actor:true,draw:()=>drawShepherdBoy(c,project(shepherd.x,shepherd.z),shepherd,view.yaw)});
-  for(const a of companions.animals)layers.push({
+  for(const a of companions.animals)if(!a.hiddenInCoop)layers.push({
     x:a.x,z:a.z,actor:true,draw:()=>drawCompanion(c,project(a.x,a.z),a,t)
   });
   layers.forEach(a=>a.depth=project(a.x??0,a.z)?.depth??-1);
@@ -468,6 +470,7 @@ function tapWorld(screenX,screenY){
   }
   const building=barnVisit.screen;
   if(building&&Math.abs(x-building.x)<building.w*.5&&y<building.y+15&&y>building.y-building.h){goBarn();return;}
+  if(coopScreen&&Math.abs(x-coopScreen.x)<coopScreen.w*.5&&y<coopScreen.y+10&&y>coopScreen.y-coopScreen.h){notify(`닭장에 닭 ${companions.coopInside}마리가 쉬고 있어요.`);return;}
   cancelBarnTrip();
   const hit=[...sheep,shepherd].sort((a,b)=>(project(a.x,a.z)?.depth??Infinity)-(project(b.x,b.z)?.depth??Infinity)).find(a=>{
     const p=a.screen;return p&&Math.abs(x-p.x)<p.w*.5&&y<p.y+8&&y>p.y-p.h;
@@ -712,13 +715,13 @@ function renderInsideBarn(){
 $('barn-enter').onclick=goBarn;
 $('barn-leave').onclick=()=>{barnVisit.requestExit(player);keys.clear();notify('문까지 걸어가 밖으로 나가요.');};
 if(typeof document.querySelectorAll==='function')chat=setupShepherdChat({
-  snapshot:()=>({time:atmosphere.text,weather:atmosphere.label,weatherSource:atmosphere.preview?'preview':atmosphere.live?'live':'local',location:weather.location?.name||'',night:atmosphere.night,total:sheep.length,lambs:lambs.length,inside:shelter.inside,playingLambs:lambPlay.groups.length*2,dogs:companions.dogs.length,feeding,shelterReason:shelter.active?shelter.reason:'',inBarn:barnVisit.inside,friend:flock.adults.find(a=>a.id===bond.friendId)?.name||null}),
+  snapshot:()=>({time:atmosphere.text,weather:atmosphere.label,weatherSource:atmosphere.preview?'preview':atmosphere.live?'live':'local',location:weather.location?.name||'',night:atmosphere.night,total:sheep.length,lambs:lambs.length,inside:shelter.inside,chickens:companions.chickens.length,chickensInside:companions.coopInside,playingLambs:lambPlay.groups.length*2,dogs:companions.dogs.length,feeding,shelterReason:shelter.active?shelter.reason:'',inBarn:barnVisit.inside,friend:flock.adults.find(a=>a.id===bond.friendId)?.name||null}),
   onOpen:()=>keys.clear(),
   execute:action=>{
     if(action==='enter_barn')return goBarn();
     if(action==='leave_barn'){if(!barnVisit.inside)return '지금은 목장 밖 풍경을 보고 있어요.';barnVisit.requestExit(player);return '축사 문으로 걸어가 밖으로 나갈게요.';}
-    if(action==='gather'){shelter.manual=true;return '네, 양들을 축사로 안내할게요. 목동과 개가 문 주변을 살피고 양들이 차례로 들어갑니다.';}
-    if(action==='release'){if(atmosphere.night||atmosphere.wet)return '지금은 어둡거나 궂은 날씨라 양들이 축사에서 쉬는 게 좋아요. 밝아지고 하늘이 개면 내보낼게요.';shelter.manual=false;return '네, 양들을 차례로 풀밭으로 내보낼게요.';}
+    if(action==='gather'){shelter.manual=true;return '네, 개들이 양은 축사로, 닭은 옆 닭장으로 차례로 몰아넣을게요.';}
+    if(action==='release'){if(atmosphere.night||atmosphere.wet)return '지금은 어둡거나 궂은 날씨라 양과 닭이 안에서 쉬는 게 좋아요. 밝아지고 하늘이 개면 내보낼게요.';shelter.manual=false;return '네, 양과 닭을 차례로 밖에 내보낼게요.';}
     if(action==='inspect'){if(shelter.active)return '양들이 축사로 들어오는지 문 앞에서 살펴볼게요.';shepherd.timer=0;shepherd.state='watch';shepherd.route=[];return '네, 양들과 축사 주변을 천천히 둘러볼게요.';}
     return '';
   }

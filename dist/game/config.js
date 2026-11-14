@@ -16,6 +16,7 @@ export const CONFIG = Object.freeze({
   }
   ],
   barn: {x:-25,z:37,entrance:{x:-25,z:28},halfWidth:10,depth:18,capacity:80},
+  coop: {x:-8.5,z:37,entrance:{x:-8.5,z:31},halfWidth:4,depth:10,capacity:10},
   hammock: {x:-6,z:7},
   shed: {
     x:24,z:48,entrance:{

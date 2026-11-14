@@ -95,3 +95,9 @@ UI 수정 시에는 390×760과 320×568의 실제 iframe viewport 또는 휴대
 `game/petting.js` chooses a dry left/right standing point from sheep size and the shortest camera rotation that places the pair horizontally side by side. Camera aligns during approach, eyes close only after arrival AND alignment. Pet zoom fits short screens; original camera restores exactly. `render/pet-pose.js` owns the bounded two-joint arm contacting the near fleece edge. The visitor omits its ordinary near arm during petting so there is no duplicate arm; lamb petting uses the existing kneeling body without a bottle. Milk and tug keep their own poses and approach rules.
 
 Pet closeup composition: the chosen sheep and visitor render as one depth-sorted foreground pair. Nonparticipant animals overlapping their screen area recede to .22 alpha only during petting; their world positions and behavior remain unchanged. This prevents a passing sheep from hiding the contact, in addition to the pair’s physical separation.
+
+## 양치기 개와 닭장
+
+`CONFIG.coop`은 양 축사 오른쪽에 있는 별도 닭장이다. 비·눈·밤 또는 목동의 모으기 명령으로 `WeatherShelter.active`가 되면 `Companions`가 닭을 `dryRoute()`로 닭장 입구까지 걷게 한다. 한 개는 양을, 다른 개는 닭을 우선 몰고, 한 무리가 먼저 들어가면 남은 무리를 돕는다. 닭은 입구에 도착한 뒤에만 `hiddenInCoop`이 되며, 날씨가 개면 순서대로 걸어 나온다. 동행견은 몰이가 끝나면 목동 곁으로 돌아간다.
+
+닭장 외관과 쉬는 닭 수는 `render/shelter.js`의 `drawCoop()`이 그린다. 닭장 안은 방문자가 들어가는 공간이 아니다. 양 축사 실내에는 양만 표시한다. `tests/coop.mjs`가 건물 간격, 개의 몰이, 닭의 연속 이동과 순차 출입을 확인한다.

@@ -16,3 +16,22 @@ export function drawShelter(c,p,{inside=0,total=0,wet=false,snow=false,night=fal
   rect(-2.1,.15,4.2,.56,'#f1e7c9');c.fillStyle='#5d684b';c.font='.3px sans-serif';c.fillText('눌러서 들어가기',0,.54);
   c.restore();return {x:p.x,y:p.y,w:p.s*21.2,h:p.s*9.3};
 }
+
+export function drawCoop(c,p,{inside=0,total=10,snow=false,night=false}={}){
+  if(!p)return null;
+  c.save();c.translate(p.x,p.y);c.scale(p.s,p.s);
+  const rect=(x,y,w,h,color)=>{c.fillStyle=color;c.fillRect(x,y,w,h);};
+  const poly=(points,color)=>{c.fillStyle=color;c.beginPath();points.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.closePath();c.fill();};
+  c.fillStyle='#223d292b';c.beginPath();c.ellipse(0,.15,4.9,.85,0,0,Math.PI*2);c.fill();
+  rect(-4,-3.8,8,3.8,'#b99a6c');rect(-3.7,-3.55,7.4,3.55,'#d7ba85');
+  for(let x=-3.5;x<3.8;x+=.8)rect(x,-3.5,.055,3.5,'#9b795657');
+  poly([[-4.5,-3.8],[0,-6.3],[4.5,-3.8]],'#775b47');
+  if(snow)poly([[-4.5,-3.82],[0,-6.35],[4.5,-3.82],[4,-3.9],[0,-6],[-4,-3.9]],'#f6f2e5');
+  rect(-1.1,-2.5,2.2,2.5,'#66503b');rect(-.9,-2.3,1.8,2.3,night?'#ab824e':'#8b7046');
+  rect(-3.15,-2.9,1.3,1.3,night?'#efce85':'#93a18a');rect(1.85,-2.9,1.3,1.3,night?'#efce85':'#93a18a');
+  for(const x of [-2.5,2.5]){rect(x-.035,-2.9,.07,1.3,'#705d44');rect(x-.65,-2.3,1.3,.07,'#705d44');}
+  if(inside){c.fillStyle='#f2e5c8';for(let i=0;i<Math.min(inside,3);i++){c.beginPath();c.ellipse(-.5+i*.48,-.43, .18,.15,0,0,Math.PI*2);c.fill();}}
+  rect(-2,-4.8,4,.65,'#546543');c.fillStyle='#fff5dc';c.textAlign='center';c.font='.48px sans-serif';c.fillText('닭장',0,-4.35);
+  rect(-2.3,-7.45,4.6,.7,'#36533de0');c.font='.37px sans-serif';c.fillText(`쉬는 닭 ${inside} / ${total}`,0,-6.97);
+  c.restore();return {x:p.x,y:p.y,w:p.s*9,h:p.s*7.5};
+}
