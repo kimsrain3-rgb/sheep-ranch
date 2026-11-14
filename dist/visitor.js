@@ -1,9 +1,11 @@
+import {drawKneelingVisitor} from './render/milk-pose.js';
 // World heading is resolved relative to the orbit camera, including while standing.
 export function visitorPose(dx=0,dz=1,yaw=0){
  const side=dx*Math.cos(yaw)-dz*Math.sin(yaw),away=dx*Math.sin(yaw)+dz*Math.cos(yaw);
  return Math.abs(side)>Math.abs(away)*1.15?(side>0?'right':'left'):(away>=0?'back':'front');
 }
-export function drawVisitor(c,p,{time=0,walking=false,seated=false,feeding=false,reaching=false,pose='back'}={}){
+export function drawVisitor(c,p,{time=0,walking=false,seated=false,feeding=false,reaching=false,milking=false,lambSize=.33,pose='back'}={}){
+ if(milking)return drawKneelingVisitor(c,p,{pose,lambSize});
  if(!p)return;c.save();c.translate(p.x,p.y);c.scale(p.s,p.s);
  const ell=(x,y,rx,ry,col)=>{c.fillStyle=col;c.beginPath();c.ellipse(x,y,rx,ry,0,0,Math.PI*2);c.fill();};
  const line=(v,col,w)=>{c.strokeStyle=col;c.lineWidth=w;c.lineCap='round';c.beginPath();v.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.stroke();};

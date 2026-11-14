@@ -1,3 +1,4 @@
+import {drawMilkBottle} from './milk-pose.js';
 export function drawInteraction(c,controller,player,project,time){
   const active=controller.active,pp=project(player.x,player.z);
   if(!pp)return;
@@ -43,26 +44,7 @@ export function drawInteraction(c,controller,player,project,time){
     c.fill();
   }
   else if(active.kind==='milk'){
-    const x=head.x-side*pp.s*.25,y=head.y+ap.s*a.size*.2;
-    c.strokeStyle='#d5ae5e';
-    c.lineWidth=pp.s*.11;
-    c.beginPath();
-    c.moveTo(shoulder.x,shoulder.y);
-    c.lineTo(x-side*pp.s*.18,y);
-    c.stroke();
-    c.translate(x,y);
-    c.scale(side,1);
-    c.rotate(-.25);
-    c.fillStyle='#e7efe7';
-    c.beginPath();
-    c.roundRect(-pp.s*.23,-pp.s*.09,pp.s*.36,pp.s*.19,pp.s*.05);
-    c.fill();
-    c.fillStyle='#8faeae';
-    c.fillRect(pp.s*.08,-pp.s*.1,pp.s*.065,pp.s*.2);
-    c.fillStyle='#d8bd8c';
-    c.beginPath();
-    c.ellipse(pp.s*.18,0,pp.s*.065,pp.s*.04,0,0,Math.PI*2);
-    c.fill();
+    drawMilkBottle(c,pp,{pose:side>0?'right':'left',lambSize:a.size});
   }
   else if(active.kind==='tug'){
     // A small fold attached to the coat hem, never a long connecting stroke.

@@ -1,14 +1,14 @@
 import { Flock } from './game/flock.js?v=short-tug';
-import { Interactions } from './game/interactions.js?v=short-tug';
+import { Interactions } from './game/interactions.js?v=kneeling-milk';
 import { Companions } from './game/companions.js';
 import { MeadowAudio } from './game/audio.js';
 import { CONFIG,keepDry } from './game/config.js';
 import { drawSheep as renderSheep } from './render/sheep.js';
 import { drawCompanion } from './render/companions.js?v=clean-mouth';
 import { makeVegetation,drawVegetation,drawHayPile,drawRipples } from './render/details.js';
-import { drawInteraction } from './render/interactions.js?v=short-tug';
+import { drawInteraction } from './render/interactions.js?v=kneeling-milk';
 import { MeadowView } from './orbit.js';
-import { drawVisitor,drawHammock,visitorPose } from './visitor.js?v=life1';
+import { drawVisitor,drawHammock,visitorPose } from './visitor.js?v=kneeling-milk';
 import { drawPasture,trees,drawWindmill } from './pasture.js';
 const canvas=document.querySelector('#world'),c=canvas.getContext('2d');
 const $=id=>document.getElementById(id);
@@ -205,7 +205,7 @@ function render(){
   });
   if(started&&!hammocking)layers.push({
     x:player.x,z:player.z,draw:()=>drawVisitor(c,project(player.x,player.z),{
-      time:t,walking:player.walking,seated,feeding,reaching:!!interaction.active&&interaction.active.kind!=='tug',pose:interaction.active?.phase==='playing'?visitorPose(interaction.active.animal.x-player.x,interaction.active.animal.z-player.z,view.yaw):visitorPose(player.headingX??0,player.headingZ??1,view.yaw)
+      time:t,walking:player.walking,seated,feeding,reaching:interaction.active?.kind==='pet'&&interaction.active.phase==='playing',milking:interaction.active?.kind==='milk'&&interaction.active.phase==='playing',lambSize:interaction.active?.animal.size,pose:interaction.active?.phase==='playing'?visitorPose(interaction.active.animal.x-player.x,interaction.active.animal.z-player.z,view.yaw):visitorPose(player.headingX??0,player.headingZ??1,view.yaw)
     })
   });
   for(const a of trees)layers.push({

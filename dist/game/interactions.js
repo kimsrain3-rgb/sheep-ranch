@@ -31,6 +31,13 @@ export class Interactions {
     const destination={
       x:animal.x-1.15,z:animal.z-.35
     };
+    if(kind==='milk'){
+      // Stand close on either dry side of the lamb, then kneel beside it.
+      const left={x:animal.x-.82,z:animal.z},right={x:animal.x+.82,z:animal.z};
+      const dryLeft={...left},dryRight={...right};keepDry(dryLeft);keepDry(dryRight);
+      const chosen=distance(left,dryLeft)<=distance(right,dryRight)?dryLeft:dryRight;
+      destination.x=chosen.x;destination.z=chosen.z;
+    }
     keepDry(destination);
     player.tx=destination.x;
     player.tz=destination.z;
@@ -118,7 +125,7 @@ export class Interactions {
       return;
     }
     if(active.phase==='approach'){
-      if(distance(player,active.animal)<1.7){
+      if(active.kind==='milk'?Math.hypot(player.x-player.tx,player.z-player.tz)<.085:distance(player,active.animal)<1.7){
         active.phase='playing';
         active.time=0;
         player.tx=player.x;
