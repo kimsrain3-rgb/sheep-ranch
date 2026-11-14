@@ -1,9 +1,9 @@
-import { Flock } from './game/flock.js?v=short-tug';
-import { Interactions } from './game/interactions.js?v=kneeling-milk';
+import { Flock } from './game/flock.js?v=touch-eyes';
+import { Interactions } from './game/interactions.js?v=touch-eyes';
 import { Companions } from './game/companions.js';
 import { MeadowAudio } from './game/audio.js';
 import { CONFIG,keepDry } from './game/config.js';
-import { drawSheep as renderSheep } from './render/sheep.js';
+import { drawSheep as renderSheep } from './render/sheep.js?v=touch-eyes';
 import { drawCompanion } from './render/companions.js?v=clean-mouth';
 import { makeVegetation,drawVegetation,drawHayPile,drawRipples } from './render/details.js';
 import { drawInteraction } from './render/interactions.js?v=kneeling-milk';
@@ -250,7 +250,7 @@ function render(){
       $('sheep-label').style.left=clamp(p.x,65,W-65)+'px';
       $('sheep-label').style.top=clamp(p.y,180,H-235)+'px';
       $('sheep-name').textContent=selected.name;
-      $('sheep-mood').textContent=selected.state==='milk'?'젖병으로 우유를 먹고 있어요':selected.state==='pet'?'눈을 감고 손길을 느껴요':selected.state==='sleep'?'풀밭에서 꾸벅꾸벅 졸고 있어요':selected.state==='nursing'?'어미 곁에서 젖을 먹어요':selected.state==='drinking'?'물가에서 물을 마셔요':selected.bite>0?'오물오물, 맛있어요':selected.pet>0?'쓰다듬어 주니 좋아해요':selected.cool>0?'배불러서 풀밭을 산책해요':feeding?'건초 냄새를 맡고 다가와요':'느긋하게 풀을 뜯는 중';
+      $('sheep-mood').textContent=selected.state==='milk'?(selected.careContact?'젖병으로 우유를 먹고 있어요':'다가오는 사람을 바라봐요'):selected.state==='pet'?(selected.careContact?'눈을 감고 손길을 느껴요':'다가오는 사람을 바라봐요'):selected.state==='sleep'?'풀밭에서 꾸벅꾸벅 졸고 있어요':selected.state==='nursing'?'어미 곁에서 젖을 먹어요':selected.state==='drinking'?'물가에서 물을 마셔요':selected.bite>0?'오물오물, 맛있어요':selected.pet>0?'쓰다듬어 주니 좋아해요':selected.cool>0?'배불러서 풀밭을 산책해요':feeding?'건초 냄새를 맡고 다가와요':'느긋하게 풀을 뜯는 중';
     }
   }
   else $('sheep-label').hidden=true;

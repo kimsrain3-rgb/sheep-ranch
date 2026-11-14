@@ -70,6 +70,7 @@ export class Flock {
   lock(a,kind){
     this.releasePair(a);
     a.lock=kind;
+    a.careContact=false;
     this.setState(a,kind);
     a.tx=a.x;
     a.tz=a.z;
@@ -77,6 +78,7 @@ export class Flock {
   unlock(a){
     if(!a)return;
     a.lock=null;
+    a.careContact=false;
     a.pet=0;
     this.setState(a,'roam');
     a.decision=18;

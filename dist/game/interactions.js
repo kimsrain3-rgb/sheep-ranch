@@ -125,8 +125,9 @@ export class Interactions {
       return;
     }
     if(active.phase==='approach'){
-      if(active.kind==='milk'?Math.hypot(player.x-player.tx,player.z-player.tz)<.085:distance(player,active.animal)<1.7){
+      if(Math.hypot(player.x-player.tx,player.z-player.tz)<.085){
         active.phase='playing';
+        active.animal.careContact=true;
         active.time=0;
         player.tx=player.x;
         player.tz=player.z;

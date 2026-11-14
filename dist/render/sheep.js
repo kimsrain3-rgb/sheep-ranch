@@ -7,7 +7,7 @@ export function drawSheep(c,a,{
     c.ellipse(x,y,rx,ry,0,0,Math.PI*2);
     c.fill();
   };
-  const resting=a.state==='sleep',happy=a.state==='pet'||a.state==='milk';
+  const resting=a.state==='sleep',happy=a.careContact&&(a.state==='pet'||a.state==='milk');
   const p=project(a.x,a.z);
   a.screen=null;
   if(!p||p.x<-250||p.x>W+250||p.y>H+300)return;
@@ -20,7 +20,7 @@ export function drawSheep(c,a,{
   c.scale(s,s);
   const step=a.walking?Math.sin(t*8+a.phase)*.10:0;
   const chew=a.bite>0?Math.sin(t*18)*.035:0;
-  ellipse(0,.01,1,.19,'#253c292e');if(a.isLamb&&(a.state==='milk'||a.state==='nursing'))ellipse(-.94+Math.sin(t*10)*.07,-.85,.15,.085,'#f6efda');
+  ellipse(0,.01,1,.19,'#253c292e');if(a.isLamb&&((a.state==='milk'&&a.careContact)||a.state==='nursing'))ellipse(-.94+Math.sin(t*10)*.07,-.85,.15,.085,'#f6efda');
   if(resting)c.translate(0,.43);
   if(a.state==='nursing')c.rotate(Math.sin(t*5)*.018);
   // Four jointed legs, soft hoof highlights, fleece silhouette and individual curls.
