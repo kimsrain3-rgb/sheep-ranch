@@ -1,16 +1,23 @@
+import {MeadowWeather} from './game/weather.js?v=living-meadow';
+import {SheepBond} from './game/bond.js?v=living-meadow';
+import {WeatherShelter} from './game/shelter.js?v=living-meadow';
+import {LambPlay} from './game/lamb-play.js?v=living-meadow';
+import {drawShelter} from './render/shelter.js?v=living-meadow';
+import {drawWeather,drawFriendBadge} from './render/weather.js?v=living-meadow';
+import {setupMeadowPanel} from './meadow-panel.js?v=living-meadow';
 import { isCompactViewport } from './game/layout.js';
-import { Flock } from './game/flock.js?v=touch-eyes';
-import { Interactions } from './game/interactions.js?v=touch-eyes';
-import { Companions } from './game/companions.js';
+import { Flock } from './game/flock.js?v=living-meadow';
+import { Interactions } from './game/interactions.js?v=living-meadow';
+import { Companions } from './game/companions.js?v=living-meadow';
 import { MeadowAudio } from './game/audio.js?v=auto-sound';
-import { CONFIG,keepDry } from './game/config.js?v=walk-to-hammock';
-import { drawSheep as renderSheep } from './render/sheep.js?v=touch-eyes';
+import { CONFIG,keepDry } from './game/config.js?v=living-meadow';
+import { drawSheep as renderSheep } from './render/sheep.js?v=living-meadow';
 import { drawCompanion } from './render/companions.js?v=clean-mouth';
 import { makeVegetation,drawVegetation,drawHayPile,drawRipples } from './render/details.js';
 import { drawInteraction } from './render/interactions.js?v=kneeling-milk';
 import { MeadowView } from './orbit.js';
 import { drawVisitor,drawHammock,visitorPose } from './visitor.js?v=forward-gait';
-import { drawPasture,trees,drawWindmill } from './pasture.js';
+import { drawPasture,trees,drawWindmill } from './pasture.js?v=living-meadow';
 const canvas=document.querySelector('#world'),c=canvas.getContext('2d');
 const $=id=>document.getElementById(id);
 let W,H,dpr,started=false,feeding=false,seated=false,hammocking=false,walkingToHammock=false,sunset=false,selected=null,feedCount=0,friends=new Set(),t=0,last=0,toastUntil=0,paused=false;
@@ -24,6 +31,9 @@ const view=new MeadowView();
 let following=true;
 const flock=new Flock(rnd),sheep=flock.animals,lambs=flock.lambs;
 const interaction=new Interactions(flock),companions=new Companions(),audioSystem=new MeadowAudio();
+const weather=new MeadowWeather(),bond=new SheepBond(),shelter=new WeatherShelter(),lambPlay=new LambPlay(rnd);
+let atmosphere=weather.snapshot(),environmentTimer=0;
+bond.apply(flock);
 const grass=makeVegetation();
 const particles=[];
 function notify(text){
@@ -74,7 +84,7 @@ function path(points,color){
   c.fill();
 }
 function background(){
-  drawPasture(c,W,H,t,sunset,view,project,ellipse,path);
+  drawPasture(c,W,H,t,sunset,view,project,ellipse,path,atmosphere);
   drawVegetation(c,grass,project,t,W,H);
   for(const pile of interaction.hayPiles)drawHayPile(c,project(pile.x,pile.z),pile);
   for(const a of sheep)if(a.state==='drinking'){const dx=CONFIG.pond.x-a.x,dz=CONFIG.pond.z-a.z,d=Math.hypot(dx,dz)||1;drawRipples(c,project(a.x+dx/d*.8,a.z+dz/d*.8,.03),t);}
@@ -109,6 +119,7 @@ function drawSheep(a){
   renderSheep(c,a,{
     project,time:t,width:W,height:H,player,feeding
   });
+  drawFriendBadge(c,project(a.x,a.z),a,t);
 }
 function drawMarker(){
   if(!marker)return;
@@ -122,6 +133,17 @@ function drawMarker(){
 }
 function update(dt){
   if(paused)return;
+  weather.tick();environmentTimer-=dt;
+  if(environmentTimer<=0){
+    atmosphere=weather.snapshot();environmentTimer=.5;sunset=atmosphere.dusk&&!atmosphere.night;
+    $('clock').textContent=atmosphere.text;
+    canvas.setAttribute('aria-label',`양들이 지내는 목장. ${atmosphere.preview?'감상용 ':atmosphere.live?'지역 날씨 ':''}${atmosphere.label}. 축사에서 쉬는 양 ${shelter.inside}마리. 뛰노는 새끼 양 ${lambPlay.groups.length*2}마리. 풀밭을 누르면 이동합니다.`);
+    $('weather-label').textContent=atmosphere.preview?`${atmosphere.label} · 감상용`:atmosphere.live?`${atmosphere.location} · ${atmosphere.label}`:'바람목장 · 지역 날씨 미연결';
+  }
+  if(shelter.updateWeather(dt,atmosphere.wet)){
+    if(shelter.active){interaction.cancel(view);interaction.mode='pet';interaction.supplyTrip=false;if(feeding)feed();notify('비와 눈을 피해 개들이 양들을 축사로 안내해요.');}
+    else notify('하늘이 개었어요. 양들이 차례로 풀밭에 나와요.');
+  }
   let dx=Number(keys.has('d')||keys.has('arrowright'))-Number(keys.has('a')||keys.has('arrowleft')),dz=Number(keys.has('w')||keys.has('arrowup'))-Number(keys.has('s')||keys.has('arrowdown'));
   player.walking=false;
   if(started&&!seated&&!hammocking&&interaction.active?.phase!=='playing'&&(dx||dz)){
@@ -149,16 +171,19 @@ function update(dt){
   interaction.tick(dt,{
     player,view,onMessage:notify,onMilk:onFed
   });
+  shelter.tick(dt,{flock,dogs:companions.dogs,yaw:view.yaw});
   flock.tick(dt,{
     player,feeding,yaw:view.yaw,hayPiles:interaction.hayPiles,
-    canTug:started&&!walkingToHammock&&!interaction.busy&&!seated&&!hammocking&&interaction.mode!=='milk',
+    canTug:started&&!shelter.active&&!walkingToHammock&&!interaction.busy&&!seated&&!hammocking&&interaction.mode!=='milk',
     onFed,onBaa:a=>audioSystem.baa(a,player,view.yaw),
     onTug:a=>{
       if(interaction.startTug(a,player,view))notify('장난꾸러기가 옷자락을 살짝 당겨요.');
     }
   });
+  bond.tick(dt,{flock,player,active:interaction.active,feeding,yaw:view.yaw,available:started&&!shelter.active&&!hammocking&&!seated&&!walkingToHammock,notify});
+  lambPlay.tick(dt,{flock,feeding,sheltering:shelter.active,yaw:view.yaw});
   companions.tick(dt,{
-    player,sheep,yaw:view.yaw
+    player,sheep,yaw:view.yaw,sheltering:shelter.active
   });
   updateCareUI();
   for(const p of particles){
@@ -168,6 +193,7 @@ function update(dt){
   while(particles.length&&particles[0].life<0)particles.shift();
 }
 function onFed(a){
+  bond.add(a,2);
   feedCount++;
   friends.add(a.name);
   $('fed-count').textContent=feedCount;
@@ -205,6 +231,7 @@ function render(){
       time:t,occupied:hammocking,sunset
     })
   });
+  layers.push({x:CONFIG.barn.x,z:CONFIG.barn.entrance.z,draw:()=>drawShelter(c,project(CONFIG.barn.x,CONFIG.barn.entrance.z),{inside:shelter.inside,total:sheep.length,wet:shelter.active,snow:atmosphere.kind==='snow',night:atmosphere.night,time:t})});
   if(started&&!hammocking)layers.push({
     x:player.x,z:player.z,draw:()=>drawVisitor(c,project(player.x,player.z),{
       time:t,walking:player.walking,seated,feeding,reaching:interaction.active?.kind==='pet'&&interaction.active.phase==='playing',milking:interaction.active?.kind==='milk'&&interaction.active.phase==='playing',lambSize:interaction.active?.animal.size,pose:interaction.active?.phase==='playing'?visitorPose(interaction.active.animal.x-player.x,interaction.active.animal.z-player.z,view.yaw):visitorPose(player.headingX??0,player.headingZ??1,view.yaw)
@@ -245,6 +272,7 @@ function render(){
     }
   }
   c.restore();
+  drawWeather(c,W,H,t,atmosphere);
   if(selected&&interaction.busy){
     const base=project(selected.x,selected.z,2.1*selected.size),p=base&&view.toScreen(base.x,base.y);
     if(p){
@@ -385,14 +413,6 @@ $('hammock').onclick=()=>{
     notify('해먹에서 일어났어요. 양들에게 다시 가볼까요?');
   }
 };
-$('time').onclick=()=>{
-  sunset=!sunset;
-  $('time-label').textContent=sunset?'노을':'오후';
-  $('time').querySelector('span').textContent=sunset?'☾':'☀';
-  $('time').setAttribute('aria-label',sunset?'오후로 바꾸기':'노을로 바꾸기');
-  $('clock').textContent=sunset?'오후 6:12':'오후 3:24';
-  notify(sunset?'하루 끝의 빛이 목장에 내려앉았어요.':'따뜻한 오후 햇살이 풀밭을 비춰요.');
-};
 function tapWorld(screenX,screenY){
   if(paused)return;
   if(!started){
@@ -408,6 +428,7 @@ function tapWorld(screenX,screenY){
     const p=a.screen;return p&&Math.abs(x-p.x)<p.w*.5&&y<p.y+8&&y>p.y-p.h;
   });
   if(hit){
+    if(shelter.active){notify('양들이 축사로 들어가 쉬고 있어요. 하늘이 개면 다시 만나요.');return;}
     if(hammocking||seated){
       notify('일어난 뒤 양과 교감할 수 있어요.');
       return;
@@ -559,6 +580,7 @@ function ensureSound(){
 // Entry starts sound. If a browser blocks it, the next normal tap retries it.
 addEventListener('pointerdown',()=>{if(started&&!audioSystem.enabled)ensureSound();},{capture:true});
 $('milk').onclick=()=>{
+  if(shelter.active){notify('새끼 양들이 축사에서 쉬고 있어요.');return;}
   cancelHammockWalk();
   if(hammocking||seated){
     notify('일어난 뒤 우유를 줄 수 있어요.');
@@ -602,3 +624,15 @@ $('care-cancel').onclick=()=>{
   selected=null;
   updateCareUI();
 };
+
+// Native modal panel is separate from simulation and responsive menu placement.
+if(typeof document.querySelectorAll==='function')setupMeadowPanel({
+  weather,bond,flock,getSelected:()=>selected,onMessage:notify,onPause:open=>{paused=open;keys.clear();if(!open){environmentTimer=0;bond.save();}},
+  onFind:animal=>{
+    if(!started)start();
+    if(shelter.active||animal.hiddenInBarn){notify('내 양도 축사에서 쉬고 있어요.');return;}
+    if(hammocking||seated){notify('자리에서 일어난 뒤 만나러 가요.');return;}
+    cancelHammockWalk();if(feeding)feed();selected=animal;interaction.mode='pet';keys.clear();notify(interaction.request('pet',animal,player,view).message);
+  }
+});
+addEventListener('pagehide',()=>bond.save());

@@ -1,6 +1,6 @@
 import {
   CONFIG,clamp,distance,keepDry,seededRandom
-} from './config.js';
+} from './config.js?v=living-meadow';
 const NAMES=['구름이','솜이','보리','몽실이','두부','우유','콩이','단추','포근이','밀크','달이','풀잎이'];
 const STATIONARY=new Set(['sleep','drinking','nursing','nurse-wait','hay-eat','pet','milk','tug']);
 export class Flock {
@@ -108,7 +108,7 @@ export class Flock {
     this.time+=dt;
     this.nextBaa-=dt;
     if(this.nextBaa<=0){
-      const near=this.animals.filter(a=>distance(a,player)<35&&!a.lock);
+      const near=this.animals.filter(a=>distance(a,player)<35&&!a.lock&&!a.hiddenInBarn);
       if(near.length)onBaa(near[Math.floor(this.random()*near.length)]);
       this.nextBaa=7+this.random()*12;
     }
@@ -123,6 +123,10 @@ export class Flock {
       if(a.lock){
         if(a.lock!=='tug'){a.walking=false;this.head(a,dt,true);}
         continue;
+      }
+      // External coordinators own these activities; never advance two behaviors at once.
+      if(a.state.startsWith('shelter')||(!feeding&&(a.state==='play'||a.state.startsWith('friend-')))){
+        this.head(a,dt,a.state.startsWith('friend-'));continue;
       }
       if(feeding&&a.cool===0){
         this.releasePair(a);

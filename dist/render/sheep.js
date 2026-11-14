@@ -1,6 +1,7 @@
 export function drawSheep(c,a,{
   project,time:t,width:W,height:H,player,feeding=false
 }){
+  if(a.hiddenInBarn){a.screen=null;return;}
   const ellipse=(x,y,rx,ry,color)=>{
     c.fillStyle=color;
     c.beginPath();
@@ -13,14 +14,16 @@ export function drawSheep(c,a,{
   if(!p||p.x<-250||p.x>W+250||p.y>H+300)return;
   const s=p.s*a.size;
   a.screen={
-    x:p.x,y:p.y,w:s*2.5,h:s*1.9
+    x:p.x,y:p.y-(a.hop||0)*s,w:s*2.5,h:s*1.9
   };
   c.save();
   c.translate(p.x,p.y);
   c.scale(s,s);
   const step=a.walking?Math.sin(t*8+a.phase)*.10:0;
   const chew=a.bite>0?Math.sin(t*18)*.035:0;
-  ellipse(0,.01,1,.19,'#253c292e');if(a.isLamb&&((a.state==='milk'&&a.careContact)||a.state==='nursing'))ellipse(-.94+Math.sin(t*10)*.07,-.85,.15,.085,'#f6efda');
+  ellipse(0,.01,1,.19,'#253c292e');
+  c.translate(0,-(a.hop||0));
+  if(a.isLamb&&((a.state==='milk'&&a.careContact)||a.state==='nursing'))ellipse(-.94+Math.sin(t*10)*.07,-.85,.15,.085,'#f6efda');
   if(resting)c.translate(0,.43);
   if(a.state==='nursing')c.rotate(Math.sin(t*5)*.018);
   // Four jointed legs, soft hoof highlights, fleece silhouette and individual curls.
@@ -72,7 +75,7 @@ export function drawSheep(c,a,{
     c.fillRect(.25,-.33,.035,.12);
   }
   c.save();
-  c.translate(headX+(happy?Math.sin(t*2)*.04:0),headY+chew);
+  c.translate(headX+(happy?Math.sin(t*2)*.04:0),headY+chew+(a.begging?Math.sin(t*2)*.035:0));
   if(!toward)c.rotate(-headX/.83*.13);
   ellipse(-.3,-.12,.24,.09,'#b3aa91');
   ellipse(.3,-.12,.24,.09,'#b3aa91');

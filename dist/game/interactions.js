@@ -1,6 +1,6 @@
 import {
   CONFIG,distance,keepDry
-} from './config.js';
+} from './config.js?v=living-meadow';
 export class Interactions {
   constructor(flock){
     this.flock=flock;

@@ -71,3 +71,14 @@ UI 수정 시에는 390×760과 320×568의 실제 iframe viewport 또는 휴대
 소리는 옵션 없이 목장 입장 버튼의 사용자 동작에서 자동 시작합니다. 별도 소리 버튼은 제거했으며 기기 볼륨을 사용합니다. MeadowAudio.start()는 멱등성이 있어 반복 호출해도 꺼지거나 중복 재생되지 않습니다. 브라우저가 차단할 때는 다음 정상 터치에서만 재시도합니다.
 
 해먹: CONFIG.hammock을 일반 player.tx/tz 보행 목표로 사용합니다. 도착 거리 .08 이내에서만 눕고, 일어날 때도 현재 위치를 유지합니다. 다른 이동·돌봄 명령이나 취소 버튼은 cancelHammockWalk로 예약된 눕기를 해제합니다.
+
+
+## Living meadow (12–16)
+- `game/weather.js`: opt-in approximate location (rounded to .02°) or city lookup via Open-Meteo. Restores only chosen region; refreshes every 15 minutes, retries offline after 2 minutes, marks data older than 1 hour unavailable. Generation tokens reject older location responses. Actual region timezone and day/night; no fake live weather. Preview weather is explicit and never persisted.
+- `game/bond.js`: per-browser `meadow.bond.v1` stores stable adult IDs, names and care points. Care contact earns points; feeding earns points; no absence penalty. At 6 points, a regular sheep recognizes the visitor and alternates following with grazing. Naming can choose the regular sheep before familiarity. No shared world, account, cross-device sync or cloud persistence is claimed. Save throttled to 2 seconds, on panel close and pagehide; blocked storage falls back to current visit.
+- `game/shelter.js`: rain/snow 3-second entry and 20-second clearing debounce. Existing care cancelled on entry; sheep stop normal feeding/play/follow logic, walk via dry routes to barn entrance, become hidden only on arrival. Occupancy count is visible; exit is staggered with continuous movement. `companions.js` assigns dogs outside sheep to herd; both dogs participate.
+- `game/navigation.js`: dry-route visibility graph around pond for shelter trips. Future construction/pathfinding should extend this module, not put new movement rules in renderers.
+- `game/lamb-play.js`: max two pairs, bounded hops with ground shadow, lock/feed/weather interrupts end both partners cleanly. Flock skips externally coordinated states to prevent double movement.
+- `meadow-panel.js`: weather and naming UI in one native modal; mobile reuses actual buttons in existing drawer. `render/weather.js`, `render/shelter.js` own visuals only. Cached dependencies use living-meadow query tag.
+- Weather data: Open-Meteo attribution in panel. Public API is used for this noncommercial prototype; before paid or large-scale launch, select a suitable service plan and add regional response caching. No per-user API secrets shipped in static client.
+- Tests: `tests/living-meadow.mjs` covers network/time/storage failures and races, independent visitors, all 62 sheep taking shelter then leaving, dog movement, play interruption. Existing movement and audio regression suite remains required.
