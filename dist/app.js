@@ -1,6 +1,6 @@
 import {MeadowView} from './orbit.js';
 import {drawVisitor,drawHammock} from './visitor.js';
-import {drawPasture,trees,cows,drawCow,drawWindmill} from './pasture.js';
+import {drawPasture,trees,drawWindmill} from './pasture.js';
 const canvas=document.querySelector('#world'),c=canvas.getContext('2d');
 const $=id=>document.getElementById(id);let W,H,dpr,started=false,feeding=false,seated=false,hammocking=false,sunset=false,selected=null,feedCount=0,friends=new Set(),t=0,last=0,toastUntil=0,paused=false;
 let seed=1731;const rnd=()=>((seed=seed*16807%2147483647)-1)/2147483646,range=(a,b)=>a+rnd()*(b-a),clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -52,7 +52,6 @@ function update(dt){if(paused)return;let dx=Number(keys.has('d')||keys.has('arro
  }for(const p of particles){p.life-=dt;p.y+=dt*p.v;}while(particles.length&&particles[0].life<0)particles.shift();if(soundOn&&rnd()<dt*.025)baa(.12);
 }
 function render(){centerView();c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,W,H);c.fillStyle=sunset?'#586d41':'#5c813f';c.fillRect(0,0,W,H);c.save();background();drawMarker();const layers=sheep.map(a=>({x:a.x,z:a.z,draw:()=>drawSheep(a)}));layers.push({x:-6,z:7,draw:()=>drawHammock(c,project(-6,7),{time:t,occupied:hammocking,sunset})});if(started&&!hammocking)layers.push({x:player.x,z:player.z,draw:()=>drawVisitor(c,project(player.x,player.z),{time:t,walking:player.walking,seated,feeding,facing:player.facing})});for(const a of trees)layers.push({x:a.x,z:a.z,draw:()=>{const p=project(a.x,a.z);if(p&&p.x>-300&&p.x<W+300)tree(p.x,p.y,p.s*a.size/45);}});
- for(const a of cows)layers.push({x:a.x,z:a.z,draw:()=>{const p=project(a.x,a.z);if(p&&p.x>-200&&p.x<W+200)drawCow(c,{...p,s:p.s*a.size},t,a.phase);}});
  layers.push({x:24,z:48,draw:()=>{const p=project(24,48);if(p)barn(p.x,p.y,p.s/8);}});
  layers.push({x:14,z:55,draw:()=>drawWindmill(c,project(14,55),t)});
  for(let i=0;i<4;i++)layers.push({x:20+i*1.2,z:45,draw:()=>{const p=project(20+i*1.2,45);if(p)ellipse(p.x,p.y-p.s*.4,p.s*.55,p.s*.5,'#d2bb74');}});

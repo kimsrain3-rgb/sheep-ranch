@@ -1,7 +1,7 @@
 // Distant sheep now belong to the same fifty-animal interactive flock.
 let seed=491;const random=()=>((seed=seed*16807%2147483647)-1)/2147483646;
 const distantSheep=Array.from({length:0},(_,i)=>({x:.10+random()*.55,y:.405+random()*.07,s:5+random()*5,phase:random()*6.28,dir:i%3?1:-1}));
-const cows=Array.from({length:9},(_,i)=>({x:.64+random()*.31,y:.485+random()*.075,s:12+random()*8,phase:random()*6.28,dir:i%2?1:-1})).sort((a,b)=>a.y-b.y);
+const cows=Array.from({length:0},(_,i)=>({x:.64+random()*.31,y:.485+random()*.075,s:12+random()*8,phase:random()*6.28,dir:i%2?1:-1})).sort((a,b)=>a.y-b.y);
 const flowers=Array.from({length:240},()=>({x:random(),y:random(),h:random(),p:random()*6.28}));
 const treeDots=Array.from({length:35},()=>({x:(random()-.5)*1.1,y:(random()-.5)*.8,r:.12+random()*.14}));
 export function drawScenery(c,W,H,t,sunset,camX){
