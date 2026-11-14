@@ -9,16 +9,16 @@ import {drawWeather,drawFriendBadge} from './render/weather.js?v=living-meadow';
 import {setupMeadowPanel} from './meadow-panel.js?v=living-meadow';
 import { isCompactViewport } from './game/layout.js';
 import { Flock } from './game/flock.js?v=living-meadow';
-import { Interactions } from './game/interactions.js?v=living-meadow';
+import { Interactions } from './game/interactions.js?v=side-pet';
 import { Companions } from './game/companions.js?v=shepherd-staff';
 import { MeadowAudio } from './game/audio.js?v=recorded-sheep';
 import { CONFIG,keepDry } from './game/config.js?v=living-meadow';
 import { drawSheep as renderSheep } from './render/sheep.js?v=living-meadow';
 import { drawCompanion } from './render/companions.js?v=clean-mouth';
 import { makeVegetation,drawVegetation,drawHayPile,drawRipples } from './render/details.js';
-import { drawInteraction } from './render/interactions.js?v=kneeling-milk';
+import { drawInteraction } from './render/interactions.js?v=side-pet';
 import { MeadowView } from './orbit.js';
-import { drawVisitor,drawHammock,visitorPose } from './visitor.js?v=forward-gait';
+import { drawVisitor,drawHammock,visitorPose } from './visitor.js?v=side-pet';
 import { drawPasture,trees,drawWindmill } from './pasture.js?v=living-meadow';
 const canvas=document.querySelector('#world'),c=canvas.getContext('2d');
 const $=id=>document.getElementById(id);
@@ -172,7 +172,7 @@ function update(dt){
   if(walkingToHammock&&Math.hypot(player.x-CONFIG.hammock.x,player.z-CONFIG.hammock.z)<=.08)lieInHammock();
   // All painted scenery and world objects share one camera transform.
   interaction.tick(dt,{
-    player,view,onMessage:notify,onMilk:onFed
+    player,view,width:W,height:H,onMessage:notify,onMilk:onFed
   });
   shelter.tick(dt,{flock,dogs:companions.dogs,yaw:view.yaw});
   flock.tick(dt,{
@@ -227,8 +227,9 @@ function render(){
   c.save();
   background();
   drawMarker();
+  const petFocus=interaction.active?.kind==='pet'&&interaction.active.phase==='playing'?interaction.active.animal:null;
   const layers=sheep.map(a=>({
-    x:a.x,z:a.z,draw:()=>drawSheep(a)
+    x:a.x,z:a.z,actor:true,focused:a===petFocus,draw:()=>drawSheep(a)
   }));
   layers.push({
     x:CONFIG.hammock.x,z:CONFIG.hammock.z,draw:()=>drawHammock(c,project(CONFIG.hammock.x,CONFIG.hammock.z),{
@@ -237,8 +238,8 @@ function render(){
   });
   layers.push({x:CONFIG.barn.x,z:CONFIG.barn.entrance.z,draw:()=>drawShelter(c,project(CONFIG.barn.x,CONFIG.barn.entrance.z),{inside:shelter.inside,total:sheep.length,wet:shelter.active,snow:atmosphere.kind==='snow',night:atmosphere.night,time:t})});
   if(started&&!hammocking)layers.push({
-    x:player.x,z:player.z,draw:()=>drawVisitor(c,project(player.x,player.z),{
-      time:t,walking:player.walking,seated,feeding,reaching:interaction.active?.kind==='pet'&&interaction.active.phase==='playing',milking:interaction.active?.kind==='milk'&&interaction.active.phase==='playing',lambSize:interaction.active?.animal.size,pose:interaction.active?.phase==='playing'?visitorPose(interaction.active.animal.x-player.x,interaction.active.animal.z-player.z,view.yaw):visitorPose(player.headingX??0,player.headingZ??1,view.yaw)
+    x:player.x,z:player.z,focused:!!petFocus,draw:()=>drawVisitor(c,project(player.x,player.z),{
+      time:t,walking:player.walking,seated,feeding,petting:interaction.active?.kind==='pet'&&interaction.active.phase==='playing',milking:interaction.active?.kind==='milk'&&interaction.active.phase==='playing',lambSize:interaction.active?.animal.size,pose:interaction.active?.phase==='playing'?visitorPose(interaction.active.animal.x-player.x,interaction.active.animal.z-player.z,view.yaw):visitorPose(player.headingX??0,player.headingZ??1,view.yaw)
     })
   });
   for(const a of trees)layers.push({
@@ -259,14 +260,22 @@ function render(){
       const p=project(20+i*1.2,45);if(p)ellipse(p.x,p.y-p.s*.4,p.s*.55,p.s*.5,'#d2bb74');
     }
   });
-  layers.push({x:shepherd.x,z:shepherd.z,draw:()=>drawShepherdBoy(c,project(shepherd.x,shepherd.z),shepherd,view.yaw)});
+  layers.push({x:shepherd.x,z:shepherd.z,actor:true,draw:()=>drawShepherdBoy(c,project(shepherd.x,shepherd.z),shepherd,view.yaw)});
   for(const a of companions.animals)layers.push({
-    x:a.x,z:a.z,draw:()=>drawCompanion(c,project(a.x,a.z),a,t)
+    x:a.x,z:a.z,actor:true,draw:()=>drawCompanion(c,project(a.x,a.z),a,t)
   });
   layers.forEach(a=>a.depth=project(a.x??0,a.z)?.depth??-1);
-  layers.sort((a,b)=>b.depth-a.depth).forEach(a=>{
-    if(a.depth>0)a.draw();
-  });
+  layers.sort((a,b)=>b.depth-a.depth);
+  const focalPoints=petFocus?[project(player.x,player.z),project(petFocus.x,petFocus.z)].filter(Boolean):[];
+  const focusArea=focalPoints.length===2?{left:Math.min(...focalPoints.map(p=>p.x-p.s*1.5)),right:Math.max(...focalPoints.map(p=>p.x+p.s*1.5)),top:Math.min(...focalPoints.map(p=>p.y-p.s*2.6)),bottom:Math.max(...focalPoints.map(p=>p.y+p.s*.25))}:null;
+  // During the closeup, passersby recede and cannot hide the touching pair.
+  for(const layer of layers){
+    if(layer.depth<=0||layer.focused)continue;
+    const p=focusArea&&layer.actor?project(layer.x,layer.z):null;
+    const recede=p&&p.x+p.s*1.5>focusArea.left&&p.x-p.s*1.5<focusArea.right&&p.y>focusArea.top&&p.y-p.s*2.5<focusArea.bottom;
+    c.save();if(recede)c.globalAlpha=.22;layer.draw();c.restore();
+  }
+  for(const layer of layers)if(layer.focused&&layer.depth>0)layer.draw();
   drawInteraction(c,interaction,player,project,t);
   for(const p of particles){
     const v=project(p.x,p.z,p.y);

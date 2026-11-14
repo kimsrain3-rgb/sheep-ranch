@@ -1,3 +1,4 @@
+import {petStand,petCameraYaw,petZoom,angleDelta} from './petting.js?v=side-pet';
 import {
   CONFIG,distance,keepDry
 } from './config.js?v=living-meadow';
@@ -28,9 +29,13 @@ export class Interactions {
         x:player.x,z:player.z
       }
     };
-    const destination={
+    let destination={
       x:animal.x-1.15,z:animal.z-.35
     };
+    if(kind==='pet'){
+      destination=petStand(animal,player);
+      this.active.petYaw=petCameraYaw(animal,destination,view.yaw);
+    }
     if(kind==='milk'){
       // Stand close on either dry side of the lamb, then kneel beside it.
       const left={x:animal.x-.82,z:animal.z},right={x:animal.x+.82,z:animal.z};
@@ -42,7 +47,7 @@ export class Interactions {
     player.tx=destination.x;
     player.tz=destination.z;
     return {
-      ok:true,message:kind==='milk'?'새끼 양에게 다가가 우유를 줄게요.':kind==='tug'?'장난꾸러기가 옷자락을 살짝 잡았어요.':'양에게 다가가 살살 쓰다듬을게요.'
+      ok:true,message:kind==='milk'?'새끼 양에게 다가가 우유를 줄게요.':kind==='tug'?'장난꾸러기가 옷자락을 살짝 잡았어요.':'양의 옆으로 다가가 살살 쓰다듬을게요.'
     };
   }
   startTug(animal,player,view){
@@ -92,7 +97,7 @@ export class Interactions {
     return true;
   }
   tick(dt,{
-    player,view,onMessage=()=>{
+    player,view,width=0,height=0,onMessage=()=>{
     },onMilk=()=>{
     }
   }){
@@ -124,8 +129,14 @@ export class Interactions {
       }
       return;
     }
+    if(active.kind==='pet'){
+      // Align the camera while approaching; touch begins only after a side view is ready.
+      const blend=1-Math.exp(-dt*6);
+      view.yaw+=angleDelta(active.petYaw,view.yaw)*blend;
+    }
     if(active.phase==='approach'){
-      if(Math.hypot(player.x-player.tx,player.z-player.tz)<.085){
+      const aligned=active.kind!=='pet'||Math.abs(angleDelta(active.petYaw,view.yaw))<.015;
+      if(Math.hypot(player.x-player.tx,player.z-player.tz)<.085&&aligned){
         active.phase='playing';
         active.animal.careContact=true;
         active.time=0;
@@ -152,8 +163,8 @@ export class Interactions {
         return;
       }
       const blend=1-Math.exp(-dt*5);
-      view.zoom+=(5.2-view.zoom)*blend;
-      view.yaw+=(0-view.yaw)*blend;
+      view.zoom+=((active.kind==='pet'?petZoom(width,height):5.2)-view.zoom)*blend;
+      if(active.kind!=='pet')view.yaw+=(0-view.yaw)*blend;
       view.pitch+=(.28-view.pitch)*blend;
     }
   }

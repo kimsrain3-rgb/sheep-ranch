@@ -3,6 +3,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node tests/orbit.cjs && node tests/visitor.cjs && node tests/camera.cjs && node tests/flock.cjs && node tests/behaviors.mjs && node tests/tug.mjs && node tests/milk-pose.mjs && node tests/gait.mjs && node tests/contact-eyes.mjs && node tests/audio.mjs && node tests/layout.mjs && node tests/living-meadow.mjs && node tests/shepherd.mjs"
+    "test": "node tests/orbit.cjs && node tests/visitor.cjs && node tests/camera.cjs && node tests/flock.cjs && node tests/behaviors.mjs && node tests/tug.mjs && node tests/milk-pose.mjs && node tests/gait.mjs && node tests/contact-eyes.mjs && node tests/audio.mjs && node tests/layout.mjs && node tests/living-meadow.mjs && node tests/shepherd.mjs && node tests/petting.mjs"
   }
 }

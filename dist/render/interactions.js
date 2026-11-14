@@ -1,4 +1,5 @@
-import {drawMilkBottle} from './milk-pose.js';
+import {petArmPose} from './pet-pose.js?v=side-pet';
+import {drawMilkBottle} from './milk-pose.js?v=side-pet';
 export function drawInteraction(c,controller,player,project,time){
   const active=controller.active,pp=project(player.x,player.z);
   if(!pp)return;
@@ -29,19 +30,10 @@ export function drawInteraction(c,controller,player,project,time){
   c.save();
   c.lineCap='round';
   if(active.kind==='pet'){
-    const hand={
-      x:head.x+Math.sin(time*3)*ap.s*a.size*.12,y:head.y-ap.s*a.size*.23
-    };
-    c.strokeStyle='#d5ae5e';
-    c.lineWidth=pp.s*.12;
-    c.beginPath();
-    c.moveTo(shoulder.x,shoulder.y);
-    c.quadraticCurveTo((shoulder.x+hand.x)/2,shoulder.y-.1*pp.s,hand.x,hand.y);
-    c.stroke();
-    c.fillStyle='#dfba95';
-    c.beginPath();
-    c.ellipse(hand.x,hand.y,pp.s*.1,pp.s*.065,-.2,0,Math.PI*2);
-    c.fill();
+    const arm=petArmPose(pp,ap,a,time);
+    c.strokeStyle='#d9b569';c.lineWidth=pp.s*.12;
+    c.beginPath();c.moveTo(arm.shoulder.x,arm.shoulder.y);c.lineTo(arm.elbow.x,arm.elbow.y);c.lineTo(arm.hand.x,arm.hand.y);c.stroke();
+    c.fillStyle='#dfba95';c.beginPath();c.ellipse(arm.hand.x,arm.hand.y,pp.s*.09,pp.s*.065,-.2,0,Math.PI*2);c.fill();
   }
   else if(active.kind==='milk'){
     drawMilkBottle(c,pp,{pose:side>0?'right':'left',lambSize:a.size});

@@ -1,12 +1,12 @@
 import {gaitLegs,armSwing} from './game/gait.js';
-import {drawKneelingVisitor} from './render/milk-pose.js';
+import {drawKneelingVisitor} from './render/milk-pose.js?v=side-pet';
 // World heading is resolved relative to the orbit camera, including while standing.
 export function visitorPose(dx=0,dz=1,yaw=0){
  const side=dx*Math.cos(yaw)-dz*Math.sin(yaw),away=dx*Math.sin(yaw)+dz*Math.cos(yaw);
  return Math.abs(side)>Math.abs(away)*1.15?(side>0?'right':'left'):(away>=0?'back':'front');
 }
-export function drawVisitor(c,p,{time=0,walking=false,seated=false,feeding=false,reaching=false,milking=false,lambSize=.33,pose='back'}={}){
- if(milking)return drawKneelingVisitor(c,p,{pose,lambSize});
+export function drawVisitor(c,p,{time=0,walking=false,seated=false,feeding=false,reaching=false,petting=false,milking=false,lambSize=.33,pose='back'}={}){
+ if(milking||(petting&&lambSize<.5))return drawKneelingVisitor(c,p,{pose,lambSize,petting});
  if(!p)return;c.save();c.translate(p.x,p.y);c.scale(p.s,p.s);
  const ell=(x,y,rx,ry,col)=>{c.fillStyle=col;c.beginPath();c.ellipse(x,y,rx,ry,0,0,Math.PI*2);c.fill();};
  const line=(v,col,w)=>{c.strokeStyle=col;c.lineWidth=w;c.lineCap='round';c.beginPath();v.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.stroke();};
@@ -22,9 +22,11 @@ export function drawVisitor(c,p,{time=0,walking=false,seated=false,feeding=false
  if(!side&&!front){rect(-.24,torso-.16,.48,.55,.09,'#69816a');line([[-.16,torso-.14],[-.16,torso+.35]],'#839783',.025);line([[.16,torso-.14],[.16,torso+.35]],'#839783',.025);line([[-.16,torso+.12],[.17,torso+.12]],'#506b55',.022);}
  if(front){line([[0,torso-.25],[0,torso+.36]],'#b18d43',.023);for(const y of [-.12,.06,.24])ell(.04,torso+y,.025,.025,'#8d783d');line([[-.29,torso-.28],[-.2,torso+.32]],'#7a8c62',.06);line([[.29,torso-.28],[.2,torso+.32]],'#7a8c62',.06);}
  if(!side)line([[-.29,torso-.16],[-.43,torso+.15+Math.abs(swing)],[-.39,torso+.37]],'#c39c51',.14);
+ if(!petting){
  const armX=side?.1:.29;
  line(feeding||reaching?[[armX,torso-.14],[.48,torso-.28],[.68,torso-.25]]:[[armX,torso-.16],[side?.14+swing*.8:.44,torso+.17-Math.abs(swing)],[side?.12+swing*1.8:.4,torso+.37]],'#d9b569',.14);
  ell(feeding||reaching?.7:side?.12+swing*1.8:.4,feeding||reaching?torso-.25:torso+.39,.09,.11,'#d9b393');
+ }
  ell(0,torso-.58,.29,.32,'#6d5744');
  if(front){ell(0,torso-.55,.24,.26,'#dfbb96');ell(-.255,torso-.55,.055,.09,'#d0a47f');ell(.255,torso-.55,.055,.09,'#d0a47f');for(const x of [-.09,.09])ell(x,torso-.6,.027,.035,'#3e4134');line([[-.07,torso-.42],[0,torso-.39],[.07,torso-.42]],'#946c50',.018);}
  else if(side){ell(.12,torso-.55,.17,.25,'#dfbb96');ell(.28,torso-.54,.075,.065,'#d9ad88');ell(.19,torso-.61,.026,.033,'#3e4134');ell(-.01,torso-.54,.055,.08,'#cc9c79');}

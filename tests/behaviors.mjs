@@ -21,7 +21,7 @@ assert.equal(mother.nursingWith,baby);flock.lock(baby,'pet');
 assert.equal(mother.nursingWith,null);assert.equal(mother.state,'roam');flock.unlock(baby);
 // Close-up finish and cancellation both restore exact previous camera settings.
 let result=care.request('pet',flock.adults[0],player,view);assert.equal(result.ok,true);
-Object.assign(player,{x:player.tx,z:player.tz});care.tick(.1,{player,view});
+Object.assign(player,{x:player.tx,z:player.tz});for(let i=0;i<50&&care.active.phase!=='playing';i++)care.tick(.05,{player,view});
 assert.equal(care.active.phase,'playing');care.tick(1,{player,view});assert.ok(view.zoom>1.65);
 care.tick(6,{player,view});assert.equal(care.active,null);assert.equal(view.zoom,1.65);assert.equal(view.yaw,1.2);assert.equal(flock.adults[0].lock,null);
 assert.equal(care.request('milk',flock.adults[0],player,view).ok,false);

@@ -9,7 +9,7 @@ function openEyes(animal){
 const f=new Flock(),care=new Interactions(f),sheep=f.adults[0],player={x:-15,z:0,tx:-15,tz:0},view={zoom:1.65,yaw:0,pitch:.23};
 care.request('pet',sheep,player,view);
 assert.equal(sheep.careContact,false);assert.equal(openEyes(sheep),2,'clicking from far away leaves both eyes open');
-Object.assign(player,{x:sheep.x-1.6,z:sheep.z});care.tick(.1,{player,view});
+Object.assign(player,{x:player.tx-.3,z:player.tz});care.tick(.1,{player,view});
 assert.equal(care.active.phase,'approach');assert.equal(openEyes(sheep),2,'proximity alone does not close the eyes');
 Object.assign(player,{x:player.tx,z:player.tz});care.tick(.1,{player,view});
 assert.equal(sheep.careContact,true);assert.equal(openEyes(sheep),0,'eyes close when the touching animation actually starts');
