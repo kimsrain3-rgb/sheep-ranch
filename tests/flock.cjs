@@ -7,8 +7,7 @@ const ctx=vm.createContext({console,Math,Map,Set,Object,innerWidth:390,innerHeig
 const modules=await Promise.all(['flock','interactions','companions','audio','config','layout','weather','bond','shelter','lamb-play','shepherd','barn'].map(name=>import('../dist/game/'+name+'.js')));
 for(const module of modules)Object.assign(ctx,module);Object.assign(ctx,await import('../dist/render/details.js'));
 const source=fs.readFileSync('dist/orbit.js','utf8').replace('export class','class')+'\n'+fs.readFileSync('dist/app.js','utf8').replace(/^import[\s\S]*?;\n/gm,'');
-vm.runInContext(source,ctx);vm.runInContext('start()',ctx);
-vm.runInContext("weather.snapshot=()=>({text:'오후 2:00',label:'맑음',kind:'clear',night:false,wet:false,dusk:false,cloud:.1,live:false,preview:false});atmosphere=weather.snapshot();environmentTimer=Infinity",ctx);
+vm.runInContext(source,ctx);vm.runInContext('start();atmosphere={...atmosphere,night:false,wet:false};environmentTimer=Infinity',ctx);
 const read=expression=>vm.runInContext(expression,ctx),event=(k,id,x,y)=>listeners.get(k)({pointerId:id,button:0,clientX:x,clientY:y});
 vm.runInContext('player.x=player.tx=0;player.z=player.tz=0;feed()',ctx);
 const slots=read('sheep.map(a=>a.feedSlot).join(",")');
