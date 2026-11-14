@@ -3,7 +3,7 @@ import { Flock } from './game/flock.js?v=touch-eyes';
 import { Interactions } from './game/interactions.js?v=touch-eyes';
 import { Companions } from './game/companions.js';
 import { MeadowAudio } from './game/audio.js?v=auto-sound';
-import { CONFIG,keepDry } from './game/config.js';
+import { CONFIG,keepDry } from './game/config.js?v=walk-to-hammock';
 import { drawSheep as renderSheep } from './render/sheep.js?v=touch-eyes';
 import { drawCompanion } from './render/companions.js?v=clean-mouth';
 import { makeVegetation,drawVegetation,drawHayPile,drawRipples } from './render/details.js';
@@ -13,7 +13,7 @@ import { drawVisitor,drawHammock,visitorPose } from './visitor.js?v=forward-gait
 import { drawPasture,trees,drawWindmill } from './pasture.js';
 const canvas=document.querySelector('#world'),c=canvas.getContext('2d');
 const $=id=>document.getElementById(id);
-let W,H,dpr,started=false,feeding=false,seated=false,hammocking=false,sunset=false,selected=null,feedCount=0,friends=new Set(),t=0,last=0,toastUntil=0,paused=false;
+let W,H,dpr,started=false,feeding=false,seated=false,hammocking=false,walkingToHammock=false,sunset=false,selected=null,feedCount=0,friends=new Set(),t=0,last=0,toastUntil=0,paused=false;
 let seed=1731;
 const rnd=()=>((seed=seed*16807%2147483647)-1)/2147483646,clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const player={
@@ -144,13 +144,14 @@ function update(dt){
     }
     else marker=null;
   }
+  if(walkingToHammock&&Math.hypot(player.x-CONFIG.hammock.x,player.z-CONFIG.hammock.z)<=.08)lieInHammock();
   // All painted scenery and world objects share one camera transform.
   interaction.tick(dt,{
     player,view,onMessage:notify,onMilk:onFed
   });
   flock.tick(dt,{
     player,feeding,yaw:view.yaw,hayPiles:interaction.hayPiles,
-    canTug:started&&!interaction.busy&&!seated&&!hammocking&&interaction.mode!=='milk',
+    canTug:started&&!walkingToHammock&&!interaction.busy&&!seated&&!hammocking&&interaction.mode!=='milk',
     onFed,onBaa:a=>audioSystem.baa(a,player,view.yaw),
     onTug:a=>{
       if(interaction.startTug(a,player,view))notify('장난꾸러기가 옷자락을 살짝 당겨요.');
@@ -174,8 +175,8 @@ function onFed(a){
 }
 function updateCareUI(){
   updateViewLabel();
-  $('care-cancel').hidden=!interaction.busy&&interaction.mode!=='milk'&&!interaction.supplyTrip;
-  $('care-cancel').textContent=interaction.busy?'교감 마치기':interaction.supplyTrip?'창고 가기 취소':'우유 주기 마치기';
+  $('care-cancel').hidden=!walkingToHammock&&!interaction.busy&&interaction.mode!=='milk'&&!interaction.supplyTrip;
+  $('care-cancel').textContent=walkingToHammock?'해먹 가기 취소':interaction.busy?'교감 마치기':interaction.supplyTrip?'창고 가기 취소':'우유 주기 마치기';
   if(interaction.carrying){
     $('feed').querySelector('strong').textContent='건초 내려놓기';
     $('feed').disabled=hammocking;
@@ -200,7 +201,7 @@ function render(){
     x:a.x,z:a.z,draw:()=>drawSheep(a)
   }));
   layers.push({
-    x:-6,z:7,draw:()=>drawHammock(c,project(-6,7),{
+    x:CONFIG.hammock.x,z:CONFIG.hammock.z,draw:()=>drawHammock(c,project(CONFIG.hammock.x,CONFIG.hammock.z),{
       time:t,occupied:hammocking,sunset
     })
   });
@@ -289,6 +290,7 @@ function start(){
 }
 $('start').onclick=start;
 function feed(){
+  cancelHammockWalk();
   if(interaction.carrying){
     if(interaction.dropHay(player))notify('건초를 펼쳐 놓았어요. 양들이 찾아올 거예요.');
     else notify('놓아둔 건초를 양들이 더 먹은 뒤에 내려놓을 수 있어요.');
@@ -313,6 +315,7 @@ function feed(){
 $('feed').onclick=feed;
 $('sit').onclick=()=>{
   if(hammocking)return;
+  cancelHammockWalk();
   interaction.cancel(view);
   interaction.mode='pet';
   interaction.supplyTrip=false;
@@ -325,36 +328,56 @@ $('sit').onclick=()=>{
   marker=null;
   notify(seated?'풀밭에 앉았어요. 잠시 양들과 같은 속도로 쉬어가요.':'다시 걸어볼까요?');
 };
-let beforeHammock=null;
+// Rest uses the same walking target and gait as normal movement.
+function cancelHammockWalk(){
+  if(!walkingToHammock)return;
+  walkingToHammock=false;
+  player.tx=player.x;
+  player.tz=player.z;
+  marker=null;
+  $('hammock').querySelector('span:last-child').textContent='해먹에서 쉬기';
+  $('move-hint').textContent='짧게 눌러 걷기 · 밀어서 둘러보기';
+}
+function lieInHammock(){
+  walkingToHammock=false;
+  hammocking=true;
+  player.walking=false;
+  marker=null;
+  $('feed').disabled=true;
+  $('sit').disabled=true;
+  $('hammock').querySelector('span:last-child').textContent='해먹에서 일어나기';
+  $('move-hint').textContent='나무 그늘에서 흔들흔들';
+  notify('해먹에 누웠어요. 바람과 양떼를 바라보며 쉬어가요.');
+}
 $('hammock').onclick=()=>{
   if(!started)start();
+  if(walkingToHammock){
+    cancelHammockWalk();
+    notify('해먹으로 가던 발걸음을 멈췄어요.');
+    return;
+  }
   interaction.cancel(view);
   interaction.mode='pet';
   interaction.supplyTrip=false;
   keys.clear();
-  marker=null;
   selected=null;
   if(!hammocking){
-    beforeHammock={
-      x:player.x,z:player.z
-    };
     if(feeding)feed();
-    hammocking=true;
     seated=false;
-    player.x=player.tx=-6;
-    player.z=player.tz=7;
-    player.walking=false;
-    $('feed').disabled=true;
-    $('sit').disabled=true;
     $('sit').querySelector('span:last-child').textContent='언덕에 앉기';
-    $('hammock').querySelector('span:last-child').textContent='해먹에서 일어나기';
-    $('move-hint').textContent='나무 그늘에서 흔들흔들';
-    notify('해먹에 누웠어요. 바람과 양떼를 바라보며 쉬어가요.');
+    walkingToHammock=true;
+    player.tx=CONFIG.hammock.x;
+    player.tz=CONFIG.hammock.z;
+    marker={...CONFIG.hammock};
+    $('hammock').querySelector('span:last-child').textContent='해먹 가기 취소';
+    $('move-hint').textContent='해먹으로 걸어가는 중';
+    notify('나무 그늘의 해먹으로 걸어가요.');
   }
   else{
     hammocking=false;
-    player.x=player.tx=beforeHammock?.x??-6;
-    player.z=player.tz=beforeHammock?.z??5;
+    // Stand at the hammock instead of returning to a remembered distant spot.
+    player.tx=player.x;
+    player.tz=player.z;
     $('feed').disabled=false;
     $('sit').disabled=false;
     $('hammock').querySelector('span:last-child').textContent='해먹에서 쉬기';
@@ -376,6 +399,7 @@ function tapWorld(screenX,screenY){
     start();
     return;
   }
+  cancelHammockWalk();
   const {
     x,y
   }
@@ -498,6 +522,7 @@ addEventListener('blur',()=>{
 addEventListener('keydown',e=>{
   if(paused)return;const k=e.key.toLowerCase();if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright','f'].includes(k)){
     e.preventDefault();if(!started)start();if(k!=='f'){
+      cancelHammockWalk();
       interaction.cancel(view);interaction.supplyTrip=false;
     }
     if(k==='f'){
@@ -534,6 +559,7 @@ function ensureSound(){
 // Entry starts sound. If a browser blocks it, the next normal tap retries it.
 addEventListener('pointerdown',()=>{if(started&&!audioSystem.enabled)ensureSound();},{capture:true});
 $('milk').onclick=()=>{
+  cancelHammockWalk();
   if(hammocking||seated){
     notify('일어난 뒤 우유를 줄 수 있어요.');
     return;
@@ -555,6 +581,7 @@ $('milk').onclick=()=>{
   updateCareUI();
 };
 $('hay').onclick=()=>{
+  cancelHammockWalk();
   if(hammocking||seated){
     notify('일어난 뒤 창고에 갈 수 있어요.');
     return;
@@ -566,6 +593,7 @@ $('hay').onclick=()=>{
   updateCareUI();
 };
 $('care-cancel').onclick=()=>{
+  cancelHammockWalk();
   interaction.cancel(view);
   interaction.mode='pet';
   interaction.supplyTrip=false;

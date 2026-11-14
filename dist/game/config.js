@@ -15,6 +15,7 @@ export const CONFIG = Object.freeze({
     x:-18,z:.5
   }
   ],
+  hammock: {x:-6,z:7},
   shed: {
     x:24,z:48,entrance:{
       x:22,z:42

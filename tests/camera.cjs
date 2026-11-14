@@ -16,6 +16,37 @@ event('pointerdown',3,200,400);event('pointermove',3,240,440);event('pointerup',
 vm.runInContext('view.zoom=2;view.yaw=0;view.pitch=.23;following=true;centerView()',ctx);const tap=read('view.toScreen(project(2,10).x,project(2,10).y)');event('pointerdown',4,tap.x,tap.y);event('pointerup',4,tap.x,tap.y);
 assert.ok(Math.abs(read('player.tx')-2)<1e-8);assert.ok(Math.abs(read('player.tz')-10)<1e-8);
 event('pointerdown',5,200,400);event('pointercancel',5,200,400);assert.equal(read('pointers.size'),0);
+// Exercise real app handlers and update loop: no teleport on entry or exit.
+read('player.x=player.tx=20;player.z=player.tz=30');
+el('hammock').onclick();
+assert.equal(read('player.x'),20);
+assert.equal(read('player.z'),30);
+assert.equal(read('hammocking'),false);
+assert.equal(read('walkingToHammock'),true);
+read('update(.05)');
+assert.equal(read('player.walking'),true);
+assert.ok(Math.hypot(read('player.x')-20,read('player.z')-30)<=.160001);
+assert.equal(read('hammocking'),false,'still walking when far from hammock');
+for(let i=0;i<400&&!read('hammocking');i++){
+  const x=read('player.x'),z=read('player.z');
+  read('update(.05)');
+  assert.ok(Math.hypot(read('player.x')-x,read('player.z')-z)<=.160001,'continuous walking speed');
+}
+assert.equal(read('hammocking'),true);
+assert.ok(read('Math.hypot(player.x-CONFIG.hammock.x,player.z-CONFIG.hammock.z)')<=.08);
+const restX=read('player.x'),restZ=read('player.z');
+el('hammock').onclick();
+assert.equal(read('hammocking'),false);
+assert.equal(read('player.x'),restX);
+assert.equal(read('player.z'),restZ);
+read('player.x=player.tx=20;player.z=player.tz=30');
+el('hammock').onclick();read('update(.05)');el('care-cancel').onclick();
+assert.equal(read('walkingToHammock'),false);
+const stopped=read('player.x');read('update(1)');assert.equal(read('player.x'),stopped);
+assert.equal(read('hammocking'),false,'cancellation never triggers delayed rest');
+el('hammock').onclick();el('hammock').onclick();assert.equal(read('walkingToHammock'),false);
+el('hammock').onclick();el('sit').onclick();assert.equal(read('walkingToHammock'),false);
+console.log('Hammock: continuous normal-speed walk, rest only on arrival, stand in place, cancellation and replacement actions.');
 console.log('Pinch expands zoom; pinch release and drag never walk; zoomed tap reaches correct world location; cancellation clears pointers.');
 
 })().catch(error=>{console.error(error);process.exitCode=1;});
