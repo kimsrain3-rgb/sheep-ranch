@@ -1,20 +1,50 @@
-// No network/audio assets required. Quiet formant synthesis with distance attenuation.
+// User-provided, streamed MP3 loop and quiet positional sheep calls. No wind noise.
 export class MeadowAudio {
   constructor(){
     this.context=null;
     this.enabled=false;
     this.lastBaa=-10;
+    this.music=null;
+    this.pending=null;
   }
   async toggle(){
+    // Repeated taps share the in-flight action instead of starting duplicate music.
+    if(this.pending)return this.pending;
+    this.pending=this.togglePlayback();
+    try{return await this.pending;}finally{this.pending=null;}
+  }
+  async togglePlayback(){
     if(!this.context){
       const AC=globalThis.AudioContext||globalThis.webkitAudioContext;
       if(!AC)throw Error('Audio unavailable');
       this.context=new AC();
-
     }
-    this.enabled=!this.enabled;
-    await this.context[this.enabled?'resume':'suspend']();
-    return this.enabled;
+    if(!this.music){
+      this.music=new Audio(new URL('../assets/pastoral-loop.mp3',import.meta.url).href);
+      this.music.loop=true;
+      this.music.volume=.22;
+      this.music.preload='none';
+      this.music.id='background-music';
+      this.music.hidden=true;
+      globalThis.document?.body?.append?.(this.music);
+    }
+    if(this.enabled){
+      this.music.pause();
+      await this.context.suspend();
+      this.enabled=false;
+      return false;
+    }
+    try{
+      // Invoke both while the user's tap is active (needed on mobile browsers).
+      await Promise.all([this.context.resume(),this.music.play()]);
+      this.enabled=true;
+      return true;
+    }catch(error){
+      this.music.pause();
+      this.enabled=false;
+      await this.context.suspend();
+      throw error;
+    }
   }
   baa(animal,player,yaw=0){
     if(!this.enabled||!this.context)return;
