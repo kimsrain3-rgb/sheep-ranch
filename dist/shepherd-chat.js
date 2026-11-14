@@ -1,5 +1,6 @@
 export function parseShepherdIntent(text){
   const s=String(text).replace(/\s+/g,'');
+  if(/(숙소|오두막|전망대|발코니).*(가자|가줘|가볼|들어|보러)/.test(s))return 'enter_lodge';
   if(/(상태|몇마리|마릿수|어디|날씨|몇시|시간|왜|언제|어떻게)/.test(s))return 'status';
   if(/(밖으로|나가자|나갈래|나가줘)/.test(s)&&!/(양|닭|방목)/.test(s))return 'leave_barn';
   if(/(축사|안으로).*(들어|가자|가줘|가볼|보러)/.test(s))return 'enter_barn';
@@ -11,6 +12,7 @@ export function parseShepherdIntent(text){
 export function localShepherdReply(text,state,receipt=''){
   if(receipt)return receipt;
   if(/안녕|반가|이름|누구/.test(text))return '안녕하세요, 목장주님! 저는 양들을 살피는 소년 목동 하루예요. 곁의 보리개와 목장을 둘러보고 있어요.';
+  if(/숙소|오두막|전망대|발코니/.test(text))return `제 숙소는 축사 뒤편의 2층 집이에요. 1층에는 목동의 침대와 식탁, 난로, 세면대, 바람이와 보리의 자리가 있어요. 2층 발코니에서는 지금 움직이는 목장 친구들을 내려다볼 수 있어요. ${state.shepherdInLodge?'저도 안에서 쉬고 있어요.':'저는 지금 목장을 돌보고 있어요.'}`;
   if(parseShepherdIntent(text)==='status')return `지금은 ${state.time}, ${state.weather}이에요. 양 ${state.total}마리 중 ${state.inside}마리가 축사에, 닭 ${state.chickens}마리 중 ${state.chickensInside}마리가 옆 닭장에 있어요.${state.night?' 해가 져서 개들이 나머지 동물들도 안으로 안내하고 있어요.':''}`;
   if(/쓰다듬|친해|내양|이름/.test(text))return '양을 자주 쓰다듬고 건초를 건네면 목장주님을 알아봐요. 내 양 메뉴에서 이름도 붙여줄 수 있어요.';
   if(/닭장|닭/.test(text))return `닭장은 큰 양들의 축사 바로 옆에 있어요. 지금 닭 ${state.chickens}마리 중 ${state.chickensInside}마리가 안에서 쉬고 있어요. 개들이 닭을 그곳으로 안내합니다.`;
@@ -31,7 +33,7 @@ export function setupShepherdChat({snapshot,execute,onOpen=()=>{},fetcher=global
   async function send(text){
     text=String(text).trim().slice(0,500);if(!text||busy)return;
     busy=true;const id=++requestId;$('shepherd-send').disabled=true;append('user',text);$('shepherd-input').value='';
-    const intent=parseShepherdIntent(text),receipt=['gather','release','enter_barn','leave_barn','inspect'].includes(intent)?execute(intent):'';
+    const intent=parseShepherdIntent(text),receipt=['gather','release','enter_barn','enter_lodge','leave_barn','inspect'].includes(intent)?execute(intent):'';
     if(!connected){append('assistant',localShepherdReply(text,snapshot(),receipt));busy=false;$('shepherd-send').disabled=false;return;}
     mode('하루가 생각하고 있어요…');
     try{

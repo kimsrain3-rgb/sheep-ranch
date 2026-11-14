@@ -3,9 +3,10 @@ import {handleShepherd} from '../server/shepherd-api.js';
 import {parseShepherdIntent} from '../dist/shepherd-chat.js';
 
 const origin='http://localhost:4173';
-const state={time:'오후 6:00',weather:'맑음',weatherSource:'live',location:'양주',total:62,lambs:12,inside:3,chickens:10,chickensInside:4,playingLambs:2,dogs:2};
+const state={time:'오후 6:00',weather:'맑음',weatherSource:'live',location:'양주',total:62,lambs:12,inside:3,chickens:10,chickensInside:4,playingLambs:2,dogs:2,dogsInLodge:1,shepherdInLodge:true};
 assert.equal(parseShepherdIntent('닭도 모아줘'),'gather');
 assert.equal(parseShepherdIntent('닭을 밖으로 내보내'),'release');
+assert.equal(parseShepherdIntent('목동 숙소로 가자'),'enter_lodge');
 const request=(message,extra={})=>new Request(origin+'/api/shepherd',{
   method:'POST',headers:{origin,'content-type':'application/json'},
   body:JSON.stringify({messages:[{role:'user',content:message}],state,...extra})
@@ -23,6 +24,8 @@ assert.match(data.reply,/62마리/);
 assert.match(data.reply,/어른 50마리, 새끼 12마리/);
 assert.match(data.reply,/축사 안에 3마리, 밖에 59마리/);
 assert.match(data.reply,/닭은 10마리 중 4마리/);
+assert.match(data.reply,/숙소에는 1마리의 개가 쉬고/);
+assert.match(data.reply,/저도 안에 있어요/);
 assert.equal(calls,0);
 
 response=await handleShepherd(request('날씨가 어때?',{state:{...state,weatherSource:'local',location:'',shelterReason:'night'}}),{OPENAI_API_KEY:'test-only'},noFetch);

@@ -1,10 +1,10 @@
-import {CONFIG,distance} from './config.js?v=night-barn';
+import {CONFIG,distance} from './config.js?v=shepherd-lodge';
 import {dryRoute} from './navigation.js?v=night-barn';
 // The NPC owns only its own movement. It never locks sheep or changes care records.
 export class ShepherdBoy{
   constructor(){
     this.id='shepherd-boy';this.name='소년 목동';this.x=2.8;this.z=1.1;this.tx=this.x;this.tz=this.z;
-    this.headingX=0;this.headingZ=-1;this.walking=false;this.state='greet';this.timer=7;this.time=0;this.route=[];this.task=0;this.wet=false;this.screen=null;
+    this.headingX=0;this.headingZ=-1;this.walking=false;this.state='greet';this.timer=7;this.time=0;this.route=[];this.task=0;this.wet=false;this.screen=null;this.insideLodge=false;this.lodgeBound=false;
   }
   greet(player){
     this.state='greet';this.timer=5;this.walking=false;this.route=[];
@@ -14,14 +14,28 @@ export class ShepherdBoy{
   go(destination){this.route=dryRoute(this,destination);this.state='walk';this.timer=0;}
   tick(dt,{player,sheep=[],sheltering=false}){
     this.time+=dt;this.timer-=dt;this.walking=false;
-    if(sheltering!==this.wet){this.wet=sheltering;this.route=[];if(sheltering)this.go({x:CONFIG.barn.entrance.x+3,z:CONFIG.barn.entrance.z-1});else{this.state='watch';this.timer=3;}}
+    if(sheltering!==this.wet){
+      this.wet=sheltering;this.route=[];this.lodgeBound=false;
+      if(sheltering)this.go({x:CONFIG.barn.entrance.x+3,z:CONFIG.barn.entrance.z-1});
+      else{this.insideLodge=false;this.state='watch';this.timer=3;}
+    }
+    if(this.insideLodge&&sheltering)return;
+    if(sheltering&&sheep.length&&sheep.every(a=>a.hiddenInBarn)&&!this.lodgeBound){
+      this.lodgeBound=true;this.go(CONFIG.lodge.entrance);
+    }
     if(this.state==='greet'&&this.timer>0)return;
     if(this.state==='watch'&&this.timer>0)return;
     if(this.state!=='walk'){
       if(sheltering){
+        if(this.lodgeBound){
+          if(distance(this,CONFIG.lodge.entrance)<.3){this.insideLodge=true;this.walking=false;return;}
+          this.go(CONFIG.lodge.entrance);
+        }
         const entrance={x:CONFIG.barn.entrance.x+3,z:CONFIG.barn.entrance.z-1};
-        if(distance(this,entrance)>.3)this.go(entrance);
-        else{this.state='watch';this.timer=5;this.headingX=-1;this.headingZ=0;return;}
+        if(!this.lodgeBound){
+          if(distance(this,entrance)>.3)this.go(entrance);
+          else{this.state='watch';this.timer=5;this.headingX=-1;this.headingZ=0;return;}
+        }
       }
       if(!sheltering){
       this.task++;
@@ -39,6 +53,12 @@ export class ShepherdBoy{
       const step=Math.min(d,dt*(sheltering?1.5:.95));this.x+=dx/d*step;this.z+=dz/d*step;
       this.walking=true;this.headingX=dx/d;this.headingZ=dz/d;
     }
-    if(d<.15){this.route.shift();if(!this.route.length){this.state='watch';this.timer=5;}}
+    if(d<.15){
+      this.route.shift();
+      if(!this.route.length){
+        if(this.lodgeBound&&distance(this,CONFIG.lodge.entrance)<.3){this.insideLodge=true;this.state='rest';this.timer=0;}
+        else{this.state='watch';this.timer=5;}
+      }
+    }
   }
 }

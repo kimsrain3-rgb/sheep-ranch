@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node tests/orbit.cjs && node tests/visitor.cjs && node tests/camera.cjs && node tests/flock.cjs && node tests/behaviors.mjs && node tests/tug.mjs && node tests/milk-pose.mjs && node tests/gait.mjs && node tests/contact-eyes.mjs && node tests/audio.mjs && node tests/layout.mjs && node tests/living-meadow.mjs && node tests/shepherd.mjs && node tests/petting.mjs && node tests/shepherd-chat.mjs && node tests/coop.mjs",
+    "test": "node tests/orbit.cjs && node tests/visitor.cjs && node tests/camera.cjs && node tests/flock.cjs && node tests/behaviors.mjs && node tests/tug.mjs && node tests/milk-pose.mjs && node tests/gait.mjs && node tests/contact-eyes.mjs && node tests/audio.mjs && node tests/layout.mjs && node tests/living-meadow.mjs && node tests/shepherd.mjs && node tests/petting.mjs && node tests/shepherd-chat.mjs && node tests/coop.mjs && node tests/lodge.mjs",
     "build": "node scripts/build-worker.mjs",
     "dev": "node scripts/preview.mjs"
   }

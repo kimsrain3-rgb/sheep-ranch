@@ -1,6 +1,6 @@
 import {
   CONFIG,distance,keepDry,seededRandom
-} from './config.js?v=coop-herding';
+} from './config.js?v=shepherd-lodge';
 import {dryRoute} from './navigation.js?v=night-barn';
 export class Companions {
   constructor(random=seededRandom(8703)){
@@ -75,11 +75,15 @@ export class Companions {
     const chickensOutside=sheltering?this.chickens.filter(a=>a.state==='coop-go').sort((a,b)=>distance(b,CONFIG.coop.entrance)-distance(a,CONFIG.coop.entrance)):[];
     for(const a of this.dogs){
       a.timer-=dt;
+      if(!sheltering&&a.hiddenInLodge){
+        a.hiddenInLodge=false;a.lodgeRoute=[];a.x=CONFIG.lodge.entrance.x;a.z=CONFIG.lodge.entrance.z;
+      }
       let speed;
       const preferred=a.role==='escort'?chickensOutside:sheepOutside;
       const other=a.role==='escort'?sheepOutside:chickensOutside;
       const target=sheltering?(preferred[0]||other[this.dogs.indexOf(a)%Math.max(1,other.length)]):null;
       if(target){
+        a.hiddenInLodge=false;
         const entrance=target.type==='chicken'?CONFIG.coop.entrance:CONFIG.barn.entrance;
         const dx=target.x-entrance.x,dz=target.z-entrance.z,d=Math.hypot(dx,dz)||1;
         const goal={x:target.x+dx/d*2.5,z:target.z+dz/d*2.5};keepDry(goal);
@@ -91,7 +95,15 @@ export class Companions {
         const waypoint=a.herdRoute[0]||goal;a.tx=waypoint.x;a.tz=waypoint.z;
         a.state=target.type==='chicken'?'herd-chicken':'herd';speed=2.5;
       }
+      else if(sheltering&&shepherd?.insideLodge){
+        if(a.hiddenInLodge){a.walking=false;a.state='lodge-rest';continue;}
+        if(!a.lodgeRoute?.length)a.lodgeRoute=dryRoute(a,CONFIG.lodge.entrance);
+        if(a.lodgeRoute.length>1&&distance(a,a.lodgeRoute[0])<.3)a.lodgeRoute.shift();
+        const waypoint=a.lodgeRoute[0]||CONFIG.lodge.entrance;
+        a.tx=waypoint.x;a.tz=waypoint.z;a.state='lodge-go';speed=2;
+      }
       else if(a.role==='escort'&&shepherd){
+        a.lodgeRoute=[];
         const goal={x:shepherd.x+1.65,z:shepherd.z-.65};keepDry(goal);
         const gap=distance(a,goal);
         a.escortMoving=gap>(a.escortMoving ? .55 : 1);
@@ -123,6 +135,9 @@ export class Companions {
       }
       this.move(a,dt,speed,yaw);
       if(target&&a.herdRoute.length>1&&distance(a,a.herdRoute[0])<.3)a.herdRoute.shift();
+      if(a.state==='lodge-go'&&distance(a,CONFIG.lodge.entrance)<.35){
+        a.hiddenInLodge=true;a.state='lodge-rest';a.walking=false;a.lodgeRoute=[];
+      }
     }
   }
 }

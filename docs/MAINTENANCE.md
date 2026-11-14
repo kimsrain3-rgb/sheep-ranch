@@ -84,7 +84,7 @@ UI 수정 시에는 390×760과 320×568의 실제 iframe viewport 또는 휴대
 - Tests: `tests/living-meadow.mjs` covers network/time/storage failures and races, independent visitors, all 62 sheep taking shelter then leaving, dog movement, play interruption. Existing movement and audio regression suite remains required.
 
 ## 소년 목동
-`game/shepherd.js` owns exactly one NPC and only changes its own state. `render/shepherd.js` draws the boy with camera-relative four-way facing and the shared tested gait. He greets at entry, walks dry routes to inspect sheep and barn, and watches the entrance in wet weather. Tapping him stops the visitor and plays a fixed greeting; this is not an AI dialogue or coding agent. Extend future dialogue through a separate controller, preserving sheep care and movement ownership.
+`game/shepherd.js` owns exactly one NPC and only changes its own state. `render/shepherd.js` draws the boy with camera-relative four-way facing and the shared tested gait. He greets at entry, walks dry routes to inspect sheep and barn, and watches the entrance in wet weather. Tapping him opens `shepherd-chat.js`; AI responses are served separately by `server/shepherd-api.js`. Movement and sheep care remain owned by their original controllers.
 
 목동 지팡이/동행견: render/shepherd.js의 왼손 gripX에 짧은 나무 지팡이를 고정합니다. 오른손 인사와 보행에도 손과 지팡이가 분리되지 않도록 합니다. Companions의 escort 한 마리는 player가 아니라 shepherd를 따르며, 이 분기를 날씨 몰이보다 먼저 적용합니다. 목동을 먼저 갱신하고 개가 최신 위치를 따라가게 합니다. 연못을 피하는 경로, 정지/출발 거리 차이로 제자리 떨림을 막고 이동은 기존 속도 제한을 유지합니다.
 
@@ -101,3 +101,9 @@ Pet closeup composition: the chosen sheep and visitor render as one depth-sorted
 `CONFIG.coop`은 양 축사 오른쪽에 있는 별도 닭장이다. 비·눈·밤 또는 목동의 모으기 명령으로 `WeatherShelter.active`가 되면 `Companions`가 닭을 `dryRoute()`로 닭장 입구까지 걷게 한다. 한 개는 양을, 다른 개는 닭을 우선 몰고, 한 무리가 먼저 들어가면 남은 무리를 돕는다. 닭은 입구에 도착한 뒤에만 `hiddenInCoop`이 되며, 날씨가 개면 순서대로 걸어 나온다. 동행견은 몰이가 끝나면 목동 곁으로 돌아간다.
 
 닭장 외관과 쉬는 닭 수는 `render/shelter.js`의 `drawCoop()`이 그린다. 닭장 안은 방문자가 들어가는 공간이 아니다. 양 축사 실내에는 양만 표시한다. `tests/coop.mjs`가 건물 간격, 개의 몰이, 닭의 연속 이동과 순차 출입을 확인한다.
+
+## 목동과 강아지의 2층 숙소
+
+`CONFIG.lodge`는 축사 뒤편에 간격을 두고 놓인 2층 집이다. `render/lodge.js`는 외관과 2층 발코니의 목장 전망을 그린다. 전망은 같은 시뮬레이션의 양·닭·개·목동 위치를 사용한다. 1층에는 목동 침대, 식탁, 난로, 세면대, 책장과 두 개의 강아지 자리가 있다. 방문자는 건물이나 메뉴를 누른 뒤 문까지 걸어가서 숙소를 열고, 1층과 2층을 전환한다. 모바일 메뉴에도 같은 버튼을 재사용한다.
+
+비·눈·밤 또는 모으기 명령으로 모든 양이 축사에 들어가면 목동은 `dryRoute()`를 따라 숙소로 이동한다. 개들은 양과 닭의 몰이를 끝낸 다음 숙소로 걸어가 쉰다. 이때에만 세계 화면에서 숨기고 1층 상태에 휴식 인원을 표시한다. 피신이 끝나면 모두 문 앞에서 다시 밖으로 나온다. `tests/lodge.mjs`는 건물 간격과 연속 이동, 동행 휴식 및 복귀를 검사한다.
