@@ -11,7 +11,7 @@ import { isCompactViewport } from './game/layout.js';
 import { Flock } from './game/flock.js?v=living-meadow';
 import { Interactions } from './game/interactions.js?v=living-meadow';
 import { Companions } from './game/companions.js?v=shepherd-staff';
-import { MeadowAudio } from './game/audio.js?v=auto-sound';
+import { MeadowAudio } from './game/audio.js?v=recorded-sheep';
 import { CONFIG,keepDry } from './game/config.js?v=living-meadow';
 import { drawSheep as renderSheep } from './render/sheep.js?v=living-meadow';
 import { drawCompanion } from './render/companions.js?v=clean-mouth';
