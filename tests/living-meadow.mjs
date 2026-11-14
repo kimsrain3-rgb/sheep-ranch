@@ -11,6 +11,8 @@ const memory=new Map(),storage={getItem:k=>memory.get(k)||null,setItem:(k,v)=>me
 assert.deepEqual([0,2,3,45,61,75,95].map(weatherKind),['clear','clouds','overcast','fog','rain','snow','rain']);
 assert.equal(localClock(new Date('2026-11-14T15:05:00Z'),'Asia/Seoul').text,'오전 12:05');
 assert.equal(localClock(new Date('2026-11-14T03:05:00Z'),'Asia/Seoul').night,false);
+assert.equal(localClock(new Date('2026-11-14T09:05:00Z'),'Asia/Seoul').night,true,'Korean autumn evening uses seasonal sunset without location permission');
+assert.equal(localClock(new Date('2026-06-14T09:05:00Z'),'Asia/Seoul').night,false,'Korean summer evening remains daylight before seasonal sunset');
 let now=100000,calls=0;
 const weather=new MeadowWeather({storage,now:()=>now,fetcher:async url=>{calls++;assert.equal(url.searchParams.get('latitude'),'37.56');return {ok:true,json:async()=>({timezone:'Asia/Seoul',current:{weather_code:75,cloud_cover:100,is_day:0}})};}});
 await weather.choose({name:'서울',latitude:37.566,longitude:126.978});assert.equal(weather.snapshot().kind,'snow');assert.equal(weather.snapshot().night,true);
@@ -34,6 +36,7 @@ returning.tick(100,{flock,player,available:false});assert.equal(returning.points
 const stranger=new SheepBond({storage:null});assert.equal(stranger.friendId,null,'different browser has independent sheep');
 const blocked=new SheepBond({storage:{getItem(){throw Error('blocked')},setItem(){throw Error('blocked')}}});blocked.add(animal,7);blocked.save();assert.equal(blocked.persistent,false);
 const herd=new Flock(),dogs=new Companions(),shelter=new WeatherShelter();
+const nightShelter=new WeatherShelter();nightShelter.updateWeather(.1,false,true);assert.equal(nightShelter.active,true,'sunset starts herding immediately');assert.equal(nightShelter.reason,'night');
 const context={player:{x:0,z:0},feeding:false,canTug:false};
 for(let i=0;i<2;i++)shelter.updateWeather(1,true);assert.equal(shelter.active,false);shelter.updateWeather(1,true);assert.equal(shelter.active,true);
 let dogMoved=false;

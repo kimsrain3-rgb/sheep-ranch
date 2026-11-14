@@ -9,11 +9,25 @@ export function weatherKind(code){
   if(code===45||code===48)return 'fog';
   return code===0?'clear':code===1||code===2?'clouds':'overcast';
 }
+const SEOUL_SUNRISE=[7.47,7.18,6.44,5.92,5.33,5.08,5.23,5.55,6.08,6.58,7.10,7.38];
+const SEOUL_SUNSET=[17.42,18.13,18.54,19.07,19.37,19.56,19.55,19.25,18.41,17.58,17.24,17.16];
+function monthlyHour(values,year,month,day){
+  const index=month-1,current=values[index];
+  if(day>=15){
+    const days=new Date(Date.UTC(year,month,0)).getUTCDate();
+    return current+(values[(index+1)%12]-current)*(day-15)/days;
+  }
+  const previous=(index+11)%12,previousDays=new Date(Date.UTC(year,month-1,0)).getUTCDate();
+  return values[previous]+(current-values[previous])*(previousDays-15+day)/previousDays;
+}
 export function localClock(now=new Date(),timezone){
-  let parts;
-  try{parts=new Intl.DateTimeFormat('en-GB',{timeZone:timezone||undefined,hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(now);}catch{parts=new Intl.DateTimeFormat('en-GB',{hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(now);}
-  const hour=Number(parts.find(p=>p.type==='hour').value),minute=Number(parts.find(p=>p.type==='minute').value);
-  return {hour,minute,text:`${hour<12?'오전':'오후'} ${hour%12||12}:${String(minute).padStart(2,'0')}`,night:hour<6||hour>=19,dusk:hour>=17&&hour<19||hour>=5&&hour<7};
+  let parts,effectiveTimezone=timezone;
+  try{effectiveTimezone=effectiveTimezone||Intl.DateTimeFormat().resolvedOptions().timeZone;parts=new Intl.DateTimeFormat('en-GB',{timeZone:effectiveTimezone||undefined,year:'numeric',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(now);}catch{effectiveTimezone='';parts=new Intl.DateTimeFormat('en-GB',{year:'numeric',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(now);}
+  const value=type=>Number(parts.find(p=>p.type===type).value),year=value('year'),month=value('month'),day=value('day'),hour=value('hour'),minute=value('minute'),minutes=hour*60+minute;
+  // Live weather sunrise/sunset wins. This seasonal window keeps Korean devices
+  // useful before a city is selected or when the weather service is unavailable.
+  const korean=effectiveTimezone==='Asia/Seoul',sunrise=(korean?monthlyHour(SEOUL_SUNRISE,year,month,day):6)*60,sunset=(korean?monthlyHour(SEOUL_SUNSET,year,month,day):19)*60;
+  return {hour,minute,text:`${hour<12?'오전':'오후'} ${hour%12||12}:${String(minute).padStart(2,'0')}`,night:minutes<sunrise||minutes>=sunset,dusk:minutes>=sunset-60&&minutes<sunset||minutes>=sunrise-45&&minutes<sunrise+45};
 }
 export class MeadowWeather{
   constructor({storage=browserStorage(),fetcher=globalThis.fetch?.bind(globalThis),now=()=>Date.now()}={}){
