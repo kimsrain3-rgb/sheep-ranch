@@ -10,20 +10,7 @@ export class MeadowAudio {
       const AC=globalThis.AudioContext||globalThis.webkitAudioContext;
       if(!AC)throw Error('Audio unavailable');
       this.context=new AC();
-      const c=this.context,b=c.createBuffer(1,c.sampleRate*4,c.sampleRate),data=b.getChannelData(0);
-      let prev=0;
-      for(let i=0;i<data.length;i++){
-        prev=(prev+(Math.random()*2-1)*.03)/1.02;
-        data[i]=prev;
-      }
-      const source=c.createBufferSource(),filter=c.createBiquadFilter(),gain=c.createGain();
-      source.buffer=b;
-      source.loop=true;
-      filter.type='lowpass';
-      filter.frequency.value=420;
-      gain.gain.value=.11;
-      source.connect(filter).connect(gain).connect(c.destination);
-      source.start();
+
     }
     this.enabled=!this.enabled;
     await this.context[this.enabled?'resume':'suspend']();

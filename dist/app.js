@@ -1,7 +1,7 @@
 import { Flock } from './game/flock.js?v=touch-eyes';
 import { Interactions } from './game/interactions.js?v=touch-eyes';
 import { Companions } from './game/companions.js';
-import { MeadowAudio } from './game/audio.js';
+import { MeadowAudio } from './game/audio.js?v=no-wind';
 import { CONFIG,keepDry } from './game/config.js';
 import { drawSheep as renderSheep } from './render/sheep.js?v=touch-eyes';
 import { drawCompanion } from './render/companions.js?v=clean-mouth';
