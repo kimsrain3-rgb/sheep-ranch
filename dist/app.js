@@ -1,5 +1,5 @@
 import {ShepherdBoy} from './game/shepherd.js?v=boy-shepherd';
-import {drawShepherdBoy} from './render/shepherd.js?v=boy-shepherd';
+import {drawShepherdBoy} from './render/shepherd.js?v=shepherd-staff';
 import {MeadowWeather} from './game/weather.js?v=living-meadow';
 import {SheepBond} from './game/bond.js?v=living-meadow';
 import {WeatherShelter} from './game/shelter.js?v=living-meadow';
@@ -10,7 +10,7 @@ import {setupMeadowPanel} from './meadow-panel.js?v=living-meadow';
 import { isCompactViewport } from './game/layout.js';
 import { Flock } from './game/flock.js?v=living-meadow';
 import { Interactions } from './game/interactions.js?v=living-meadow';
-import { Companions } from './game/companions.js?v=living-meadow';
+import { Companions } from './game/companions.js?v=shepherd-staff';
 import { MeadowAudio } from './game/audio.js?v=auto-sound';
 import { CONFIG,keepDry } from './game/config.js?v=living-meadow';
 import { drawSheep as renderSheep } from './render/sheep.js?v=living-meadow';
@@ -185,10 +185,10 @@ function update(dt){
   });
   bond.tick(dt,{flock,player,active:interaction.active,feeding,yaw:view.yaw,available:started&&!shelter.active&&!hammocking&&!seated&&!walkingToHammock,notify});
   lambPlay.tick(dt,{flock,feeding,sheltering:shelter.active,yaw:view.yaw});
-  companions.tick(dt,{
-    player,sheep,yaw:view.yaw,sheltering:shelter.active
-  });
   if(started)shepherd.tick(dt,{player,sheep,sheltering:shelter.active});
+  companions.tick(dt,{
+    player,sheep,yaw:view.yaw,sheltering:shelter.active,shepherd
+  });
   updateCareUI();
   for(const p of particles){
     p.life-=dt;

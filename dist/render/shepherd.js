@@ -12,6 +12,13 @@ export function drawShepherdBoy(c,p,boy,yaw=0){
   const rect=(x,y,w,h,r,color)=>{c.fillStyle=color;c.beginPath();c.roundRect(x,y,w,h,r);c.fill();};
   ell(0,.02,.43,.12,'#29432d2b');
   c.save();if(pose==='left')c.scale(-1,1);
+  const gripX=side?-.36:-.42;
+  // Short wooden crook sits in the free hand, including while the other waves.
+  c.save();c.translate(gripX,-.67);c.rotate(boy.walking?Math.sin(t*4)*.025:0);
+  c.strokeStyle='#805b3b';c.lineWidth=.055;c.lineCap='round';c.beginPath();
+  c.moveTo(-.05,.68);c.lineTo(.02,-.75);
+  c.quadraticCurveTo(.02,-.94,-.13,-.91);c.quadraticCurveTo(-.28,-.87,-.2,-.73);c.stroke();
+  c.strokeStyle='#b18b56';c.lineWidth=.018;c.beginPath();c.moveTo(-.035,.63);c.lineTo(.033,-.72);c.stroke();c.restore();
   // Reuse the tested forward-bending gait with shorter child-sized legs.
   for(const leg of gaitLegs(t,pose,boy.walking)){
     line([[leg.hip.x,leg.hip.y*.77],[leg.knee.x,leg.knee.y*.77],[leg.ankle.x,leg.ankle.y*.77]],leg.index?'#4e7776':'#396362',.145);
@@ -27,7 +34,7 @@ export function drawShepherdBoy(c,p,boy,yaw=0){
   }
   // Sleeves and fixed-length arms; a small greeting stays near the head.
   const left=side?-.17:-.3;
-  line([[left,-1.13],[left-.10,-.88+Math.abs(swing)],[left-.09+swing,-.67]],'#e8d8a3',.14);ell(left-.09+swing,-.65,.075,.085,'#e2b38d');
+  line([[left,-1.13],[gripX+.015,-.89],[gripX,-.67]],'#e8d8a3',.14);ell(gripX,-.67,.075,.085,'#e2b38d');
   const shoulder=side?.14:.3;
   if(waving){
     line([[shoulder,-1.12],[.47,-1.32],[.48+Math.sin(t*5)*.045,-1.6]],'#eadca9',.14);
