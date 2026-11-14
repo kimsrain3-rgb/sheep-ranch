@@ -4,7 +4,7 @@ import { Companions } from './game/companions.js';
 import { MeadowAudio } from './game/audio.js';
 import { CONFIG,keepDry } from './game/config.js';
 import { drawSheep as renderSheep } from './render/sheep.js';
-import { drawCompanion } from './render/companions.js';
+import { drawCompanion } from './render/companions.js?v=clean-mouth';
 import { makeVegetation,drawVegetation,drawHayPile,drawRipples } from './render/details.js';
 import { drawInteraction } from './render/interactions.js';
 import { MeadowView } from './orbit.js';

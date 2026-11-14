@@ -46,7 +46,6 @@ export function drawCompanion(c,p,a,time){
     line([[.46,rest?-.75:-1.25],[.4,rest?-1:-1.55],[.66,rest?-.77:-1.26]],'#485348',.11);
     if(rest)line([[.68,-.6],[.8,-.6]],'#263a2c',.025);
     else ell(.77,-1.11,.035,.035,'#242f28');
-    line([[.53,rest?-.4:-.8],[.88,rest?-.4:-.8]],'#a9784e',.045);
   }
   c.restore();
 }
