@@ -82,3 +82,6 @@ UI 수정 시에는 390×760과 320×568의 실제 iframe viewport 또는 휴대
 - `meadow-panel.js`: weather and naming UI in one native modal; mobile reuses actual buttons in existing drawer. `render/weather.js`, `render/shelter.js` own visuals only. Cached dependencies use living-meadow query tag.
 - Weather data: Open-Meteo attribution in panel. Public API is used for this noncommercial prototype; before paid or large-scale launch, select a suitable service plan and add regional response caching. No per-user API secrets shipped in static client.
 - Tests: `tests/living-meadow.mjs` covers network/time/storage failures and races, independent visitors, all 62 sheep taking shelter then leaving, dog movement, play interruption. Existing movement and audio regression suite remains required.
+
+## 소년 목동
+`game/shepherd.js` owns exactly one NPC and only changes its own state. `render/shepherd.js` draws the boy with camera-relative four-way facing and the shared tested gait. He greets at entry, walks dry routes to inspect sheep and barn, and watches the entrance in wet weather. Tapping him stops the visitor and plays a fixed greeting; this is not an AI dialogue or coding agent. Extend future dialogue through a separate controller, preserving sheep care and movement ownership.

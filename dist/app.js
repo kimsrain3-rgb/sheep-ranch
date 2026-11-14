@@ -1,3 +1,5 @@
+import {ShepherdBoy} from './game/shepherd.js?v=boy-shepherd';
+import {drawShepherdBoy} from './render/shepherd.js?v=boy-shepherd';
 import {MeadowWeather} from './game/weather.js?v=living-meadow';
 import {SheepBond} from './game/bond.js?v=living-meadow';
 import {WeatherShelter} from './game/shelter.js?v=living-meadow';
@@ -34,6 +36,7 @@ const interaction=new Interactions(flock),companions=new Companions(),audioSyste
 const weather=new MeadowWeather(),bond=new SheepBond(),shelter=new WeatherShelter(),lambPlay=new LambPlay(rnd);
 let atmosphere=weather.snapshot(),environmentTimer=0;
 bond.apply(flock);
+const shepherd=new ShepherdBoy();
 const grass=makeVegetation();
 const particles=[];
 function notify(text){
@@ -137,7 +140,7 @@ function update(dt){
   if(environmentTimer<=0){
     atmosphere=weather.snapshot();environmentTimer=.5;sunset=atmosphere.dusk&&!atmosphere.night;
     $('clock').textContent=atmosphere.text;
-    canvas.setAttribute('aria-label',`양들이 지내는 목장. ${atmosphere.preview?'감상용 ':atmosphere.live?'지역 날씨 ':''}${atmosphere.label}. 축사에서 쉬는 양 ${shelter.inside}마리. 뛰노는 새끼 양 ${lambPlay.groups.length*2}마리. 풀밭을 누르면 이동합니다.`);
+    canvas.setAttribute('aria-label',`양들이 지내는 목장. ${atmosphere.preview?'감상용 ':atmosphere.live?'지역 날씨 ':''}${atmosphere.label}. 축사에서 쉬는 양 ${shelter.inside}마리. 뛰노는 새끼 양 ${lambPlay.groups.length*2}마리. 소년 목동이 양들을 살피고 있어요. 목동을 누르면 인사합니다. 풀밭을 누르면 이동합니다.`);
     $('weather-label').textContent=atmosphere.preview?`${atmosphere.label} · 감상용`:atmosphere.live?`${atmosphere.location} · ${atmosphere.label}`:'바람목장 · 지역 날씨 미연결';
   }
   if(shelter.updateWeather(dt,atmosphere.wet)){
@@ -185,6 +188,7 @@ function update(dt){
   companions.tick(dt,{
     player,sheep,yaw:view.yaw,sheltering:shelter.active
   });
+  if(started)shepherd.tick(dt,{player,sheep,sheltering:shelter.active});
   updateCareUI();
   for(const p of particles){
     p.life-=dt;
@@ -255,6 +259,7 @@ function render(){
       const p=project(20+i*1.2,45);if(p)ellipse(p.x,p.y-p.s*.4,p.s*.55,p.s*.5,'#d2bb74');
     }
   });
+  layers.push({x:shepherd.x,z:shepherd.z,draw:()=>drawShepherdBoy(c,project(shepherd.x,shepherd.z),shepherd,view.yaw)});
   for(const a of companions.animals)layers.push({
     x:a.x,z:a.z,draw:()=>drawCompanion(c,project(a.x,a.z),a,t)
   });
@@ -424,9 +429,13 @@ function tapWorld(screenX,screenY){
     x,y
   }
   =view.toWorld(screenX,screenY);
-  const hit=[...sheep].sort((a,b)=>(project(a.x,a.z)?.depth??Infinity)-(project(b.x,b.z)?.depth??Infinity)).find(a=>{
+  const hit=[...sheep,shepherd].sort((a,b)=>(project(a.x,a.z)?.depth??Infinity)-(project(b.x,b.z)?.depth??Infinity)).find(a=>{
     const p=a.screen;return p&&Math.abs(x-p.x)<p.w*.5&&y<p.y+8&&y>p.y-p.h;
   });
+  if(hit===shepherd){
+    interaction.cancel(view);interaction.supplyTrip=false;interaction.mode='pet';keys.clear();player.tx=player.x;player.tz=player.z;marker=null;selected=null;
+    shepherd.greet(player);notify(shelter.active?'목동: 양들이 축사에 잘 들어가는지 살펴보고 있어요.':'목동: 안녕하세요! 오늘도 양들과 편히 쉬어가세요.');return;
+  }
   if(hit){
     if(shelter.active){notify('양들이 축사로 들어가 쉬고 있어요. 하늘이 개면 다시 만나요.');return;}
     if(hammocking||seated){
