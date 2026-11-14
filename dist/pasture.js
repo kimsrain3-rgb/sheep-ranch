@@ -1,3 +1,4 @@
+import {CONFIG} from './game/config.js';
 let seed=981;const rnd=()=>((seed=seed*16807%2147483647)-1)/2147483646;
 export const trees=Array.from({length:105},(_,i)=>{const a=rnd()*Math.PI*2,r=34+rnd()*85;return {x:Math.sin(a)*r,z:Math.cos(a)*r,size:1.1+rnd()*1.1,phase:rnd()*6.28};});
 export function drawPasture(c,W,H,t,sunset,view,project,ellipse,path){
@@ -11,8 +12,8 @@ export function drawPasture(c,W,H,t,sunset,view,project,ellipse,path){
  function polygon(points,color){const pp=points.map(p=>project(p[0],p[1],p[2]||.015));if(pp.some(p=>!p))return;path(pp.map(p=>[p.x,p.y]),color);}
  // World-space pond and a walking path remain anchored while the camera turns.
  polygon([[-2,-65],[3,-65],[11,130],[7,130]],'#c6c39366');
- const pond=Array.from({length:65},(_,i)=>{const a=i/64*Math.PI*2;return [-16+Math.cos(a)*7,-5+Math.sin(a)*5];});polygon(pond,'#c6c7a5');polygon(pond.map(([x,z])=>[-16+(x+16)*.92,-5+(z+5)*.92,.03]),sunset?'#8da9a2':'#91beb5');
- for(let i=0;i<4;i++){const p=project(-16+i*1.5,-5+Math.sin(t*.4+i),.05);if(p)ellipse(p.x,p.y,p.s*.5,Math.max(.4,p.s*.014),'#e5f0de70');}
+ const pond=Array.from({length:65},(_,i)=>{const a=i/64*Math.PI*2;return [CONFIG.pond.x+Math.cos(a)*CONFIG.pond.rx,CONFIG.pond.z+Math.sin(a)*CONFIG.pond.rz];});polygon(pond,'#c6c7a5');polygon(pond.map(([x,z])=>[CONFIG.pond.x+(x-CONFIG.pond.x)*.92,CONFIG.pond.z+(z-CONFIG.pond.z)*.92,.03]),sunset?'#8da9a2':'#91beb5');
+ for(let i=0;i<4;i++){const p=project(CONFIG.pond.x+i*1.5,CONFIG.pond.z+Math.sin(t*.4+i),.05);if(p)ellipse(p.x,p.y,p.s*.5,Math.max(.4,p.s*.014),'#e5f0de70');}
  for(let i=-10;i<30;i++){const x=i*4;for(const z of [65,-30]){const a=project(x,z),b=project(x,z,1.1),next=project(x+4,z,.75),rail=project(x,z,.75);if(!a||!b||!next||!rail)continue;c.strokeStyle='#ded9b9';c.lineWidth=Math.max(1,a.s*.06);c.beginPath();c.moveTo(a.x,a.y);c.lineTo(b.x,b.y);c.moveTo(rail.x,rail.y);c.lineTo(next.x,next.y);c.stroke();}}
 }
 

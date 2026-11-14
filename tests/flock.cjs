@@ -1,9 +1,12 @@
+(async()=>{
 const vm=require('node:vm'),fs=require('node:fs'),assert=require('node:assert/strict');
 const elements=new Map(),listeners=new Map(),captures=new Set();
 function el(id){if(!elements.has(id))elements.set(id,{style:{},classList:{add(){},toggle(){}},setAttribute(k,v){this[k]=v},querySelector(){return el(id+'child')},focus(){},addEventListener(k,fn){listeners.set(k,fn)},setPointerCapture(id){captures.add(id)},hasPointerCapture(id){return captures.has(id)},releasePointerCapture(id){captures.delete(id)}});return elements.get(id)}
 el('world').getContext=()=>({setTransform(){}});
 const ctx=vm.createContext({console,Math,Map,Set,Object,innerWidth:390,innerHeight:780,devicePixelRatio:1,document:{querySelector:()=>el('world'),getElementById:el,body:el('body')},addEventListener(){},requestAnimationFrame(){}});
-const source=fs.readFileSync('dist/orbit.js','utf8').replace('export class','class')+'\n'+fs.readFileSync('dist/app.js','utf8').replace(/^import .*;\n/gm,'');
+const modules=await Promise.all(['flock','interactions','companions','audio','config'].map(name=>import('../dist/game/'+name+'.js')));
+for(const module of modules)Object.assign(ctx,module);Object.assign(ctx,await import('../dist/render/details.js'));
+const source=fs.readFileSync('dist/orbit.js','utf8').replace('export class','class')+'\n'+fs.readFileSync('dist/app.js','utf8').replace(/^import[\s\S]*?;\n/gm,'');
 vm.runInContext(source,ctx);vm.runInContext('start()',ctx);
 const read=expression=>vm.runInContext(expression,ctx),event=(k,id,x,y)=>listeners.get(k)({pointerId:id,button:0,clientX:x,clientY:y});
 vm.runInContext('player.x=player.tx=0;player.z=player.tz=0;feed()',ctx);
@@ -12,9 +15,11 @@ for(let i=0;i<1800;i++) vm.runInContext('t+=1/60;update(1/60)',ctx);
 assert.equal(read('sheep.map(a=>a.feedSlot).join(",")'),slots);
 assert.ok(read('feedCount')>0);
 assert.equal(read('lambs.every(a=>a.size===a.mother.size/3)'),true);
-vm.runInContext('feed();const baby=lambs[0];baby.x=baby.mother.x+Math.sin(baby.phase)*1.7;baby.z=Math.max(4,baby.mother.z-.65);baby.walking=false;update(1/60)',ctx);
+vm.runInContext('feed();const baby=lambs[0];baby.x=baby.mother.x+Math.sin(baby.phase)*1.7;baby.z=baby.mother.z-.65;baby.walking=false;update(1/60)',ctx);
 assert.equal(read('lambs[0].walking'),false);
 vm.runInContext('sheep[0].headX=.83;sheep[0].dir=-1;update(1/60)',ctx);
 assert.ok(read('sheep[0].headX')>0,'head must turn gradually rather than flip sides in a frame');
 assert.equal(read('sheep.every(a=>Number.isFinite(a.x)&&Number.isFinite(a.z)&&Number.isFinite(a.headX))'),true);
 console.log('30-second flock simulation: stable feeding slots, successful feeding, exact lamb scale, resting near mother, smooth head turns, finite positions.');
+
+})().catch(error=>{console.error(error);process.exitCode=1;});

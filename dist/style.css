@@ -47,3 +47,7 @@ body:not(.walking) #camera-controls{display:none}canvas{cursor:grab}.walking can
  body:not(.walking) #mobile-menu-toggle{display:none}.menu-open #bottom{visibility:hidden}
  #help-panel section{max-height:calc(100dvh - 40px);overflow:auto;padding:25px}
 }
+.care-actions{position:absolute;right:46px;bottom:137px;z-index:20;display:flex;gap:8px}.care-actions button{min-height:44px;background:#faf8eecf;border:1px solid #fff8;padding:10px 16px;border-radius:25px;font-size:12px}.care-actions button[aria-pressed=true]{background:#e1dfc3}
+#care-cancel{position:absolute;z-index:25;top:154px;left:46px;min-height:44px;padding:10px 16px;border-radius:24px;background:#faf8eee3;font-size:12px}body:not(.walking) .care-actions{display:none}
+@media(max-width:700px){.care-actions{display:none}#care-cancel{top:max(14px,env(safe-area-inset-top));left:14px;max-width:calc(100vw - 125px);font-size:11px}#mobile-menu-care{display:grid;grid-template-columns:1fr;gap:6px}#mobile-menu-care button{min-height:44px;border-radius:11px;background:#e9eddf;font-size:12px;padding:9px}#mobile-menu-care button[aria-pressed=true]{background:#ded4ac}.walking #toast{bottom:146px;max-width:80vw}#sheep-label{max-width:190px}#mobile-sheet{max-height:calc(100dvh - 24px)}}
+@media(max-width:700px){.walking #sheep-label{display:none}}
