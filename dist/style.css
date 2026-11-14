@@ -33,7 +33,7 @@ body:not(.walking) #camera-controls{display:none}canvas{cursor:grab}.walking can
  #mobile-sheet{position:absolute;right:12px;top:max(12px,env(safe-area-inset-top));width:min(310px,calc(100% - 24px));max-height:calc(100dvh - 24px);overflow:auto;overscroll-behavior:contain;padding:16px;background:#faf8eff5;border:1px solid #fff;border-radius:18px;box-shadow:0 12px 45px #193b2933;backdrop-filter:blur(12px)}
  .mobile-sheet-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}.mobile-sheet-title strong{font-family:'Noto Serif KR',serif;font-size:18px;font-weight:500}
  #mobile-menu-close{width:44px;height:44px;font-size:27px;background:#e9eddf;border-radius:50%}
- #mobile-menu-sound{display:flex;gap:8px}#mobile-menu-sound button{background:#e9eddf;border-radius:11px;padding:10px 14px;min-height:44px;font-size:12px}#mobile-menu-sound #sound{flex:1}#mobile-menu-sound #help{width:44px}
+ #mobile-menu-help{display:flex;gap:8px}#mobile-menu-help button{background:#e9eddf;border-radius:11px;padding:10px 14px;min-height:44px;font-size:12px}#mobile-menu-help #help{width:44px}
  .mobile-section-label{font-size:11px;color:#77846c;margin:18px 0 8px}
  #mobile-sheet #camera-controls{position:static;display:flex!important;justify-content:space-between;box-shadow:none;background:#e9eddf;border:0;padding:3px;border-radius:12px}
  #mobile-sheet #camera-controls button{height:44px;min-width:40px}#mobile-sheet #camera-home{padding:0 10px}
@@ -70,3 +70,5 @@ body:not(.walking) #camera-controls{display:none}canvas{cursor:grab}.walking can
  #welcome p{font-size:11px;line-height:1.5;margin:6px 0}#welcome #start{margin-top:6px;padding:12px 18px;min-height:44px}
  #welcome .welcome-note{display:none}header{top:8px}.brand small{display:none}
 }
+
+.help-text{display:none}#mobile-menu-help .help-text{display:inline;margin-left:8px}#mobile-menu-help #help{width:100%;font-size:12px}

@@ -7,6 +7,10 @@ export class MeadowAudio {
     this.music=null;
     this.pending=null;
   }
+  async start(){
+    if(this.enabled)return true;
+    return this.toggle();
+  }
   async toggle(){
     // Repeated taps share the in-flight action instead of starting duplicate music.
     if(this.pending)return this.pending;

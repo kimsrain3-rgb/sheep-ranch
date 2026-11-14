@@ -2,7 +2,7 @@ import {COMPACT_UI_QUERY} from './game/layout.js';
 const $=id=>document.getElementById(id);
 const toggle=$('mobile-menu-toggle'),overlay=$('mobile-menu'),sheet=$('mobile-sheet');
 const media=matchMedia(COMPACT_UI_QUERY);
-const groups=[['mobile-menu-sound',['sound','help']],['mobile-menu-camera',['camera-controls']],['mobile-menu-rest',['sit','hammock','time']],['mobile-menu-care',['milk','hay']],['mobile-menu-stats',[]]];
+const groups=[['mobile-menu-help',['help']],['mobile-menu-camera',['camera-controls']],['mobile-menu-rest',['sit','hammock','time']],['mobile-menu-care',['milk','hay']],['mobile-menu-stats',[]]];
 const stats=document.querySelector('.stats');
 const items=groups.flatMap(([target,ids])=>ids.map(id=>({node:$(id),target:$(target)})));
 items.push({node:stats,target:$('mobile-menu-stats')});

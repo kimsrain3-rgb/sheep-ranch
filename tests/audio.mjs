@@ -10,3 +10,5 @@ assert.equal(await audio.toggle(),true);assert.equal(count,1);await audio.toggle
 fail=true;await assert.rejects(audio.toggle());assert.equal(audio.enabled,false);assert.equal(audio.context.state,'suspended');
 fail=false;release=()=>{};const a=audio.toggle(),b=audio.toggle();release();await Promise.all([a,b]);assert.equal(count,1);assert.equal(audio.enabled,true);assert.equal(plays,4);
 console.log('Audio: one streamed looping MP3, quiet volume, pause/resume position, no duplicate playback and playback-failure rollback passed.');
+
+const before=plays;assert.equal(await audio.start(),true);assert.equal(await audio.start(),true);assert.equal(plays,before,"automatic start never toggles off or starts another track");

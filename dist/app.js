@@ -2,7 +2,7 @@ import { isCompactViewport } from './game/layout.js';
 import { Flock } from './game/flock.js?v=touch-eyes';
 import { Interactions } from './game/interactions.js?v=touch-eyes';
 import { Companions } from './game/companions.js';
-import { MeadowAudio } from './game/audio.js?v=pastoral-mp3';
+import { MeadowAudio } from './game/audio.js?v=auto-sound';
 import { CONFIG,keepDry } from './game/config.js';
 import { drawSheep as renderSheep } from './render/sheep.js?v=touch-eyes';
 import { drawCompanion } from './render/companions.js?v=clean-mouth';
@@ -271,6 +271,7 @@ requestAnimationFrame(frame);
 function start(){
   if(started)return;
   started=true;
+  ensureSound();
   document.body.classList.add('walking');
   $('welcome').hidden=true;
   view.zoom=1.65;
@@ -524,17 +525,14 @@ $('help-panel').onclick=e=>{
 addEventListener('keydown',e=>{
   if(e.key==='Escape'&&paused)help(false);
 });
-$('sound').onclick=async()=>{
-  try{
-    const enabled=await audioSystem.toggle();
-    $('sound').setAttribute('aria-pressed',enabled);
-    $('sound').querySelector('span').textContent=enabled?'소리 끄기':'소리 켜기';
-    if(enabled)audioSystem.baa(sheep[0],player,view.yaw);
-  }
-  catch{
-    notify('이 브라우저에서는 소리를 켤 수 없어요.');
-  }
-};
+let soundRetryNotified=false;
+function ensureSound(){
+  audioSystem.start().catch(()=>{
+    if(!soundRetryNotified){notify('화면을 한 번 더 누르면 음악이 시작됩니다.');soundRetryNotified=true;}
+  });
+}
+// Entry starts sound. If a browser blocks it, the next normal tap retries it.
+addEventListener('pointerdown',()=>{if(started&&!audioSystem.enabled)ensureSound();},{capture:true});
 $('milk').onclick=()=>{
   if(hammocking||seated){
     notify('일어난 뒤 우유를 줄 수 있어요.');
