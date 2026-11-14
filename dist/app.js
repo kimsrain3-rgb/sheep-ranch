@@ -1,3 +1,4 @@
+import { isCompactViewport } from './game/layout.js';
 import { Flock } from './game/flock.js?v=touch-eyes';
 import { Interactions } from './game/interactions.js?v=touch-eyes';
 import { Companions } from './game/companions.js';
@@ -26,9 +27,9 @@ const interaction=new Interactions(flock),companions=new Companions(),audioSyste
 const grass=makeVegetation();
 const particles=[];
 function notify(text){
-  if(W<=700&&text.includes('오물오물 먹었어요'))return;
-  $('toast').textContent=W<=700?text.split('. ')[0]:text;
-  toastUntil=t+(W<=700?2.2:6);
+  if(isCompactViewport(W,H)&&text.includes('오물오물 먹었어요'))return;
+  $('toast').textContent=isCompactViewport(W,H)?text.split('. ')[0]:text;
+  toastUntil=t+(isCompactViewport(W,H)?2.2:6);
   $('toast').style.opacity=1;
 }
 function resize(){
@@ -272,7 +273,7 @@ function start(){
   started=true;
   document.body.classList.add('walking');
   $('welcome').hidden=true;
-  view.zoom=W<700?1.65:1.65;
+  view.zoom=1.65;
   following=true;
   centerView();
   updateViewLabel();
@@ -281,7 +282,7 @@ function start(){
   $('hammock').disabled=false;
   $('milk').disabled=false;
   $('hay').disabled=false;
-  if(W>700)notify('좌우로 밀어 360° 회전 · 두 손가락으로 확대 · 짧게 눌러 걷기');
+  if(!isCompactViewport(W,H))notify('좌우로 밀어 360° 회전 · 두 손가락으로 확대 · 짧게 눌러 걷기');
   else $('toast').style.opacity=0;
   notify('양을 누르면 가까이서 쓰다듬어요. 우유와 건초는 메뉴에 있어요.');
 }
