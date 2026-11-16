@@ -1,5 +1,5 @@
 import http from 'node:http';import {readFile} from 'node:fs/promises';import path from 'node:path';import {createHash} from 'node:crypto';import {handleShepherd} from '../server/shepherd-api.js';import {serveAsset} from '../server/static-response.js';
-const dist=path.resolve('dist'),mime={'.html':'text/html;charset=utf-8','.js':'text/javascript;charset=utf-8','.css':'text/css;charset=utf-8','.mp3':'audio/mpeg'};
+const dist=path.resolve('dist'),mime={'.html':'text/html;charset=utf-8','.js':'text/javascript;charset=utf-8','.css':'text/css;charset=utf-8','.mp3':'audio/mpeg','.png':'image/png'};
 http.createServer(async(req,res)=>{try{
  const origin=`http://${req.headers.host}`,url=new URL(req.url,origin),chunks=[];let length=0;for await(const chunk of req){length+=chunk.length;if(length>12000){res.writeHead(413);res.end();return;}chunks.push(chunk);}
  const request=new Request(url,{method:req.method,headers:req.headers,...(!['GET','HEAD'].includes(req.method)?{body:Buffer.concat(chunks)}:{})});let response;

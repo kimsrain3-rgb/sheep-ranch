@@ -4,15 +4,15 @@ import {
 const NAMES=['구름이','솜이','보리','몽실이','두부','우유','콩이','단추','포근이','밀크','달이','풀잎이'];
 const STATIONARY=new Set(['sleep','drinking','nursing','nurse-wait','hay-eat','pet','milk','tug']);
 export class Flock {
-  constructor(random=seededRandom()){
+  constructor(random=seededRandom(),counts=CONFIG){
     this.random=random;
     this.nextBaa=5;
     this.time=0;
     const range=(a,b)=>a+random()*(b-a);
     this.adults=Array.from({
-      length:CONFIG.adults
+      length:counts.adults
     },(_,i)=>{
-      const angle=i/CONFIG.adults*Math.PI*2,r=18+range(0,48);
+      const angle=i/counts.adults*Math.PI*2,r=18+range(0,48);
       const x=i===0?3:i<12?range(-22,22):Math.sin(angle)*r;
       const z=i===0?6:i<12?range(5,35):Math.cos(angle)*r;
       return {
@@ -27,7 +27,7 @@ export class Flock {
         }))
       };
     });
-    this.lambs=this.adults.slice(0,CONFIG.lambs).map((mother,i)=>({
+    this.lambs=this.adults.slice(0,counts.lambs).map((mother,i)=>({
       ...mother,
       id:'lamb-'+i,name:mother.name+'의 아기양',mother,isLamb:true,size:mother.size/3,
       x:mother.x+(i%2?-1.65:1.65),z:mother.z-.6,phase:range(0,7),decision:range(15,45),
@@ -35,12 +35,12 @@ export class Flock {
     }));
     this.animals=[...this.adults,...this.lambs];
     // Living scenes are present from the first visit, not only after a long wait.
-    for(const i of [4,13,27,36])this.setState(this.adults[i],'sleep',15+i*.4);
-    Object.assign(this.adults[6],{
+    for(const i of [4,13,27,36])if(this.adults[i])this.setState(this.adults[i],'sleep',15+i*.4);
+    if(this.adults[6])Object.assign(this.adults[6],{
       x:-8.4,z:-4.5,tx:-8.4,tz:-4.5,drinkSpot:0
     });
-    this.setState(this.adults[6],'drinking',8);
-    this.beginNursing(this.lambs[2]);
+    if(this.adults[6])this.setState(this.adults[6],'drinking',8);
+    if(this.lambs[2])this.beginNursing(this.lambs[2]);
   }
   setState(a,state,timer=0){
     a.state=state;

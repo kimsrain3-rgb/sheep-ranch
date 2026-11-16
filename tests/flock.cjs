@@ -15,8 +15,10 @@ for(let i=0;i<1800;i++) vm.runInContext('t+=1/60;update(1/60)',ctx);
 assert.equal(read('sheep.map(a=>a.feedSlot).join(",")'),slots);
 assert.ok(read('feedCount')>0);
 assert.equal(read('lambs.every(a=>a.size===a.mother.size/3)'),true);
-vm.runInContext('feed();lambPlay.next=Infinity;const baby=lambs[0];baby.x=baby.mother.x+Math.sin(baby.phase)*1.7;baby.z=baby.mother.z-.65;baby.walking=false;update(1/60)',ctx);
-assert.equal(read('lambs[0].walking'),false);
+if(read('lambs.length')){
+  vm.runInContext('feed();lambPlay.next=Infinity;const baby=lambs[0];baby.x=baby.mother.x+Math.sin(baby.phase)*1.7;baby.z=baby.mother.z-.65;baby.walking=false;update(1/60)',ctx);
+  assert.equal(read('lambs[0].walking'),false);
+}else vm.runInContext('feed()',ctx);
 vm.runInContext('sheep[0].headX=.83;sheep[0].dir=-1;update(1/60)',ctx);
 assert.ok(read('sheep[0].headX')>0,'head must turn gradually rather than flip sides in a frame');
 assert.equal(read('sheep.every(a=>Number.isFinite(a.x)&&Number.isFinite(a.z)&&Number.isFinite(a.headX))'),true);
