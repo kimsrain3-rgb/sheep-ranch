@@ -1,5 +1,3 @@
-import {CONFIG} from '../game/config.js?v=shepherd-lodge';
-
 export function drawLodge(c,p,{night=false,snow=false,occupants=0}={}){
   if(!p)return null;
   c.save();c.translate(p.x,p.y);c.scale(p.s,p.s);
@@ -35,40 +33,60 @@ export function drawLodge(c,p,{night=false,snow=false,occupants=0}={}){
   return {x:p.x,y:p.y,w:p.s*13,h:p.s*13.5};
 }
 
-// A live, elevated view from the lodge balcony. Animal positions come from the
-// same simulation as the meadow; no separate decorative flock is invented.
-export function drawLodgePanorama(c,width,height,{sheep=[],chickens=[],dogs=[],shepherd=null,night=false}={}){
-  const scale=Math.min(globalThis.devicePixelRatio||1,2);
-  const pixelWidth=Math.max(1,Math.round(width*scale)),pixelHeight=Math.max(1,Math.round(height*scale));
-  if(c.canvas.width!==pixelWidth||c.canvas.height!==pixelHeight){c.canvas.width=pixelWidth;c.canvas.height=pixelHeight;}
-  c.setTransform(scale,0,0,scale,0,0);
-  const sky=c.createLinearGradient(0,0,0,height);
-  sky.addColorStop(0,night?'#223848':'#9bc2b8');
-  sky.addColorStop(.62,night?'#536875':'#e9d9ae');
-  sky.addColorStop(1,night?'#44583e':'#89a86b');
-  c.fillStyle=sky;c.fillRect(0,0,width,height);
-  const horizon=height*.37;
-  c.fillStyle=night?'#526d54':'#92ad7b';
-  c.beginPath();c.moveTo(0,horizon+18);c.quadraticCurveTo(width*.24,horizon-35,width*.48,horizon+6);c.quadraticCurveTo(width*.72,horizon+38,width,horizon-10);c.lineTo(width,height);c.lineTo(0,height);c.fill();
-  c.fillStyle=night?'#3b6344':'#7da15b';c.fillRect(0,horizon+35,width,height-horizon);
-  // North is at the top. The balcony looks south across the sheep field.
-  const point=(x,z)=>({x:width*.5+(x-CONFIG.lodge.x)*width/125,y:horizon+43+(CONFIG.lodge.z-z)*(height-horizon-55)/100});
-  const house=(position,w,h,fill,label)=>{
-    const p=point(position.x,position.z);
-    c.fillStyle='#30452f48';c.beginPath();c.ellipse(p.x,p.y+3,w*.58,h*.18,0,0,Math.PI*2);c.fill();
-    c.fillStyle=fill;c.fillRect(p.x-w/2,p.y-h,w,h);
-    c.fillStyle='#715945';c.beginPath();c.moveTo(p.x-w*.65,p.y-h);c.lineTo(p.x,p.y-h-h*.48);c.lineTo(p.x+w*.65,p.y-h);c.fill();
-    c.fillStyle=night?'#fff1c8':'#324933';c.font='bold 11px sans-serif';c.textAlign='center';c.fillText(label,p.x,p.y+17);
+// Walkable cutaway rooms use the same perspective and ground picking as the barn.
+export function drawLodgeInterior(c,W,H,project,{floor=1,night=false}={}){
+  const poly=(points,color)=>{
+    const p=points.map(([x,z,y=0])=>project(x,z,y));
+    if(p.some(v=>!v))return;
+    c.fillStyle=color;c.beginPath();p.forEach((v,i)=>i?c.lineTo(v.x,v.y):c.moveTo(v.x,v.y));c.closePath();c.fill();
   };
-  house(CONFIG.barn,Math.max(28,width*.075),Math.max(20,height*.13),'#d9c6a0','축사');
-  house(CONFIG.coop,Math.max(17,width*.04),Math.max(14,height*.08),'#cfab7d','닭장');
-  const dot=(a,r,color)=>{const p=point(a.x,a.z);if(p.x<4||p.x>width-4||p.y<horizon+6||p.y>height-28)return;c.fillStyle=color;c.beginPath();c.arc(p.x,p.y,r,0,Math.PI*2);c.fill();};
-  for(const a of sheep)if(!a.hiddenInBarn)dot(a,a.isLamb?2.2:3.3,'#fff7e7');
-  for(const a of chickens)if(!a.hiddenInCoop)dot(a,2,'#e7ba63');
-  for(const a of dogs)if(!a.hiddenInLodge)dot(a,3.3,'#a16b43');
-  if(shepherd&&!shepherd.insideLodge)dot(shepherd,3.8,'#355b72');
-  c.fillStyle='#594333';c.fillRect(0,height-28,width,28);
-  for(let x=12;x<width;x+=48)c.fillRect(x,height-56,6,28);
-  c.fillStyle='#fbf5df';c.font='12px sans-serif';c.textAlign='left';
-  c.fillText('2층 발코니 · 목장 전망',14,23);
+  const line=(a,b,color,width=.04)=>{
+    const p=project(...a),q=project(...b);if(!p||!q)return;
+    c.strokeStyle=color;c.lineWidth=Math.max(1,p.s*width);c.beginPath();c.moveTo(p.x,p.y);c.lineTo(q.x,q.y);c.stroke();
+  };
+  const box=(x1,z1,x2,z2,h,side,top)=>{
+    poly([[x1,z1],[x2,z1],[x2,z2],[x1,z2]],side);
+    poly([[x1,z1,0],[x2,z1,0],[x2,z1,h],[x1,z1,h]],side);
+    poly([[x1,z1,h],[x2,z1,h],[x2,z2,h],[x1,z2,h]],top);
+  };
+  const label=(text,x,z,y,color='#fff8e5')=>{
+    const p=project(x,z,y);if(!p)return;
+    c.fillStyle=color;c.textAlign='center';c.font=`${Math.max(11,Math.min(19,p.s*.26))}px sans-serif`;c.fillText(text,p.x,p.y);
+  };
+  if(floor===1){
+    const backdrop=c.createLinearGradient(0,0,0,H);
+    backdrop.addColorStop(0,'#695f50');backdrop.addColorStop(1,'#d5bb91');
+    c.fillStyle=backdrop;c.fillRect(0,0,W,H);
+    poly([[-5.5,-1],[5.5,-1],[5.5,14],[-5.5,14]],'#bea176');
+    for(let z=0;z<14;z+=.9)line([-5.5,z,.02],[5.5,z,.02],'#9c79585e',.018);
+    poly([[-5.5,14,0],[5.5,14,0],[5.5,14,5.2],[-5.5,14,5.2]],'#dfcaa3');
+    poly([[-5.5,-1,0],[-5.5,14,0],[-5.5,14,3.4],[-5.5,-1,3.4]],'#ad8b68');
+    poly([[5.5,-1,0],[5.5,14,0],[5.5,14,3.4],[5.5,-1,3.4]],'#b69973');
+    // A real window, warm light and readable furniture surround an open aisle.
+    poly([[-2.5,13.98,2.15],[2.5,13.98,2.15],[2.5,13.98,4.1],[-2.5,13.98,4.1]],night?'#536b75':'#a5c9ba');
+    line([0,13.96,2.15],[0,13.96,4.1],'#f7e7c0',.11);
+    line([-2.5,13.96,3.15],[2.5,13.96,3.15],'#f7e7c0',.1);
+    box(-5,3,-2.1,6.8,.55,'#75573e','#f6e7c8');label('목동 침대',-3.5,5,1);
+    box(2.1,3,4.7,5.4,.85,'#785b43','#ddbc78');label('식탁 · 차',3.4,4.5,1.22);
+    box(-5,9,-3.2,11.5,1.55,'#785a42','#b78362');label('책과 목장 일지',-4.1,10.8,1.9);
+    box(3,7.1,5,8.8,1.25,'#545046','#e7a85c');label('난로',4,8.2,1.55);
+    box(-4.9,1,-3.3,2.2,.8,'#8d927e','#c2d8d1');label('세면대',-4.1,1.8,1.12);
+    for(const [x,name] of [[-2.4,'바람개'],[1,'보리개']]){
+      poly([[x,11.2,.05],[x+1.5,11.2,.05],[x+1.5,12.8,.05],[x,12.8,.05]],'#e9c989');
+      label(name+' 자리',x+.75,12.2,.14,'#463f2f');
+    }
+    box(3.2,10,5.2,12,.2,'#785f48','#bd9c71');label('2층 계단 ↑',4.1,11.4,.5,'#2d4e3b');
+    for(const z of [2,12]){line([-5.3,z,3.5],[5.3,z,3.5],'#76563f',.1);const p=project(0,z,3.35);if(p){c.save();c.shadowColor='#ffde95';c.shadowBlur=20;c.fillStyle='#f4d18b';c.beginPath();c.arc(p.x,p.y,Math.max(3,p.s*.11),0,Math.PI*2);c.fill();c.restore();}}
+  }else{
+    // The real meadow is painted behind the open balcony before these rails.
+    poly([[-5.5,-1],[5.5,-1],[5.5,14],[-5.5,14]],'#ae9067');
+    for(let z=0;z<14;z+=1.1)line([-5.5,z,.02],[5.5,z,.02],'#e0bc8755',.025);
+    poly([[-5.5,14,0],[5.5,14,0],[5.5,14,.42],[-5.5,14,.42]],'#6d543e');
+    for(let x=-5.5;x<=5.5;x+=1.1)line([x,14,.4],[x,14,1.35],'#654b37',.08);
+    line([-5.5,14,1.35],[5.5,14,1.35],'#ead1a0',.12);
+    for(const x of [-5.5,5.5])line([x,-1,.05],[x,14,1.2],'#715640',.09);
+    box(-4.8,2,-2.4,4,.55,'#725b43','#dcc69a');label('전망 의자',-3.6,3.3,.9);
+    box(2.5,7,4.7,9,.45,'#75583f','#b99564');label('망원경',3.6,8,.82);
+    box(3.2,10,5.2,12,.2,'#785f48','#bd9c71');label('1층 계단 ↓',4.1,11.4,.5,'#2d4e3b');
+  }
 }

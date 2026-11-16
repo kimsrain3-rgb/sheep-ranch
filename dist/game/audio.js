@@ -27,7 +27,7 @@ export class MeadowAudio {
       this.context=new AC();
     }
     if(!this.music){
-      this.music=new Audio(new URL('../assets/pastoral-loop.mp3',import.meta.url).href);
+      this.music=new Audio(new URL('../assets/sounds/pastoral-loop.mp3',import.meta.url).href);
       this.music.loop=true;
       this.music.volume=.22;
       this.music.preload='none';
@@ -59,7 +59,7 @@ export class MeadowAudio {
     if(this.callsLoading)return this.callsLoading;
     if(!this.fetcher||!this.context?.decodeAudioData)return Promise.resolve([]);
     this.callsLoading=Promise.all(SHEEP_CALLS.map(async clip=>{
-      const url=new URL('../assets/'+clip.file,import.meta.url).href;
+      const url=new URL('../assets/sounds/'+clip.file,import.meta.url).href;
       try{
         const response=await this.fetcher(url);if(!response.ok)throw Error('Missing sheep clip');
         const buffer=await this.context.decodeAudioData(await response.arrayBuffer());

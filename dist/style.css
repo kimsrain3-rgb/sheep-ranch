@@ -86,21 +86,9 @@ body:not(.walking) #camera-controls{display:none}canvas{cursor:grab}.walking can
 @media(max-width:700px), (max-height:540px){#shepherd-talk{left:14px;bottom:max(14px,env(safe-area-inset-bottom));font-size:11px;padding:9px 13px}#shepherd-chat{left:14px;bottom:max(12px,env(safe-area-inset-bottom));max-height:37dvh}.chat-open #bottom{visibility:hidden}#barn-leave{top:max(14px,env(safe-area-inset-top));left:14px;font-size:11px}#barn-room-status{top:68px;max-width:80vw;overflow:hidden;text-overflow:ellipsis}.in-barn .place{display:none!important}}
 @media(max-height:540px){#shepherd-chat{width:min(350px,46vw);max-height:calc(100dvh - 70px);bottom:10px;padding:10px}#shepherd-messages{max-height:100px;font-size:11px}.chat-heading strong{font-size:14px}.chat-heading small{font-size:9px}.chat-prompts button{font-size:9px;min-height:27px}.chat-prompts{margin:3px 0}#shepherd-form input{min-height:38px}#barn-room-status{top:14px;max-width:40vw}}
 
-/* Two-floor shepherd lodge: a shared warm room and a live balcony view. */
-#lodge-dialog{width:min(760px,calc(100vw - 26px));max-height:calc(100dvh - 28px);overflow:auto;padding:0;color:var(--ink);background:#f9f3e5;border:1px solid #fff8e5;border-radius:20px;box-shadow:0 20px 80px #19332666}
-#lodge-dialog::backdrop{background:#1c302b85;backdrop-filter:blur(5px)}
-.lodge-heading{display:flex;justify-content:space-between;align-items:start;gap:15px;padding:24px 26px 12px;background:linear-gradient(110deg,#fbf4df,#e5ead8)}
-.lodge-heading small{font-size:9px;letter-spacing:2px;color:#758571}.lodge-heading h2{font:28px 'Noto Serif KR',serif;margin:7px 0}.lodge-heading p{font-size:12px;color:#66765f;margin:0}
-#lodge-close{width:44px;height:44px;flex-shrink:0;border-radius:50%;background:#e3e7d6;font-size:26px}
-.lodge-floors{display:flex;gap:8px;padding:16px 26px 0}.lodge-floors button{flex:1;min-height:44px;border-radius:10px;background:#e8e4d4;font-size:12px}.lodge-floors button[aria-pressed=true]{background:#405f49;color:#fff9e9}
-#lodge-first-floor,#lodge-second-floor{padding:18px 26px 24px}.lodge-room{height:330px;position:relative;overflow:hidden;border:10px solid #ac8660;border-radius:12px;background:repeating-linear-gradient(90deg,#bd9b70 0 28px,#c5a77e 28px 30px);box-shadow:inset 0 15px 30px #5c3d2645}
-.lodge-room>div{position:absolute;display:flex;align-items:center;justify-content:center;text-align:center;padding:8px;border-radius:8px;font-size:12px;box-shadow:0 7px 14px #4b322f33}
-.lodge-window{top:0;left:38%;width:24%;height:48px;background:linear-gradient(#92babc,#d4e9d4);border:8px solid #f2ddad;border-top:0;border-radius:0 0 12px 12px!important;color:#355b53}
-.lodge-bed{top:75px;left:6%;width:28%;height:105px;background:#e5d8b9;border:10px solid #795c41;color:#4b493b;flex-direction:column}.lodge-bed span{font-size:10px;margin-top:8px}
-.lodge-table{top:100px;left:38%;width:25%;height:90px;background:#e4cd92;border:9px solid #8c6c4d;color:#4d4a3c}
-.lodge-stove{top:74px;right:5%;width:21%;height:92px;background:#5a584b;color:#ffd98b!important;border:8px solid #927755}
-.lodge-wash{bottom:20px;left:6%;width:25%;height:58px;background:#c2d2bf;border:7px solid #e8dbbd}
-.lodge-shelf{bottom:20px;left:36%;width:25%;height:58px;background:#aa8257;color:#fff7dd}
-.lodge-dogbeds{bottom:19px;right:5%;width:30%;display:flex!important;gap:7px;box-shadow:none!important;padding:0!important}.lodge-dogbeds div{flex:1;min-height:65px;padding:7px 4px;border-radius:50%;background:#e9c887;color:#4e4535;border:5px solid #9a704d;font-size:11px;display:grid;place-items:center}
-.lodge-caption{font-size:12px;line-height:1.6;color:#697765;margin:13px 0 0}.lodge-balcony{padding:9px;background:#926f4f;border-radius:12px}#lodge-panorama{position:static;width:100%;height:350px;touch-action:auto;border-radius:7px;cursor:default}
-@media(max-width:700px),(max-height:540px){.lodge-heading{padding:17px 17px 10px}.lodge-heading h2{font-size:22px}.lodge-floors{padding:12px 17px 0}.lodge-floors button{font-size:11px;padding:7px}#lodge-first-floor,#lodge-second-floor{padding:12px 17px 17px}.lodge-room{height:280px}.lodge-room>div{font-size:10px}.lodge-dogbeds{width:38%}.lodge-dogbeds div{font-size:9px;min-height:58px}#lodge-panorama{height:280px}}
+/* In-world lodge navigation follows the barn's controls. */
+#lodge-leave,#lodge-stairs{position:fixed;z-index:26;top:145px;min-height:44px;padding:10px 16px;border-radius:25px;background:#f8f0dbe8;font-size:12px}
+#lodge-leave{left:30px}#lodge-stairs{right:30px}
+#lodge-room-status{position:fixed;z-index:19;top:108px;left:50%;transform:translateX(-50%);padding:7px 13px;border-radius:18px;background:#f7efdce0;font-size:11px;color:#5b674d;white-space:nowrap}
+.in-lodge #bottom,.in-lodge .care-actions,.in-lodge #camera-controls,.in-lodge #mobile-menu-toggle{display:none!important}
+@media(max-width:700px),(max-height:540px){#lodge-leave,#lodge-stairs{top:max(14px,env(safe-area-inset-top));font-size:11px;padding:9px 12px}#lodge-leave{left:14px}#lodge-stairs{right:14px}#lodge-room-status{top:68px;max-width:94vw;overflow:hidden;text-overflow:ellipsis}.in-lodge .place{display:none!important}}
