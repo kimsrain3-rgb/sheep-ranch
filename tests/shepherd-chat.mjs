@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {handleShepherd} from '../server/shepherd-api.js';
-import {parseShepherdIntent} from '../dist/shepherd-chat.js';
+import {parseShepherdIntent,setupShepherdChat} from '../dist/shepherd-chat.js';
 
 const origin='http://localhost:4173';
 const state={time:'오후 6:00',weather:'맑음',weatherSource:'live',location:'양주',total:62,lambs:12,inside:3,chickens:10,chickensInside:4,playingLambs:2,dogs:2,dogsInLodge:1,shepherdInLodge:true};
@@ -54,3 +54,32 @@ response=await handleShepherd(request('보리개는 무엇을 하고 있어?'),{
 assert.equal(response.status,503);
 assert.equal((await response.json()).error,'AI_NOT_CONFIGURED');
 console.log('Shepherd chat: exact live status, weather source, AI conversation and missing-key fallback passed.');
+
+// Both the button and programmatic open must obey proximity, as must sending.
+const elements=new Map();
+function node(id){
+  if(!elements.has(id))elements.set(id,{hidden:true,children:[],value:'',disabled:false,scrollHeight:0,
+    classList:{add(){},remove(){}},focus(){},addEventListener(){},querySelectorAll(){return [];},
+    append(child){this.children.push(child);}});
+  return elements.get(id);
+}
+let allowed=false,approaches=0,opened=0,closed=0;
+globalThis.document={getElementById:node,createElement:()=>({}),body:node('body')};
+try{
+  const ui=setupShepherdChat({snapshot:()=>state,execute:()=>'',canTalk:()=>allowed,
+    requestOpen:()=>approaches++,onOpen:()=>opened++,onClose:()=>closed++,
+    fetcher:async()=>new Response(JSON.stringify({connected:false}))});
+  node('shepherd-talk').onclick();
+  assert.equal(approaches,1);
+  assert.equal(node('shepherd-chat').hidden,true,'distant button starts approach without showing dialogue');
+  ui.open();assert.equal(approaches,2,'programmatic open has the same proximity gate');
+  allowed=true;ui.open();
+  assert.equal(opened,1);assert.equal(node('shepherd-chat').hidden,false);
+  assert.equal(node('shepherd-talk').hidden,true);
+  assert.equal(node('shepherd-messages').children.length,1);
+  allowed=false;node('shepherd-input').value='안녕';node('shepherd-form').onsubmit({preventDefault(){}});
+  assert.equal(closed,1);assert.equal(node('shepherd-chat').hidden,true,'losing proximity closes the panel before send');
+  assert.equal(node('shepherd-messages').children.length,1,'no distant message is sent or appended');
+  await new Promise(resolve=>setImmediate(resolve));
+}finally{delete globalThis.document;}
+console.log('Chat proximity gate: button, programmatic open and message send require a nearby face-to-face encounter.');

@@ -1,4 +1,4 @@
-import {distance,keepDry} from './config.js?v=night-barn';
+import {distance,keepDry} from './config.js?v=solid-buildings-2';
 export class LambPlay{
   constructor(random=Math.random){this.random=random;this.time=0;this.next=4;this.groups=[];}
   tick(dt,{flock,feeding=false,sheltering=false,yaw=0}){

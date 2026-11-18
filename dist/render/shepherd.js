@@ -5,6 +5,7 @@ export function drawShepherdBoy(c,p,boy,yaw=0){
   const size=p.s*.94;
   boy.screen={x:p.x,y:p.y,w:size*1.3,h:size*2.2};
   const pose=visitorPose(boy.headingX,boy.headingZ,yaw),side=pose==='left'||pose==='right',back=pose==='back';
+  const date=new Date(),festive=date.getMonth()===11&&date.getDate()>=20&&date.getDate()<=26;
   const t=boy.time,swing=armSwing(t,boy.walking),waving=boy.state==='greet';
   c.save();c.translate(p.x,p.y);c.scale(size,size);
   const ell=(x,y,rx,ry,color)=>{c.fillStyle=color;c.beginPath();c.ellipse(x,y,rx,ry,0,0,Math.PI*2);c.fill();};
@@ -25,22 +26,22 @@ export function drawShepherdBoy(c,p,boy,yaw=0){
     ell(leg.ankle.x+.035,leg.ankle.y*.77+.015,.14,.07,'#705344');
   }
   if(side)rect(-.36,-1.03,.22,.4,.06,'#a68b5b');
-  rect(side?-.23:-.32,-1.23,side?.48:.64,.63,.14,'#eee1b3');
-  rect(side?-.23:-.32,-.98,side?.48:.64,.49,.09,'#598783');
+  rect(side?-.23:-.32,-1.23,side?.48:.64,.63,.14,festive?'#b63130':'#eee1b3');
+  rect(side?-.23:-.32,-.98,side?.48:.64,.49,.09,festive?'#b63130':'#598783');
   if(!side){
-    line([[-.23,-1.19],[-.2,-.74]],'#598783',.085);line([[.23,-1.19],[.2,-.74]],'#598783',.085);
-    if(!back){rect(-.16,-.97,.32,.23,.045,'#709b91');for(const x of [-.21,.21])ell(x,-1.02,.035,.035,'#d6be76');}
+    line([[-.23,-1.19],[-.2,-.74]],festive?'#b63130':'#598783',.085);line([[.23,-1.19],[.2,-.74]],festive?'#b63130':'#598783',.085);
+    if(!back){rect(-.16,-.97,.32,.23,.045,festive?'#f5ead4':'#709b91');for(const x of [-.21,.21])ell(x,-1.02,.035,.035,'#d6be76');}
     else{rect(-.26,-1.08,.52,.43,.09,'#b69865');line([[-.22,-.93],[.22,-.93]],'#8e744d',.035);}
   }
   // Sleeves and fixed-length arms; a small greeting stays near the head.
   const left=side?-.17:-.3;
-  line([[left,-1.13],[gripX+.015,-.89],[gripX,-.67]],'#e8d8a3',.14);ell(gripX,-.67,.075,.085,'#e2b38d');
+  line([[left,-1.13],[gripX+.015,-.89],[gripX,-.67]],festive?'#b63130':'#e8d8a3',.14);ell(gripX,-.67,.075,.085,'#e2b38d');
   const shoulder=side?.14:.3;
   if(waving){
-    line([[shoulder,-1.12],[.47,-1.32],[.48+Math.sin(t*5)*.045,-1.6]],'#eadca9',.14);
+    line([[shoulder,-1.12],[.47,-1.32],[.48+Math.sin(t*5)*.045,-1.6]],festive?'#b63130':'#eadca9',.14);
     ell(.48+Math.sin(t*5)*.045,-1.63,.085,.1,'#e7bc96');
   }else{
-    line([[shoulder,-1.12],[shoulder+.08+swing,-.88],[shoulder+swing*1.5,-.66]],'#eadca9',.14);ell(shoulder+swing*1.5,-.64,.075,.085,'#e7bc96');
+    line([[shoulder,-1.12],[shoulder+.08+swing,-.88],[shoulder+swing*1.5,-.66]],festive?'#b63130':'#eadca9',.14);ell(shoulder+swing*1.5,-.64,.075,.085,'#e7bc96');
   }
   // Round cheeks, short fringe, small smile and a floppy straw hat.
   ell(0,-1.47,.33,.34,'#5b4436');
@@ -55,10 +56,11 @@ export function drawShepherdBoy(c,p,boy,yaw=0){
     ell(side?-.13:-.31,-1.43,.055,.075,'#e3b48d');
     if(!side)ell(.31,-1.43,.055,.075,'#e3b48d');
   }
-  ell(0,-1.76,.47,.085,'#c9b37a');ell(-.015,-1.88,.31,.19,'#e4d09b');
+  if(festive){c.fillStyle='#bb3232';c.beginPath();c.moveTo(-.32,-1.78);c.lineTo(.02,-2.16);c.quadraticCurveTo(.28,-2.18,.4,-1.94);c.lineTo(.26,-1.77);c.closePath();c.fill();ell(0,-1.78,.36,.075,'#f9f1dd');ell(.4,-1.95,.08,.08,'#f9f1dd');}
+  else{ell(0,-1.76,.47,.085,'#c9b37a');ell(-.015,-1.88,.31,.19,'#e4d09b');
   line([[-.29,-1.8],[.27,-1.8]],'#9a704b',.045);
   // A tiny leaf tucked into the hat helps distinguish him from the visitor.
-  line([[.23,-1.83],[.35,-2.02]],'#6a8051',.022);ell(.32,-1.98,.07,.032,'#8c9c5b');
+  line([[.23,-1.83],[.35,-2.02]],'#6a8051',.022);ell(.32,-1.98,.07,.032,'#8c9c5b');}
   c.restore();
   rect(-.38,-2.36,.76,.25,.07,'#526b4de0');c.fillStyle='#fff7dc';c.font='.15px sans-serif';c.textAlign='center';c.fillText('목동',0,-2.18);
   c.restore();

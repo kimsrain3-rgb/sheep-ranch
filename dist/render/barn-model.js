@@ -152,3 +152,14 @@ export function drawBarnImmersiveModel(c,W,H,view,{night=false}={}){
   c.restore();
   return true;
 }
+
+// Match the exact Blender polygons drawn outside, including annex and doors.
+export function getBarnOcclusionMesh(origin){
+  if(!model)return null;
+  const key=origin.x+':'+origin.z;
+  if(model.occlusion?.key!==key){
+    const points=model.vertices.map(([x,z,y])=>[origin.x+x,origin.z+z,y]);
+    model.occlusion={key,kind:'barn',skipNearCrossing:true,polygons:model.faces.map(face=>face.indices.map(index=>points[index]))};
+  }
+  return model.occlusion;
+}

@@ -1,7 +1,7 @@
 import {
-  CONFIG,distance,keepDry,seededRandom
-} from './config.js?v=shepherd-lodge';
-import {dryRoute} from './navigation.js?v=night-barn';
+  CONFIG,distance,keepDry,seededRandom,actorRadius,buildingAccess,buildingPathClear
+} from './config.js?v=solid-buildings-2';
+import {dryRoute} from './navigation.js?v=solid-buildings-2';
 export class Companions {
   constructor(random=seededRandom(8703)){
     this.random=random;
@@ -20,7 +20,12 @@ export class Companions {
   }
   get coopInside(){return this.chickens.filter(a=>a.hiddenInCoop).length;}
   move(a,dt,speed,yaw){
-    const dx=a.tx-a.x,dz=a.tz-a.z,d=Math.hypot(dx,dz);
+    const goal={x:a.tx,z:a.tz};keepDry(goal,{radius:actorRadius(a),access:buildingAccess(a)});a.tx=goal.x;a.tz=goal.z;
+    if(!a.walkGoal||distance(a.walkGoal,goal)>.15){
+      a.walkGoal=goal;a.walkRoute=buildingPathClear(a,goal,CONFIG)?null:dryRoute(a,goal);
+    }
+    while(a.walkRoute?.length&&distance(a,a.walkRoute[0])<.15)a.walkRoute.shift();
+    const target=a.walkRoute?.[0]||goal,dx=target.x-a.x,dz=target.z-a.z,d=Math.hypot(dx,dz);
     a.walking=speed>0&&d>.08;
     if(!a.walking)return;
     a.x+=dx/d*Math.min(d,dt*speed);a.z+=dz/d*Math.min(d,dt*speed);keepDry(a);
@@ -74,9 +79,10 @@ export class Companions {
     const sheepOutside=sheltering?sheep.filter(s=>s.state==='shelter-go').sort((a,b)=>distance(b,CONFIG.barn.entrance)-distance(a,CONFIG.barn.entrance)):[];
     const chickensOutside=sheltering?this.chickens.filter(a=>a.state==='coop-go').sort((a,b)=>distance(b,CONFIG.coop.entrance)-distance(a,CONFIG.coop.entrance)):[];
     for(const a of this.dogs){
+      if(a.buildingAccess==='lodge'&&a.z<CONFIG.lodge.entrance.z-actorRadius(a)-.05)a.buildingAccess=null;
       a.timer-=dt;
       if(!sheltering&&a.hiddenInLodge){
-        a.hiddenInLodge=false;a.lodgeRoute=[];a.x=CONFIG.lodge.entrance.x;a.z=CONFIG.lodge.entrance.z;
+        a.hiddenInLodge=false;a.lodgeRoute=[];a.x=CONFIG.lodge.entrance.x;a.z=CONFIG.lodge.entrance.z;a.buildingAccess='lodge';
       }
       let speed;
       const preferred=a.role==='escort'?chickensOutside:sheepOutside;

@@ -24,6 +24,23 @@ for(const size of [.8,1.18,.8/3,1.18/3])for(const yaw of [-Math.PI,-Math.PI/2,0,
  assert.ok(Math.abs(length(arm.shoulder,arm.elbow)-arm.bone)<1e-7);
  assert.ok(Math.abs(length(arm.elbow,arm.hand)-arm.bone)<1e-7);
  assert.ok(length(arm.hand,arm.contact)<pp.s*.015,'normal-length arm touches the near fleece');
+ // Sample an entire stroke: a single frame cannot catch straight-arm popping.
+ const poses=Array.from({length:121},(_,i)=>petArmPose(pp,ap,animal,i/120*Math.PI*2/3.4));
+ for(const [i,pose] of poses.entries()){
+   assert.ok(Math.abs(pose.bone-arm.bone)<1e-7,'arm length stays constant through a stroke');
+   assert.ok(Math.abs(length(pose.shoulder,pose.elbow)-pose.bone)<1e-7);
+   assert.ok(Math.abs(length(pose.elbow,pose.hand)-pose.bone)<1e-7);
+   assert.ok(length(pose.shoulder,pose.hand)<=pose.bone*1.8+1e-7,'elbow keeps a bend instead of locking straight');
+   assert.ok(length(pose.hand,pose.contact)<1e-7,'hand keeps its stroke on the fleece');
+   if(i>0)assert.ok(length(pose.elbow,poses[i-1].elbow)<pp.s*.025,'elbow has no sudden step');
+   if(i>1){
+     const previous=poses[i-1].elbow,older=poses[i-2].elbow;
+     const acceleration=Math.hypot(pose.elbow.x-2*previous.x+older.x,pose.elbow.y-2*previous.y+older.y);
+     assert.ok(acceleration<pp.s*.004,'elbow changes direction smoothly');
+   }
+ }
+ const handY=poses.map(pose=>pose.hand.y);
+ assert.ok(Math.max(...handY)-Math.min(...handY)>=pp.s*.159,'visible hand movement is preserved');
  care.cancel(view);assert.equal(view.yaw,yaw);assert.equal(view.zoom,1.65);assert.equal(animal.careContact,false);
 }
 assert.ok(petZoom(780,360)<petZoom(390,780),'landscape closeup fits its shorter viewport');

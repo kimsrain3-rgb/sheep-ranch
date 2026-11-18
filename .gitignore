@@ -7,3 +7,5 @@ dist/.openai/
 project-history.bundle
 .sites-checkout/
 .sites-runtime/
+
+node_modules/

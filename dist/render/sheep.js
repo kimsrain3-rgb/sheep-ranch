@@ -1,3 +1,4 @@
+import {drawLayeredLamb} from './lamb.js?v=lamb-8';
 const handSheep = typeof Image === 'undefined' ? null : new Image();
 if(handSheep) handSheep.src = new URL('./hand-sheep.png', import.meta.url).href;
 const handParts = typeof Image === 'undefined' ? [] : ['body','head','leg0','leg1','leg2','leg3'].map(name=>{
@@ -31,6 +32,7 @@ export function drawSheep(c,a,{
   a.screen={
     x:p.x,y:p.y-(a.hop||0)*s,w:s*2.5,h:s*1.9
   };
+  if(a.isLamb&&drawLayeredLamb(c,p,a,t))return;
   const selectedSheepParts=a.fifthSheepAppearance?fifthSheepParts:thirdSheepParts;
   if((a.thirdSheepAppearance||a.fifthSheepAppearance) && selectedSheepParts.length && selectedSheepParts.every(image=>image.complete&&image.naturalWidth)){
     c.save();c.translate(p.x,p.y-(a.hop||0)*s);c.scale(s,s);

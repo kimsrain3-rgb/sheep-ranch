@@ -1,4 +1,4 @@
-import {petArmPose} from './pet-pose.js?v=night-barn';
+import {petArmPose} from './pet-pose.js?v=soft-elbow-5';
 import {drawMilkBottle} from './milk-pose.js?v=night-barn';
 export function drawInteraction(c,controller,player,project,time){
   const active=controller.active,pp=project(player.x,player.z);
@@ -29,11 +29,12 @@ export function drawInteraction(c,controller,player,project,time){
   };
   c.save();
   c.lineCap='round';
+  c.lineJoin='round';
   if(active.kind==='pet'){
     const arm=petArmPose(pp,ap,a,time);
     c.strokeStyle='#d9b569';c.lineWidth=pp.s*.12;
     c.beginPath();c.moveTo(arm.shoulder.x,arm.shoulder.y);c.lineTo(arm.elbow.x,arm.elbow.y);c.lineTo(arm.hand.x,arm.hand.y);c.stroke();
-    c.fillStyle='#dfba95';c.beginPath();c.ellipse(arm.hand.x,arm.hand.y,pp.s*.09,pp.s*.065,-.2,0,Math.PI*2);c.fill();
+    c.fillStyle='#dfba95';c.beginPath();c.ellipse(arm.hand.x,arm.hand.y,pp.s*.09,pp.s*.065,arm.wristAngle,0,Math.PI*2);c.fill();
   }
   else if(active.kind==='milk'){
     drawMilkBottle(c,pp,{pose:side>0?'right':'left',lambSize:a.size});

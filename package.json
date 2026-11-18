@@ -3,8 +3,19 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node tests/orbit.cjs && node tests/visitor.cjs && node tests/camera.cjs && node tests/flock.cjs && node tests/behaviors.mjs && node tests/tug.mjs && node tests/milk-pose.mjs && node tests/gait.mjs && node tests/contact-eyes.mjs && node tests/audio.mjs && node tests/layout.mjs && node tests/living-meadow.mjs && node tests/shepherd.mjs && node tests/petting.mjs && node tests/shepherd-chat.mjs && node tests/coop.mjs && node tests/lodge.mjs && node tests/barn-model.mjs",
+    "test": "node tests/orbit.cjs && node tests/visitor.cjs && node tests/camera.cjs && node tests/flock.cjs && node tests/behaviors.mjs && node tests/tug.mjs && node tests/milk-pose.mjs && node tests/gait.mjs && node tests/contact-eyes.mjs && node tests/audio.mjs && node tests/layout.mjs && node tests/living-meadow.mjs && node tests/shepherd.mjs && node tests/petting.mjs && node tests/lamb-sprite.mjs && node tests/pond.mjs && node tests/waterways.mjs && node tests/shepherd-chat.mjs && node tests/coop.mjs && node tests/lodge.mjs && node tests/barn-model.mjs && node tests/buildings-three.mjs && node tests/lodge-immersive.mjs && node tests/occlusion.mjs && node tests/building-collision.mjs",
     "build": "node scripts/build-worker.mjs",
-    "dev": "node scripts/preview.mjs"
+    "dev": "node scripts/preview.mjs",
+    "vendor:three": "node scripts/vendor-three.mjs",
+    "test:buildings:browser": "node tests/buildings-browser.cjs",
+    "test:occlusion:browser": "node tests/occlusion-browser.cjs",
+    "test:walls:browser": "node tests/building-walls-browser.cjs",
+    "test:picking:browser": "node tests/picking-browser.cjs"
+  },
+  "dependencies": {
+    "three": "0.180.0"
+  },
+  "devDependencies": {
+    "playwright-core": "1.58.2"
   }
 }

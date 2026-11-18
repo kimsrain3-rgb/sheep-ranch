@@ -1,24 +1,25 @@
-import {CONFIG,clamp,distance} from './config.js?v=lodge-interior';
-import {dryRoute} from './navigation.js?v=night-barn';
+import {lodgeRoute,moveLodgePlayer,LODGE_STAIRS} from './lodge-layout.js?v=lodge-eyes-2';
+import {CONFIG,distance} from './config.js?v=solid-buildings-2';
+import {dryRoute} from './navigation.js?v=solid-buildings-2';
 
 export class LodgeVisit{
   constructor(){this.inside=false;this.floor=1;this.trip=null;this.route=[];this.outside=null;this.screen=null;this.exitAfterStairs=false;}
   nextTarget(player){if(this.route[0]){player.tx=this.route[0].x;player.tz=this.route[0].z;}}
-  request(player){if(this.inside)return;this.trip='enter';this.route=dryRoute(player,CONFIG.lodge.entrance);this.nextTarget(player);}
-  cancel(player){if(this.inside)return;this.trip=null;this.route=[];player.tx=player.x;player.tz=player.z;}
+  request(player){if(this.inside)return;player.buildingAccess='lodge';this.trip='enter';this.route=dryRoute(player,CONFIG.lodge.entrance);this.nextTarget(player);}
+  cancel(player){if(this.inside)return;this.trip=null;this.route=[];player.buildingAccess=null;player.tx=player.x;player.tz=player.z;}
   walkTo(point,player,keepTrip=false){
     if(!keepTrip){this.trip=null;this.exitAfterStairs=false;}
-    const target={x:clamp(point.x,-4.7,4.7),z:clamp(point.z,.5,13.3)};
-    this.route=[];
-    if(this.floor===1&&Math.abs(target.z-player.z)>1){
-      if(Math.abs(player.x)>1.7)this.route.push({x:0,z:player.z});
-      if(Math.abs(target.x)>1.7)this.route.push({x:0,z:target.z});
-    }
-    this.route.push(target);this.nextTarget(player);
+    this.route=lodgeRoute(player,point,this.floor);this.nextTarget(player);
   }
+  steer(wx,wz,player){
+    this.trip=null;this.exitAfterStairs=false;this.route=[];
+    player.tx=player.x+wx*3;player.tz=player.z+wz*3;
+  }
+  move(player,next){return moveLodgePlayer(player,next,this.floor);}
+
   requestFloor(floor,player){
     if(!this.inside||floor===this.floor)return;
-    this.trip=floor===2?'up':'down';this.walkTo({x:3.65,z:10.5},player,true);
+    this.trip=floor===2?'up':'down';this.walkTo(LODGE_STAIRS,player,true);
   }
   requestExit(player){
     if(!this.inside)return;
@@ -30,7 +31,7 @@ export class LodgeVisit{
     if(this.route.length||!this.trip)return null;
     if(this.trip==='enter'){
       this.outside={x:CONFIG.lodge.entrance.x,z:CONFIG.lodge.entrance.z-.7};
-      this.inside=true;this.floor=1;this.trip=null;
+      this.inside=true;this.floor=1;this.trip=null;player.buildingAccess=null;
       player.x=player.tx=0;player.z=player.tz=1;player.walking=false;player.headingX=0;player.headingZ=1;
       return 'entered';
     }

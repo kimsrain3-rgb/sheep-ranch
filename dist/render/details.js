@@ -1,14 +1,14 @@
 import {
-  CONFIG,seededRandom
-} from '../game/config.js';
+  CONFIG,seededRandom,pondLevel,inRiver,onBridge
+} from '../game/config.js?v=solid-buildings-2';
 export function makeVegetation(){
   const random=seededRandom(4528),out=[];
   for(let i=0;i<2700;i++){
     const patch=i%18,a=patch*2.4,r=6+(patch%6)*8,center={
-      x:Math.sin(a)*r,z:Math.cos(a)*r+8
+      x:Math.sin(a)*r*(patch>12?2.2:1),z:Math.cos(a)*r*(patch>12?2.2:1)+8
     };
     const x=center.x+(random()-.5)*16,z=center.z+(random()-.5)*15,p=CONFIG.pond;
-    if(Math.hypot((x-p.x)/p.rx,(z-p.z)/p.rz)<1.15||Math.abs(x-5)<2)continue;
+    if(pondLevel({x,z})<1.15||inRiver({x,z},1)||onBridge({x,z},.6)||Math.abs(x-5)<2)continue;
     out.push({
       x,z,h:.12+random()*.25,p:random()*7,flower:random()<.24,color:Math.floor(random()*3)
     });

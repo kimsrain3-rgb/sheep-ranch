@@ -1,14 +1,14 @@
 import assert from 'node:assert/strict';
 import {Companions} from '../dist/game/companions.js';
 import {ShepherdBoy} from '../dist/game/shepherd.js';
-import {CONFIG,distance} from '../dist/game/config.js';
+import {CONFIG,distance,keepDry,pondLevel} from '../dist/game/config.js';
 import {drawShepherdBoy} from '../dist/render/shepherd.js';
 const boy=new ShepherdBoy(),player={x:0,z:0},sheep=[{x:4,z:8,state:'pet',lock:'pet'},{x:6,z:15,state:'roam'}],before=JSON.stringify(sheep);
 const initial={x:boy.x,z:boy.z};boy.tick(1,{player,sheep});assert.equal(boy.state,'greet');assert.equal(boy.x,initial.x);
 let moved=false;
 for(let i=0;i<4000;i++){
  const a={x:boy.x,z:boy.z};boy.tick(.05,{player,sheep});const step=distance(a,boy);assert.ok(step<=.05*.95+.000001);if(step>.001)moved=true;
- assert.ok(Math.hypot((boy.x-CONFIG.pond.x)/CONFIG.pond.rx,(boy.z-CONFIG.pond.z)/CONFIG.pond.rz)>=1.05);
+ assert.ok(pondLevel(boy)>=1.05);
 }
 assert.ok(moved);assert.equal(JSON.stringify(sheep),before,'NPC never changes sheep care or positions');
 boy.tick(.05,{player,sheep,sheltering:true});const a={x:boy.x,z:boy.z};boy.greet(player);assert.equal(boy.x,a.x);assert.equal(boy.z,a.z);
@@ -37,3 +37,54 @@ assert.ok(chickenHerded,'escort dog helps move chickens during sheltering');
 assert.equal(companions.coopInside,CONFIG.chickens,'all chickens reach their coop');
 assert.ok(distance(escort,leader)<3);assert.equal(escort.state,'rest');assert.ok(distance(escort,owner)>50,'never follows the owner instead');
 console.log('Escort dog follows the boy in dry weather, herds chickens into their coop, then returns to the boy.');
+
+// The UI may open only after continuous movement to the waiting NPC.
+function approach(npc,visitor,indoors=false){
+  const initial={x:visitor.x,z:visitor.z},boyStart={x:npc.x,z:npc.z};
+  assert.equal(npc.requestTalk(visitor,{indoors}),true);
+  assert.deepEqual({x:visitor.x,z:visitor.z},initial,'request does not teleport the visitor');
+  assert.ok(!npc.canTalk(visitor,indoors),'no remote dialogue on request');
+  let ready=false;
+  for(let i=0;i<5000&&!ready;i++){
+    const old={x:visitor.x,z:visitor.z},dx=visitor.tx-visitor.x,dz=visitor.tz-visitor.z,d=Math.hypot(dx,dz);
+    if(d>.08){const step=Math.min(d,.05*3.2);visitor.x+=dx/d*step;visitor.z+=dz/d*step;}
+    if(!indoors)keepDry(visitor);
+    assert.ok(distance(old,visitor)<=.05*3.2+.00001,'approach uses normal walking speed');
+    const event=npc.updateTalk(visitor,{indoors});
+    npc.tick(.05,{player:visitor,sheep:[],sheltering:indoors});
+    assert.deepEqual({x:npc.x,z:npc.z},boyStart,'NPC waits during the whole approach');
+    if(!indoors)assert.ok(pondLevel(visitor)>=1.05,'visitor walks around the pond');
+    ready=event==='ready';
+  }
+  assert.ok(ready,'arrival enables the conversation');
+  const point=npc.talk.point,dx=point.x-visitor.x,dz=point.z-visitor.z;
+  assert.ok(Math.hypot(dx,dz)<=2.2,'conversation is within speaking distance');
+  assert.ok(visitor.headingX*dx+visitor.headingZ*dz>0,'visitor faces the shepherd');
+  assert.ok(npc.headingX*dx+npc.headingZ*dz<0,'shepherd faces the visitor');
+  for(let i=0;i<240;i++){
+    npc.updateTalk(visitor,{indoors});npc.tick(.05,{player:visitor,sheep:[],sheltering:indoors});
+    assert.equal(npc.canTalk(visitor,indoors),true,'NPC stays facing visitor throughout a long chat');
+  }
+}
+for(const from of [{x:0,z:-18},{x:35,z:42},{x:CONFIG.pond.x-CONFIG.pond.rx*1.3,z:CONFIG.pond.z}]){
+  const npc=new ShepherdBoy(),visitor={...from,tx:from.x,tz:from.z};npc.x=-2;npc.z=-5;
+  approach(npc,visitor);
+  visitor.tx=visitor.x+3;
+  assert.equal(npc.updateTalk(visitor),'cancelled','walking away ends conversation');
+  assert.ok(!npc.talk);
+}
+const waiting=new ShepherdBoy(),traveler={x:40,z:40,tx:40,tz:40};
+waiting.requestTalk(traveler);waiting.endTalk(traveler);
+assert.equal(traveler.tx,traveler.x,'cancel stops the approach');
+assert.ok(!waiting.canTalk(traveler));
+const resident=new ShepherdBoy(),guest={x:0,z:1,tx:0,tz:1};resident.insideLodge=true;
+assert.equal(resident.requestTalk(guest),false,'no conversation across indoor/outdoor spaces');
+approach(resident,guest,true);
+assert.ok(!resident.canTalk(guest,false),'indoor conversation cannot continue outdoors');
+resident.endTalk(guest);
+assert.equal(resident.state,'rest');
+const returning=new ShepherdBoy(),owner2={x:0,z:0,tx:0,tz:0};
+returning.requestTalk(owner2);returning.tick(1,{player:owner2,sheep:[],sheltering:true});returning.endTalk(owner2);
+returning.tick(.05,{player:owner2,sheep:[],sheltering:true});
+assert.equal(returning.wet,true,'weather shelter behavior resumes after conversation');
+console.log('Nearby conversation: normal-speed pond-safe approach, waiting NPC, mutual facing, long dialogue, cancellation and indoor separation passed.');

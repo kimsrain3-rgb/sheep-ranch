@@ -1,6 +1,8 @@
 import {
-  CONFIG,clamp,distance,keepDry,seededRandom
-} from './config.js?v=night-barn';
+  CONFIG,clamp,distance,keepDry,seededRandom,actorRadius,buildingAccess,buildingPathClear
+} from './config.js?v=solid-buildings-2';
+import {dryRoute} from './navigation.js?v=solid-buildings-2';
+import {riverPathClear} from './waterways.js?v=lake-bridge-1';
 const NAMES=['구름이','솜이','보리','몽실이','두부','우유','콩이','단추','포근이','밀크','달이','풀잎이'];
 const STATIONARY=new Set(['sleep','drinking','nursing','nurse-wait','hay-eat','pet','milk','tug']);
 export class Flock {
@@ -34,10 +36,11 @@ export class Flock {
       milkCooldown:0,nursingWith:null,screen:null
     }));
     this.animals=[...this.adults,...this.lambs];
+    for(const animal of this.animals){keepDry(animal);animal.tx=animal.x;animal.tz=animal.z;}
     // Living scenes are present from the first visit, not only after a long wait.
     for(const i of [4,13,27,36])if(this.adults[i])this.setState(this.adults[i],'sleep',15+i*.4);
     if(this.adults[6])Object.assign(this.adults[6],{
-      x:-8.4,z:-4.5,tx:-8.4,tz:-4.5,drinkSpot:0
+      x:CONFIG.drinkingSpots[0].x,z:CONFIG.drinkingSpots[0].z,tx:CONFIG.drinkingSpots[0].x,tz:CONFIG.drinkingSpots[0].z,drinkSpot:0
     });
     if(this.adults[6])this.setState(this.adults[6],'drinking',8);
     if(this.lambs[2])this.beginNursing(this.lambs[2]);
@@ -87,8 +90,16 @@ export class Flock {
     [...this.animals].sort((a,b)=>distance(a,player)-distance(b,player)).forEach((a,i)=>a.feedSlot=i);
   }
   move(a,dt,speed,yaw){
-    const dx=a.tx-a.x,dz=a.tz-a.z,d=Math.hypot(dx,dz),stop=a.isLamb?.3:.2;
-    a.walking=d>(a.walking?stop:a.isLamb?.7:.3);
+    const options={radius:actorRadius(a),access:buildingAccess(a)},goal={x:a.tx,z:a.tz};
+    keepDry(goal,options);a.tx=goal.x;a.tz=goal.z;
+    if(!a.walkGoal||distance(a.walkGoal,goal)>.35){
+      a.walkGoal=goal;
+      a.walkRoute=riverPathClear(a,goal)&&buildingPathClear(a,goal,CONFIG,options)?null:dryRoute(a,goal);
+    }
+    while(a.walkRoute?.length&&distance(a,a.walkRoute[0])<.24)a.walkRoute.shift();
+    const waypoint=a.walkRoute?.[0],target=waypoint||goal;
+    const dx=target.x-a.x,dz=target.z-a.z,d=Math.hypot(dx,dz),stop=waypoint?.05:a.isLamb?.3:.2;
+    a.walking=d>(a.walking?stop:waypoint?.08:a.isLamb?.7:.3);
     if(a.walking){
       const amount=Math.min(d,dt*speed);
       a.x+=dx/d*amount;

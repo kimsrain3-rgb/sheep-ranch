@@ -1,6 +1,6 @@
-import {CONFIG,distance} from './config.js?v=night-barn';
-import {dryRoute} from './navigation.js?v=night-barn';
-import {barnSlot,advanceRoute} from './barn.js?v=night-barn';
+import {CONFIG,distance} from './config.js?v=solid-buildings-2';
+import {dryRoute} from './navigation.js?v=solid-buildings-2';
+import {barnSlot,advanceRoute} from './barn.js?v=solid-buildings-2';
 export class WeatherShelter{
   constructor(){this.active=false;this.wetFor=0;this.dryFor=0;this.inside=0;this.manual=false;this.reason='';}
   updateWeather(dt,wet,night=false){

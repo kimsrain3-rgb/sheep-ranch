@@ -1,7 +1,8 @@
-import {petStand,petCameraYaw,petZoom,angleDelta} from './petting.js?v=night-barn';
+import {petStand,petCameraYaw,petZoom,angleDelta} from './petting.js?v=solid-buildings-2';
 import {
-  CONFIG,distance,keepDry
-} from './config.js?v=night-barn';
+  CONFIG,distance,keepDry,actorRadius,buildingPathClear
+} from './config.js?v=solid-buildings-2';
+import {dryRoute} from './navigation.js?v=solid-buildings-2';
 export class Interactions {
   constructor(flock){
     this.flock=flock;
@@ -44,8 +45,8 @@ export class Interactions {
       destination.x=chosen.x;destination.z=chosen.z;
     }
     keepDry(destination);
-    player.tx=destination.x;
-    player.tz=destination.z;
+    this.active.route=dryRoute(player,destination);
+    const first=this.active.route[0];player.tx=first.x;player.tz=first.z;
     return {
       ok:true,message:kind==='milk'?'새끼 양에게 다가가 우유를 줄게요.':kind==='tug'?'장난꾸러기가 옷자락을 살짝 잡았어요.':'양의 옆으로 다가가 살살 쓰다듬을게요.'
     };
@@ -77,8 +78,8 @@ export class Interactions {
       ok:false,message:'건초를 들고 있어요. 풀밭에 내려놓아 주세요.'
     };
     this.supplyTrip=true;
-    player.tx=CONFIG.shed.entrance.x;
-    player.tz=CONFIG.shed.entrance.z;
+    player.buildingAccess='shed';this.supplyRoute=dryRoute(player,CONFIG.shed.entrance);
+    player.tx=this.supplyRoute[0].x;player.tz=this.supplyRoute[0].z;
     return {
       ok:true,message:'건초 창고로 걸어갑니다. 도착하면 한 다발 가져올게요.'
     };
@@ -102,8 +103,12 @@ export class Interactions {
     }
   }){
     const active=this.active;
+    if(this.supplyTrip){
+      while(this.supplyRoute?.length&&distance(player,this.supplyRoute[0])<.08)this.supplyRoute.shift();
+      const next=this.supplyRoute?.[0];if(next){player.tx=next.x;player.tz=next.z;}
+    }
     if(this.supplyTrip&&distance(player,CONFIG.shed.entrance)<1.2){
-      this.supplyTrip=false;
+      this.supplyTrip=false;this.supplyRoute=[];player.buildingAccess=null;player.tx=player.x;player.tz=player.z;player.walking=false;
       this.carrying=true;
       onMessage('건초 한 다발을 가져왔어요. 원하는 풀밭에서 내려놓으세요.');
     }
@@ -114,6 +119,8 @@ export class Interactions {
       const a=active.animal,side=active.tugSide,rightX=Math.cos(view.yaw),rightZ=-Math.sin(view.yaw);
       const offset=.34+.83*a.size;
       const target={x:player.x+side*rightX*offset,z:player.z+side*rightZ*offset};
+      const safe={...target};keepDry(safe,{radius:actorRadius(a)});
+      if(distance(safe,target)>.03||!buildingPathClear(a,target,CONFIG)){this.cancel(view);return;}
       const dx=target.x-a.x,dz=target.z-a.z,d=Math.hypot(dx,dz);
       if(active.phase==='tug-approach'){
         const step=Math.min(d,dt*.85);if(d>.001){a.x+=dx/d*step;a.z+=dz/d*step;}
@@ -135,6 +142,8 @@ export class Interactions {
       view.yaw+=angleDelta(active.petYaw,view.yaw)*blend;
     }
     if(active.phase==='approach'){
+      while(active.route?.length&&distance(player,active.route[0])<.085)active.route.shift();
+      const next=active.route?.[0];if(next){player.tx=next.x;player.tz=next.z;}
       const aligned=active.kind!=='pet'||Math.abs(angleDelta(active.petYaw,view.yaw))<.015;
       if(Math.hypot(player.x-player.tx,player.z-player.tz)<.085&&aligned){
         active.phase='playing';

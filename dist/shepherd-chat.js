@@ -19,7 +19,7 @@ export function localShepherdReply(text,state,receipt=''){
   if(/축사/.test(text))return '큰 축사는 목장 왼쪽에 있어요. “축사로 가자”라고 하시면 문까지 걸어가서 안을 둘러볼 수 있어요.';
   return '지금은 목장 안내 모드예요. 양과 닭의 상태를 알려드리고, 동물 모으기·순찰·축사 출입을 도와드릴 수 있어요. 자유로운 AI 대화는 아직 연결 전이에요.';
 }
-export function setupShepherdChat({snapshot,execute,onOpen=()=>{},fetcher=globalThis.fetch?.bind(globalThis)}){
+export function setupShepherdChat({snapshot,execute,onOpen=()=>{},onClose=()=>{},requestOpen=()=>{},canTalk=()=>true,fetcher=globalThis.fetch?.bind(globalThis)}){
   const $=id=>document.getElementById(id),panel=$('shepherd-chat'),log=$('shepherd-messages');let connected=false,busy=false,requestId=0;
   const history=[];
   function mode(text){$('shepherd-mode').textContent=text;}
@@ -28,9 +28,10 @@ export function setupShepherdChat({snapshot,execute,onOpen=()=>{},fetcher=global
     history.push({role:role==='user'?'user':'assistant',content:String(text).slice(0,1000)});while(history.length>12)history.shift();
   }
   async function check(){try{const r=await fetcher('/api/shepherd/status');const data=await r.json();connected=r.ok&&data.connected===true;}catch{connected=false;}mode(connected?'AI 목동 · 하루':'목장 안내 모드 · AI 연결 전');}
-  function open(){panel.hidden=false;document.body.classList.add('chat-open');$('shepherd-talk').hidden=true;onOpen();if(!history.length)append('assistant','목장주님, 어서 오세요! 저는 하루예요. 양들과 축사를 살피고 있어요. 무엇을 도와드릴까요?');void check();}
-  function close(){panel.hidden=true;document.body.classList.remove('chat-open');$('shepherd-talk').hidden=false;$('shepherd-talk').focus();}
+  function open(){if(!canTalk()){requestOpen();return;}panel.hidden=false;document.body.classList.add('chat-open');$('shepherd-talk').hidden=true;onOpen();if(!history.length)append('assistant','목장주님, 어서 오세요! 저는 하루예요. 양들과 축사를 살피고 있어요. 무엇을 도와드릴까요?');void check();}
+  function close(){onClose();panel.hidden=true;document.body.classList.remove('chat-open');$('shepherd-talk').hidden=false;$('shepherd-talk').focus();}
   async function send(text){
+    if(!canTalk()){close();return;}
     text=String(text).trim().slice(0,500);if(!text||busy)return;
     busy=true;const id=++requestId;$('shepherd-send').disabled=true;append('user',text);$('shepherd-input').value='';
     const intent=parseShepherdIntent(text),receipt=['gather','release','enter_barn','enter_lodge','leave_barn','inspect'].includes(intent)?execute(intent):'';

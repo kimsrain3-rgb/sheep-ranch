@@ -1,27 +1,40 @@
+import {keepRiverDry,inRiver} from './waterways.js?v=lake-bridge-1';
+export {BRIDGE,LAKE_BRIDGE,BRIDGES,bridgePathClear,bridgeHeight,bridgePoint,bridgeLocal,onBridge,WATERWAYS,nearestRiver,inRiver} from './waterways.js?v=lake-bridge-1';
+import {keepOutsideBuildings} from './building-collision.js?v=solid-buildings-2';
+export {actorRadius,buildingAccess,buildingPathClear,buildingFootprints} from './building-collision.js?v=solid-buildings-2';
+const pond=Object.freeze({
+  x:-25,z:-9,rx:19*Math.sqrt(2),rz:11*Math.sqrt(2),
+  openWater:Object.freeze({x:-26,z:-9,rx:6*Math.sqrt(2),rz:3*Math.sqrt(2)})
+});
+// A smooth asymmetric shore with a sheltered inlet on the eastern bank.
+export function pondEdge(angle){
+  const inlet=Math.atan2(Math.sin(angle-.45),Math.cos(angle-.45));
+  return .94+.10*Math.sin(angle*2+.35)+.055*Math.cos(angle*3-.3)-.32*Math.exp(-((inlet/.42)**2));
+}
+export function pondPoint(angle,scale=1){
+  const radius=pondEdge(angle)*scale;
+  return {x:pond.x+Math.cos(angle)*pond.rx*radius,z:pond.z+Math.sin(angle)*pond.rz*radius};
+}
+export function pondLevel(point){
+  const dx=(point.x-pond.x)/pond.rx,dz=(point.z-pond.z)/pond.rz;
+  return Math.hypot(dx,dz)/pondEdge(Math.atan2(dz,dx));
+}
 // All tunable counts, places and activity durations live here.
 export const CONFIG = Object.freeze({
   adults: 50, lambs: 12, chickens: 10, dogs: 2,
   bounds: {
-    minX:-75,maxX:75,minZ:-75,maxZ:150
+    minX:-150,maxX:150,minZ:-150,maxZ:300
   },
-  pond: {
-    x:-16,z:-5,rx:7,rz:5
-  },
-  drinkingSpots: [{
-    x:-8.4,z:-4.5
-  },{
-    x:-10,z:-.8
-  },{
-    x:-18,z:.5
-  }
-  ],
+  playerBounds:{minX:-110,maxX:110,minZ:-110,maxZ:290},
+  pond,
+  drinkingSpots: [.06,.9,2.7].map(angle=>pondPoint(angle,1.08)),
   barn: {x:-25,z:37,entrance:{x:-25,z:28},halfWidth:10,depth:18,capacity:80},
   coop: {x:-8.5,z:37,entrance:{x:-8.5,z:31},halfWidth:4,depth:10,capacity:10},
   lodge: {x:-47,z:52,entrance:{x:-47,z:43},halfWidth:6,depth:14},
   hammock: {x:-6,z:7},
   shed: {
     x:24,z:48,entrance:{
-      x:22,z:42
+      x:24,z:48
     }
   },
   durations: {
@@ -34,11 +47,16 @@ export const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 export function seededRandom(seed=1731){
   return ()=>((seed=seed*16807%2147483647)-1)/2147483646;
 }
-export function keepDry(a){
-  const p=CONFIG.pond,dx=(a.x-p.x)/p.rx,dz=(a.z-p.z)/p.rz,r=Math.hypot(dx,dz);
-  if(r<1.06){
-    const angle=r>.0001?Math.atan2(dz,dx):0;
-    a.x=p.x+Math.cos(angle)*p.rx*1.06;
-    a.z=p.z+Math.sin(angle)*p.rz*1.06;
+export function isWater(point,clearance=0){
+  return pondLevel(point)<1+clearance/Math.min(pond.rx,pond.rz)||inRiver(point,clearance);
+}
+export function keepDry(a,options={}){
+  for(let pass=0;pass<4;pass++){
+    const oldX=a.x,oldZ=a.z,p=CONFIG.pond,dx=(a.x-p.x)/p.rx,dz=(a.z-p.z)/p.rz,r=Math.hypot(dx,dz);
+    const angle=r>.0001?Math.atan2(dz,dx):0,edge=pondEdge(angle)*1.06;
+    if(r<edge){a.x=p.x+Math.cos(angle)*p.rx*edge;a.z=p.z+Math.sin(angle)*p.rz*edge;}
+    keepRiverDry(a);
+    keepOutsideBuildings(a,CONFIG,options);
+    if(Math.hypot(a.x-oldX,a.z-oldZ)<1e-7)break;
   }
 }
