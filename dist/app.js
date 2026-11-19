@@ -4,7 +4,6 @@ import {BarnVisit} from './game/barn.js?v=solid-buildings-2';
 import {BarnInteriorView} from './game/barn-camera.js?v=immersive-barn-v2';
 import {FarmRoomVisit,FARM_ROOMS} from './game/farm-room.js?v=solid-buildings-2';
 import {LodgeVisit} from './game/lodge.js?v=solid-buildings-2';
-import {drawBarnInterior} from './render/barn.js?v=night-barn';
 import {setupShepherdChat} from './shepherd-chat.js?v=nearby-talk-7';
 import {ShepherdBoy} from './game/shepherd.js?v=solid-buildings-2';
 import {drawShepherdBoy} from './render/shepherd.js?v=christmas';
@@ -12,9 +11,7 @@ import {MeadowWeather} from './game/weather.js?v=coop-herding';
 import {SheepBond} from './game/bond.js?v=night-barn';
 import {WeatherShelter} from './game/shelter.js?v=solid-buildings-2';
 import {LambPlay} from './game/lamb-play.js?v=solid-buildings-2';
-import {drawShelter} from './render/shelter.js?v=coop-herding';
-import {drawBarnImmersiveModel,drawBarnModel,hasBarnModel,loadBarnModel,getBarnOcclusionMesh} from './render/barn-model.js?v=solid-buildings-2';
-import {drawBuilding3D,drawFarmRoom3D,drawLodgeRoom3D,getBuildingOcclusionMeshes} from './render/buildings-three.js?v=solid-buildings-2';
+import {drawBuilding3D,drawBuildingLabel3D,drawBarnRoom3D,drawFarmRoom3D,drawLodgeRoom3D,getBuildingOcclusionMeshes} from './render/buildings-three.js?v=barn-three-2';
 import {drawWeather,drawFriendBadge} from './render/weather.js?v=night-barn';
 import {setupMeadowPanel} from './meadow-panel.js?v=night-barn';
 import { isCompactViewport } from './game/layout.js';
@@ -63,14 +60,10 @@ const shepherd=new ShepherdBoy(),barnVisit=new BarnVisit(),lodgeVisit=new LodgeV
 let chat=null,pendingShepherdTalk=false;
 let coopScreen=null,lodgeScreen=null,shedScreen=null;
 const grass=makeVegetation();
-if(typeof loadBarnModel==='function')loadBarnModel();
 const particles=[];
 const buildingOcclusion=new BuildingOcclusion();
 const shedOccluder={kind:'shed',billboard:true,x:CONFIG.shed.x,z:CONFIG.shed.z,scale:1/8,polygons:[
   [[-46,-60],[45,-60],[45,0],[-46,0]],[[-60,-60],[0,-99],[58,-60]]
-]};
-const fallbackBarnOccluder={kind:'barn',billboard:true,x:CONFIG.barn.x,z:CONFIG.barn.entrance.z,polygons:[
-  [[-9.8,-4.8],[9.8,-4.8],[9.8,0],[-9.8,0]],[[-10.6,-4.7],[0,-8],[10.6,-4.7]]
 ]};
 function notify(text){
   if(isCompactViewport(W,H)&&text.includes('오물오물 먹었어요'))return;
@@ -334,15 +327,18 @@ function drawWorldLayer(layer){
   buildingOcclusion.draw(c,p.depth,spriteBounds(p,layer.cover),()=>layer.draw());
 }
 function paintWorldLayers(layers){
-  const barnMesh=getBarnOcclusionMesh({x:CONFIG.barn.x,z:CONFIG.barn.entrance.z})||fallbackBarnOccluder;
   const visibleBuildings=new Set(layers.filter(layer=>layer.building).map(layer=>layer.building));
-  const meshes=[...(visibleBuildings.has('barn')?[barnMesh]:[]),...getBuildingOcclusionMeshes({snow:atmosphere.kind==='snow'}).filter(mesh=>visibleBuildings.has(mesh.kind)),...(visibleBuildings.has('shed')?[shedOccluder]:[])];
+  const meshes=[...getBuildingOcclusionMeshes({snow:atmosphere.kind==='snow'}).filter(mesh=>visibleBuildings.has(mesh.kind)),...(visibleBuildings.has('shed')?[shedOccluder]:[])];
   buildingOcclusion.prepare(view.basis(W,H),W,H,meshes,view===lookoutView?.12:.8);
   layers.forEach(layer=>layer.depth=project(layer.x??0,layer.z,layer.height)?.depth??-1);
   layers.sort((a,b)=>b.depth-a.depth);
   // Paint solid buildings first. Every subsequent world sprite uses their
   // actual nearest surface depth, rather than the building entrance's depth.
   for(const layer of layers)if(layer.building)buildingOcclusion.drawBuilding(c,layer.building,()=>layer.draw());
+  for(const kind of ['barn','lodge','coop'])if(visibleBuildings.has(kind)){
+    const options=kind==='barn'?{inside:shelter.inside,total:sheep.length}:kind==='coop'?{inside:companions.coopInside,total:companions.chickens.length}:{occupants:Number(shepherd.insideLodge)+companions.dogs.filter(a=>a.hiddenInLodge).length};
+    drawBuildingLabel3D(c,kind,project,options);
+  }
   for(const layer of layers)if(!layer.building&&!layer.focused&&layer.depth>0)drawWorldLayer(layer);
   for(const layer of layers)if(!layer.building&&layer.focused&&layer.depth>0)drawWorldLayer(layer);
 }
@@ -367,9 +363,9 @@ function render(){
       time:t,occupied:hammocking,sunset
     })
   });
-  layers.push({x:CONFIG.barn.x,z:CONFIG.barn.entrance.z,building:'barn',draw:()=>{const options={inside:shelter.inside,total:sheep.length,wet:shelter.active,snow:atmosphere.kind==='snow',night:atmosphere.night,time:t};barnVisit.screen=hasBarnModel()?drawBarnModel(c,project,{x:CONFIG.barn.x,z:CONFIG.barn.entrance.z},options):drawShelter(c,project(CONFIG.barn.x,CONFIG.barn.entrance.z),options);}});
-  layers.push({x:CONFIG.coop.x,z:CONFIG.coop.entrance.z,building:'coop',draw:()=>{coopScreen=drawBuilding3D(c,'coop',project,view,W,H,{inside:companions.coopInside,total:companions.chickens.length,snow:atmosphere.kind==='snow',night:atmosphere.night});}});
-  layers.push({x:CONFIG.lodge.x,z:CONFIG.lodge.entrance.z,building:'lodge',draw:()=>{lodgeScreen=drawBuilding3D(c,'lodge',project,view,W,H,{night:atmosphere.night,snow:atmosphere.kind==='snow',occupants:Number(shepherd.insideLodge)+companions.dogs.filter(a=>a.hiddenInLodge).length});}});
+  layers.push({x:CONFIG.barn.x,z:CONFIG.barn.entrance.z,building:'barn',draw:()=>{barnVisit.screen=drawBuilding3D(c,'barn',project,view,W,H,{inside:shelter.inside,total:sheep.length,snow:atmosphere.kind==='snow',night:atmosphere.night,label:false});}});
+  layers.push({x:CONFIG.coop.x,z:CONFIG.coop.entrance.z,building:'coop',draw:()=>{coopScreen=drawBuilding3D(c,'coop',project,view,W,H,{inside:companions.coopInside,total:companions.chickens.length,snow:atmosphere.kind==='snow',night:atmosphere.night,label:false});}});
+  layers.push({x:CONFIG.lodge.x,z:CONFIG.lodge.entrance.z,building:'lodge',draw:()=>{lodgeScreen=drawBuilding3D(c,'lodge',project,view,W,H,{night:atmosphere.night,snow:atmosphere.kind==='snow',occupants:Number(shepherd.insideLodge)+companions.dogs.filter(a=>a.hiddenInLodge).length,label:false});}});
   if(started&&!hammocking)layers.push({
     x:player.x,z:player.z,focused:!!petFocus,cover:{halfWidth:2.8,above:3,below:.5},draw:()=>drawVisitor(c,project(player.x,player.z),{
       time:t,walking:player.walking,seated,feeding,petting:interaction.active?.kind==='pet'&&interaction.active.phase==='playing',milking:interaction.active?.kind==='milk'&&interaction.active.phase==='playing',lambSize:interaction.active?.animal.size,pose:interaction.active?.phase==='playing'?visitorPose(interaction.active.animal.x-player.x,interaction.active.animal.z-player.z,view.yaw):visitorPose(player.headingX??0,player.headingZ??1,view.yaw)
@@ -896,8 +892,8 @@ function renderLodgeOutlook(){
   drawBridgeDeck(c,project);
   drawVegetation(c,grass,project,t,W,H);
   const layers=sheep.filter(a=>!a.hiddenInBarn).map(a=>({x:a.x,z:a.z,cover:{halfWidth:1.9*a.size,above:3*a.size+.5,below:.5*a.size},draw:()=>renderSheep(c,a,{project,time:t,width:W,height:H,player:lodgeVisit.outside,feeding:false})}));
-  layers.push({x:CONFIG.barn.x,z:CONFIG.barn.entrance.z,building:'barn',draw:()=>{const options={inside:shelter.inside,total:sheep.length,night:atmosphere.night,snow:atmosphere.kind==='snow'};return hasBarnModel()?drawBarnModel(c,project,{x:CONFIG.barn.x,z:CONFIG.barn.entrance.z},options):drawShelter(c,project(CONFIG.barn.x,CONFIG.barn.entrance.z),options);}});
-  layers.push({x:CONFIG.coop.x,z:CONFIG.coop.entrance.z,building:'coop',draw:()=>drawBuilding3D(c,'coop',project,view,W,H,{inside:companions.coopInside,total:companions.chickens.length,night:atmosphere.night,snow:atmosphere.kind==='snow'})});
+  layers.push({x:CONFIG.barn.x,z:CONFIG.barn.entrance.z,building:'barn',draw:()=>drawBuilding3D(c,'barn',project,view,W,H,{inside:shelter.inside,total:sheep.length,night:atmosphere.night,snow:atmosphere.kind==='snow',label:false})});
+  layers.push({x:CONFIG.coop.x,z:CONFIG.coop.entrance.z,building:'coop',draw:()=>drawBuilding3D(c,'coop',project,view,W,H,{inside:companions.coopInside,total:companions.chickens.length,night:atmosphere.night,snow:atmosphere.kind==='snow',label:false})});
   for(const a of companions.animals)if(!a.hiddenInCoop&&!a.hiddenInLodge)layers.push({x:a.x,z:a.z,draw:()=>drawCompanion(c,project(a.x,a.z),a,t)});
   if(!shepherd.insideLodge)layers.push({x:shepherd.x,z:shepherd.z,draw:()=>drawShepherdBoy(c,project(shepherd.x,shepherd.z),shepherd,view.yaw)});
   layers.push({x:14,z:55,cover:{halfWidth:2.8,above:5.2,below:.5},draw:()=>drawWindmill(c,project(14,55),t)});
@@ -927,7 +923,7 @@ $('lodge-stairs').onclick=()=>{lodgeVisit.requestFloor(lodgeVisit.floor===1?2:1,
 function renderInsideBarn(){
   centerView();c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,W,H);
   const options={night:atmosphere.night,inside:shelter.inside,total:sheep.length};
-  if(!hasBarnModel()||!drawBarnImmersiveModel(c,W,H,view,options))drawBarnInterior(c,W,H,project,options);
+  drawBarnRoom3D(c,view,W,H,options);
   drawMarker();
   const inside=barnVisit.animals(flock),layers=inside.map(a=>({depth:project(a.x,a.z)?.depth||0,draw:()=>drawSheep(a)}));
   layers.sort((a,b)=>b.depth-a.depth).forEach(a=>a.draw());$('sheep-label').hidden=true;

@@ -6,7 +6,7 @@ const {chromium}=require('playwright-core'),fs=require('node:fs/promises'),{exis
  const hooks=`
   const simulatePicking=update;update=()=>{};globalThis.requestAnimationFrame=()=>0;
   globalThis.__pickingQA={
-   state(){return {selected:selected?.id,care:interaction.active?.animal.id,phase:interaction.active?.phase,barnTrip:barnVisit.trip,barnInside:barnVisit.inside,farmTrip:farmVisit.trip,lodgeTrip:lodgeVisit.trip,walking:!!outdoorWalk,modelReady:hasBarnModel()};},
+   state(){return {selected:selected?.id,care:interaction.active?.animal.id,phase:interaction.active?.phase,barnTrip:barnVisit.trip,barnInside:barnVisit.inside,farmTrip:farmVisit.trip,lodgeTrip:lodgeVisit.trip,walking:!!outdoorWalk,modelReady:document.querySelector('#world').dataset.buildings==='three-webgl'};},
    advance(seconds){for(let i=0;i<seconds/.05;i++)simulatePicking(.05);render();return this.state();},
    scene(mode){
     paused=false;started=true;t=5;cancelBarnTrip();cancelLodgeTrip();interaction.cancel(view);interaction.supplyTrip=false;selected=null;marker=null;outdoorWalk=null;shelter.active=false;feeding=false;hammocking=false;seated=false;

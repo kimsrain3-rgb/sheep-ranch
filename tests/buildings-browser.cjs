@@ -88,6 +88,8 @@ const assert=require('node:assert/strict');
     await page.screenshot({path:path.join(output,name+'-lodge-balcony.png')});
     await page.locator('#lodge-leave').click();await page.evaluate(()=>__buildingQA.step(20));assert.equal((await page.evaluate(()=>__buildingQA.state())).lodge,false);
     if(name==='desktop'){await page.evaluate(()=>__buildingQA.place(-25,24));await page.locator('#barn-enter').click();await page.evaluate(()=>__buildingQA.step(12));assert.equal((await page.evaluate(()=>__buildingQA.state())).barn,true);
+    assert.equal(await page.locator('#world').getAttribute('data-barn-interior'),'eye-height-three','the barn room uses the shared Three.js renderer');
+    await page.screenshot({path:path.join(output,name+'-barn-inside.png')});
     await page.locator('#barn-leave').click();await page.evaluate(()=>__buildingQA.step(12));assert.equal((await page.evaluate(()=>__buildingQA.state())).barn,false);}
    }
    assert.deepEqual(errors,[],'no browser runtime errors');console.log(`${name}: Three.js GPU buildings, room walking/exit, labels and menu passed.`);await page.close();

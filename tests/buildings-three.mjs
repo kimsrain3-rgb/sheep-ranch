@@ -1,13 +1,14 @@
 import assert from 'node:assert/strict';
 import * as THREE from '../dist/vendor/three/three.module.js';
-import {createLodgeModel,createCoopModel,createFarmRoomModel} from '../dist/render/building-models.js';
+import {createBarnModel,createBarnRoomModel,createLodgeModel,createCoopModel,createFarmRoomModel} from '../dist/render/building-models.js';
 import {BuildingRenderer,syncBuildingCamera} from '../dist/render/buildings-three.js';
 import {FarmRoomVisit,FARM_ROOMS} from '../dist/game/farm-room.js';
 import {CONFIG,distance,isWater} from '../dist/game/config.js';
+import {buildingFootprints} from '../dist/game/building-collision.js';
 import {MeadowView} from '../dist/orbit.js';
 import {BarnInteriorView} from '../dist/game/barn-camera.js';
 
-for(const model of [createLodgeModel(),createCoopModel(),createFarmRoomModel('coop'),createFarmRoomModel('shed')]){
+for(const model of [createBarnModel(),createBarnRoomModel(),createLodgeModel(),createCoopModel(),createFarmRoomModel('coop'),createFarmRoomModel('shed')]){
  assert.ok(model.isGroup&&model.children.every(mesh=>mesh.isMesh),'buildings are actual Three.js geometry');
  assert.ok(model.children.length<=13,'static details batch into a small draw count');
  const box=new THREE.Box3().setFromObject(model),size=box.getSize(new THREE.Vector3());
@@ -17,6 +18,16 @@ for(const model of [createLodgeModel(),createCoopModel(),createFarmRoomModel('co
  }
 }
 const house=createLodgeModel(),coop=createCoopModel();
+const barn=createBarnModel();
+assert.ok(barn.userData.parts.some(p=>p.name==='barn side wall'));
+assert.ok(barn.userData.parts.some(p=>p.name==='open barn door'));
+assert.ok(barn.userData.parts.some(p=>p.name==='barn stall rail'));
+const barnFootprint=buildingFootprints(CONFIG).find(p=>p.kind==='barn');
+const frontWalls=barn.userData.parts.filter(p=>p.name==='barn front wall').sort((a,b)=>a.min[0]-b.min[0]);
+assert.ok(Math.abs(frontWalls[0].max[0]-(barnFootprint.doorX-CONFIG.barn.x-barnFootprint.doorHalf))<.001);
+assert.ok(Math.abs(frontWalls[1].min[0]-(barnFootprint.doorX-CONFIG.barn.x+barnFootprint.doorHalf))<.001);
+assert.ok(Math.abs(Math.max(...barn.userData.parts.filter(p=>p.name==='barn side wall').map(p=>p.max[0]))-(barnFootprint.right-CONFIG.barn.x))<.001);
+assert.ok(createBarnRoomModel().userData.parts.some(p=>p.name==='barn room ceiling'));
 assert.ok(house.userData.parts.some(p=>p.name==='balcony deck'));
 assert.ok(house.userData.parts.some(p=>p.name==='stone chimney'));
 assert.ok(coop.userData.parts.some(p=>p.name==='open coop door'));
@@ -44,7 +55,7 @@ const makeContext=()=>new Proxy({canvas:{dataset:{}},measureText:text=>({width:S
   return ()=>{};
  }});
 const software=new BuildingRenderer({createCanvas:()=>null}),context=makeContext();
-for(const yaw of [0,Math.PI/2,Math.PI,Math.PI*1.5])for(const kind of ['lodge','coop']){
+for(const yaw of [0,Math.PI/2,Math.PI,Math.PI*1.5])for(const kind of ['barn','lodge','coop']){
  const view=new MeadowView();view.target={x:CONFIG[kind].x,z:CONFIG[kind].entrance.z+5};view.yaw=yaw;view.zoom=.9;
  const project=(x,z,y=0)=>view.project(x,z,y,900,700);
  const hit=software.draw(context,kind,project,view,900,700,{night:true,snow:true,inside:5,total:10,occupants:3});
@@ -54,6 +65,8 @@ for(const yaw of [0,Math.PI/2,Math.PI,Math.PI*1.5])for(const kind of ['lodge','c
 for(const kind of ['coop','shed']){
  const view=new BarnInteriorView();for(const yaw of [0,1.5,3.14,4.7]){view.yaw=yaw;software.drawInterior(context,kind,view,900,700);}
 }
+for(const yaw of [0,1.5,3.14,4.7]){const view=new BarnInteriorView();view.yaw=yaw;software.drawBarnRoom(context,view,900,700);}
+assert.equal(context.canvas.dataset.barnInterior,'eye-height-three');
 
 let glCreates=0,renders=0;const sizes=[];
 const canvasFactory=()=>({width:0,height:0,addEventListener(){},getContext:()=>({clearRect(){},drawImage(){}})});
@@ -63,10 +76,10 @@ const cached=new BuildingRenderer({createCanvas:canvasFactory,createRenderer:opt
 }});
 const view=new MeadowView();view.target={x:-25,z:36};view.zoom=.65;
 const project=(x,z,y=0)=>view.project(x,z,y,1400,900);
-for(let i=0;i<3;i++)for(const kind of ['lodge','coop'])cached.draw(context,kind,project,view,1400,900);
-assert.equal(glCreates,1,'all buildings share a single WebGL context');assert.equal(renders,2,'standing still reuses building snapshots');
-view.yaw=.4;cached.draw(context,'lodge',project,view,1400,900);assert.equal(renders,3,'camera rotation refreshes the model');
-cached.draw(context,'lodge',project,view,1400,900,{snow:true,night:true});assert.equal(renders,4);
+for(let i=0;i<3;i++)for(const kind of ['barn','lodge','coop'])cached.draw(context,kind,project,view,1400,900);
+assert.equal(glCreates,1,'all buildings share a single WebGL context');assert.equal(renders,3,'standing still reuses building snapshots');
+view.yaw=.4;cached.draw(context,'lodge',project,view,1400,900);assert.equal(renders,4,'camera rotation refreshes the model');
+cached.draw(context,'lodge',project,view,1400,900,{snow:true,night:true});assert.equal(renders,5);
 assert.ok(sizes.every(n=>n<1810000),'phone rendering uses a capped pixel budget');
 assert.ok(cached.buildings.lodge.model.children.filter(m=>m.userData.snow).every(m=>m.visible));
 cached.dispose();software.dispose();

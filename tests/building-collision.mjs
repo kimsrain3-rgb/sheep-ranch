@@ -34,6 +34,21 @@ for(const b of buildingFootprints(CONFIG)){
 }
 
 const flock=new Flock(seededRandom(315));
+const barn=buildingFootprints(CONFIG).find(b=>b.kind==='barn');
+for(const actor of [{type:'visitor'},{id:'sheep-wall-check',size:1.18}])for(const [x,z,dx,dz] of [
+  [barn.left-actorRadius(actor)-.2,(barn.front+barn.back)/2,1,0],
+  [barn.right+actorRadius(actor)+.2,barn.front+.3,-1,0],
+  [barn.doorX+barn.doorHalf+actorRadius(actor)+1,barn.front-actorRadius(actor)-.2,0,1],
+  [barn.doorX,barn.back+actorRadius(actor)+.2,0,-1]
+]){
+  const walker={...actor,x,z};
+  for(let step=0;step<80;step++){
+    const before={x:walker.x,z:walker.z};walker.x+=dx*.16;walker.z+=dz*.16;keepDry(walker);
+    const safe={...walker};keepOutsideBuildings(safe,CONFIG);
+    assert.ok(distance(safe,walker)<1e-7,'visitor and sheep stay outside the new barn walls');
+    assert.ok(distance(before,walker)<=.160001,`a wall never teleports a visitor or sheep: ${JSON.stringify({actor,step,before,after:walker})}`);
+  }
+}
 // The largest adult cannot fit between the barn and coop. Resolving an old
 // position or an invalid target must never push it back inside its neighbor.
 const alley={id:'sheep-wide',size:1.18,x:-13.82,z:35};keepDry(alley);

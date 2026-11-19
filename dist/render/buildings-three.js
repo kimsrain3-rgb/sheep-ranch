@@ -1,6 +1,6 @@
 import {createLodgeRoomModel} from './lodge-room-model.js?v=lodge-eyes-2';
 import * as THREE from '../vendor/three/three.module.js';
-import {createLodgeModel,createCoopModel,createFarmRoomModel} from './building-models.js?v=lodge-eyes-2';
+import {createBarnModel,createBarnRoomModel,createLodgeModel,createCoopModel,createFarmRoomModel} from './building-models.js?v=barn-three-1';
 import {CONFIG} from '../game/config.js?v=solid-buildings-2';
 
 // The existing Canvas actors and these Three.js meshes use exactly the same
@@ -80,7 +80,7 @@ export class BuildingRenderer{
     this.roomLight=new THREE.AmbientLight('#fff0d2',0);
     this.sun=new THREE.DirectionalLight('#fff0cf',2.2);this.sun.position.set(-35,65,45);
     this.scene.add(this.ambient,this.sun,this.roomLight);
-    this.buildings={lodge:prepareBuilding(createLodgeModel(),buildingOrigin('lodge')),coop:prepareBuilding(createCoopModel(),buildingOrigin('coop'))};
+    this.buildings={barn:prepareBuilding(createBarnModel(),buildingOrigin('barn')),lodge:prepareBuilding(createLodgeModel(),buildingOrigin('lodge')),coop:prepareBuilding(createCoopModel(),buildingOrigin('coop'))};
     this.rooms=new Map();
     for(const building of Object.values(this.buildings)){
       for(const material of Object.values(building.model.userData.palette))material.side=THREE.DoubleSide;
@@ -148,8 +148,8 @@ export class BuildingRenderer{
   label(c,kind,building,project,options){
     const {x,z}=building.origin,spec=building.model.userData.spec;
     const point=project(x,z+spec.depth*.2,spec.ridge+1.15);if(!point)return null;
-    const title=kind==='lodge'?'목동과 강아지의 집':'닭장';
-    const status=kind==='lodge'?`2층 전망대${options.occupants?` · 쉬는 친구 ${options.occupants}`:''}`:`쉬는 닭 ${options.inside||0} / ${options.total??10}`;
+    const title=kind==='barn'?'양들의 축사':kind==='lodge'?'목동과 강아지의 집':'닭장';
+    const status=kind==='barn'?`쉬는 양 ${options.inside||0} / ${options.total??0}`:kind==='lodge'?`2층 전망대${options.occupants?` · 쉬는 친구 ${options.occupants}`:''}`:`쉬는 닭 ${options.inside||0} / ${options.total??10}`;
     const size=Math.max(10,Math.min(17,point.s*.38));
     c.font=`${size}px sans-serif`;c.textAlign='center';c.textBaseline='middle';
     const w=Math.max(c.measureText(title).width,c.measureText(status).width)+20,h=size*3.1;
@@ -168,9 +168,13 @@ export class BuildingRenderer{
       try{this.drawWebGL(c,building,kind,basis,crop,W,H,options);mode='three-webgl';}
       catch{this.lost=true;this.caches.clear();this.drawSoftware(c,building,project,basis,options);}
     }else this.drawSoftware(c,building,project,basis,options);
-    const label=this.label(c,kind,building,project,options);c.restore();
+    const label=options.label===false?null:this.label(c,kind,building,project,options);c.restore();
     this.lastMode=mode;if(c.canvas?.dataset)c.canvas.dataset.buildings=mode;
     return {x:(crop.left+crop.right)/2,y:Math.max(crop.bottom,label?.bottom??-Infinity),w:crop.right-crop.left,h:Math.max(crop.bottom,label?.bottom??-Infinity)-Math.min(crop.top,label?.top??Infinity)};
+  }
+  drawLabel(c,kind,project,options={}){
+    const building=this.buildings[kind];
+    return building?this.label(c,kind,building,project,options):null;
   }
   drawInterior(c,kind,view,W,H,options={}){
     if(!this.rooms.has(kind)){
@@ -186,6 +190,22 @@ export class BuildingRenderer{
       catch{this.lost=true;this.caches.clear();this.drawSoftware(c,building,project,basis,settings);}
     }else this.drawSoftware(c,building,project,basis,settings);
     c.restore();
+  }
+  drawBarnRoom(c,view,W,H,options={}){
+    const key='barn-room';
+    if(!this.rooms.has(key)){
+      const room=prepareBuilding(createBarnRoomModel(),{x:0,z:0});
+      room.model.visible=false;this.scene.add(room.model);this.rooms.set(key,room);
+    }
+    const building=this.rooms.get(key),basis=view.basis(W,H),settings={...options,near:.12,snow:false};
+    const project=(x,z,y=0)=>view.project(x,z,y,W,H);
+    this.initialise();this.appearance(building,settings);this.roomLight.intensity=options.night?.8:1.3;
+    c.save();c.fillStyle=options.night?'#443b34':'#b4a17e';c.fillRect(0,0,W,H);
+    if(this.renderer&&!this.lost){
+      try{this.drawWebGL(c,building,key,basis,{x:0,y:0,w:W,h:H},W,H,settings);}
+      catch{this.lost=true;this.caches.clear();this.drawSoftware(c,building,project,basis,settings);}
+    }else this.drawSoftware(c,building,project,basis,settings);
+    c.restore();if(c.canvas?.dataset)c.canvas.dataset.barnInterior='eye-height-three';
   }
   drawLodgeRoom(c,floor,view,W,H,options={}){
     const key='lodge-floor-'+floor;
@@ -214,14 +234,16 @@ export class BuildingRenderer{
 
 let shared=null;
 export function drawBuilding3D(...args){shared??=new BuildingRenderer();return shared.draw(...args);}
+export function drawBuildingLabel3D(...args){shared??=new BuildingRenderer();return shared.drawLabel(...args);}
 export function drawFarmRoom3D(...args){shared??=new BuildingRenderer();return shared.drawInterior(...args);}
 
 export function drawLodgeRoom3D(...args){shared??=new BuildingRenderer();return shared.drawLodgeRoom(...args);}
+export function drawBarnRoom3D(...args){shared??=new BuildingRenderer();return shared.drawBarnRoom(...args);}
 
 export function getBuildingOcclusionMeshes({snow=false}={}){
   shared??=new BuildingRenderer();
   return Object.values(shared.buildings).map(building=>{
     const key=snow?'snowOcclusion':'dryOcclusion';
-    return building[key]??={kind:building.model.userData.kind,near:.8,polygons:building.faces.filter(face=>!face.snow||snow).map(face=>face.points)};
+    return building[key]??={kind:building.model.userData.kind,near:.8,skipNearCrossing:building.model.userData.kind==='barn',polygons:building.faces.filter(face=>!face.snow||snow).map(face=>face.points)};
   });
 }

@@ -3,6 +3,7 @@ import * as THREE from '../vendor/three/three.module.js';
 // Model space uses metres-like game units: x = east, y = up, -z = meadow north.
 // Geometry stays local to the existing entrance; neither building moves an NPC.
 export const BUILDING_SPECS=Object.freeze({
+  barn:Object.freeze({width:19.3,depth:18,eave:4.5,ridge:8.2}),
   lodge:Object.freeze({width:11.2,depth:13.5,eave:8.2,ridge:11.2}),
   coop:Object.freeze({width:7.6,depth:9,eave:3.7,ridge:5.9}),
   shed:Object.freeze({width:9.4,depth:11,eave:4.2,ridge:6.2})
@@ -204,6 +205,83 @@ export function createCoopModel(){
   // A simple timber vent in the gable.
   box('gable vent',0,5.05,-.14,.8,.65,.11,p.dark);
   for(const y of [4.84,5.05,5.26])box('vent slat',0,y,-.23,.85,.075,.13,p.door);
+  return b.finish();
+}
+
+export function createBarnModel(){
+  const b=builder('barn'),p=b.palette,{box,beam}=b;
+  const half=BUILDING_SPECS.barn.width/2,depth=BUILDING_SPECS.barn.depth;
+  const wall=b.material('barn cream boards','#c8b48b');
+  const timber=b.material('barn warm timber','#76583e');
+  const door=b.material('barn sage doors','#667966');
+  const opening=3.1;
+  box('barn stone foundation',0,.13,depth/2,19.3,.26,depth,p.stone);
+  box('barn floor',0,.24,depth/2,19.05,.18,depth-.2,p.trim);
+  for(const side of [-1,1]){
+    box('barn side wall',side*(half-.09),2.25,depth/2,.18,4.5,depth,wall);
+    box('barn front wall',side*(half+opening)/2,2.25,0,half-opening,4.5,.18,wall);
+    for(let z=.55;z<depth;z+=.95)box('barn side board seam',side*(half+.025),2.2,z,.035,4.3,.04,timber);
+    for(let x=opening+.55;x<half;x+=.95)box('barn front board seam',side*x,2.2,-.12,.035,4.3,.04,timber);
+    for(const z of [0,4.5,9,13.5,18])box('barn side post',side*half,2.25,z,.24,4.5,.24,timber);
+    for(const x of [opening,half])box('barn front post',side*x,2.25,-.15,.26,4.5,.27,timber);
+    for(const y of [.42,4.25])box('barn side rail',side*half,y,depth/2,.2,.19,depth,timber);
+    for(const z of [4,9,14])b.sideWindow(side,z,2.65,1.8,1.5);
+    // The two leaves sit open beside the six-metre entry, matching the collision gap.
+    box('open barn door',side*4.1,1.65,-.34,1.65,3.2,.15,door,[0,side*.4,0]);
+    beam('barn door brace',[side*3.4,.65,-.5],[side*4.8,2.7,-.5],.095,timber);
+  }
+  box('barn back wall',0,2.25,depth,19.3,4.5,.18,wall);
+  for(let x=-9.1;x<9.2;x+=.96)box('barn back board seam',x,2.2,depth+.12,.035,4.3,.04,timber);
+  for(const y of [.42,4.25])box('barn back rail',0,y,depth+.13,19.3,.19,.2,timber);
+  box('barn door lintel',0,4.05,-.05,opening*2, .9,.22,timber);
+  box('barn entry ramp',0,.1,-.56,opening*2,.16,1.35,p.trim,[.08,0,0]);
+  b.gable('barn front gable',19.3,.16,4.5,8.2,wall,-.12);
+  b.gable('barn rear gable',19.3,.16,4.5,8.2,wall,17.96);
+  b.roof(19.3,18,4.5,8.2);
+  for(const z of [0,6,12,18]){
+    beam('barn roof truss left',[-half,4.5,z],[0,8.05,z],.2,timber);
+    beam('barn roof truss right',[0,8.05,z],[half,4.5,z],.2,timber);
+  }
+  b.frontWindow(-5.8,2.75,-.15,1.75,1.65);
+  b.frontWindow(5.8,2.75,-.15,1.75,1.65);
+  box('barn loft vent',0,6.05,-.37,1.5,1.25,.12,p.dark);
+  for(const y of [5.7,6.05,6.4])box('barn vent slat',0,y,-.46,1.6,.09,.13,door);
+  box('barn sign board',0,4.85,-.35,3.4,.5,.15,door);
+  for(const x of [-1.25,1.25])box('barn sign end cap',x,4.85,-.46,.14,.53,.12,p.frame);
+  // Interior details are visible through the open doorway.
+  for(const side of [-1,1])for(const z of [3,6,9,12,15]){
+    box('barn stall rail',side*3.1,1.05,z,.13,.14,2.7,timber);
+    box('barn stall post',side*3.1,.8,z-1.3,.16,1.55,.16,timber);
+    box('barn hay',side*5.7,.4,z,3.1,.55,1.8,p.straw);
+  }
+  return b.finish();
+}
+
+export function createBarnRoomModel(){
+  const b=builder('barn'),p=b.palette,{box,beam}=b;
+  const wall=b.material('barn interior boards','#c8b48b');
+  box('barn room floor',0,.06,9,19.1,.12,18,p.trim);
+  for(const side of [-1,1]){
+    box('barn room side wall',side*9.6,2.3,9,.18,4.6,18,wall);
+    for(const z of [4,9,14]){
+      box('barn room window',side*9.48,2.55,z,.05,1.5,1.8,p.glass);
+      for(const dz of [-.95,.95])box('barn room window frame',side*9.4,2.55,z+dz,.13,1.65,.1,p.frame);
+    }
+    for(const z of [3,6,9,12,15]){
+      box('barn stall divider',side*5.2,.95,z-1.3,4.1,1.6,.13,p.wood);
+      box('barn stall front',side*3.1,.9,z,.14,1.65,2.7,p.wood);
+      box('barn hay bed',side*6.35,.22,z,4.3,.24,2.25,p.straw);
+    }
+  }
+  box('barn room back wall',0,2.3,18,19.2,4.6,.18,wall);
+  for(const side of [-1,1])box('barn room front wall',side*6.35,2.3,0,6.5,4.6,.18,wall);
+  box('barn room lintel',0,4.05,0,6.2,1.1,.18,p.wood);
+  box('barn room ceiling',0,7.55,9,19.2,.18,18,p.wood);
+  for(let z=1;z<18;z+=2)box('barn floor seam',0,.125,z,19,.01,.03,p.wood);
+  for(const z of [3,6,9,12,15]){
+    beam('barn ceiling truss left',[-9.5,4.5,z],[0,7.5,z],.22,p.wood);
+    beam('barn ceiling truss right',[0,7.5,z],[9.5,4.5,z],.22,p.wood);
+  }
   return b.finish();
 }
 
