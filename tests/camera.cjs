@@ -27,7 +27,8 @@ read('update(.05)');
 assert.equal(read('player.walking'),true);
 assert.ok(Math.hypot(read('player.x')-20,read('player.z')-30)<=.160001);
 assert.equal(read('hammocking'),false,'still walking when far from hammock');
-for(let i=0;i<400&&!read('hammocking');i++){
+// Allow the longer walk from the far pasture to P10 at normal speed.
+for(let i=0;i<1200&&!read('hammocking');i++){
   const x=read('player.x'),z=read('player.z');
   read('update(.05)');
   assert.ok(Math.hypot(read('player.x')-x,read('player.z')-z)<=.160001,'continuous walking speed');
