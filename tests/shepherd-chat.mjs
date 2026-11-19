@@ -3,6 +3,17 @@ import {handleShepherd} from '../server/shepherd-api.js';
 import {parseShepherdIntent,setupShepherdChat} from '../dist/shepherd-chat.js';
 
 const origin='http://localhost:4173';
+const pages='https://kimsrain3-rgb.github.io';
+const preflight=await handleShepherd(new Request(origin+'/api/shepherd',{method:'OPTIONS',headers:{origin:pages,'Access-Control-Request-Method':'POST','Access-Control-Request-Headers':'content-type'}}));
+assert.equal(preflight.status,204);
+assert.equal(preflight.headers.get('Access-Control-Allow-Origin'),pages);
+assert.match(preflight.headers.get('Access-Control-Allow-Headers'),/content-type/i);
+const publicStatus=await handleShepherd(new Request(origin+'/api/shepherd/status',{headers:{origin:pages}}),{OPENAI_API_KEY:'test-only'});
+assert.equal(publicStatus.headers.get('Access-Control-Allow-Origin'),pages);
+assert.equal((await publicStatus.json()).connected,true);
+const otherSite=await handleShepherd(new Request(origin+'/api/shepherd',{method:'OPTIONS',headers:{origin:'https://example.org'}}));
+assert.equal(otherSite.status,403);
+assert.equal(otherSite.headers.get('Access-Control-Allow-Origin'),null);
 const state={time:'오후 6:00',weather:'맑음',weatherSource:'live',location:'양주',total:62,lambs:12,inside:3,chickens:10,chickensInside:4,playingLambs:2,dogs:2,dogsInLodge:1,shepherdInLodge:true};
 assert.equal(parseShepherdIntent('닭도 모아줘'),'gather');
 assert.equal(parseShepherdIntent('닭을 밖으로 내보내'),'release');

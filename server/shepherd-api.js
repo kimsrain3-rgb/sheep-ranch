@@ -10,11 +10,22 @@ export function shepherdStateReply(state){
  return `목장주님, 지금은 ${state.time||'시간 확인 중'}이고 ${weather}. 양은 모두 ${state.total}마리(어른 ${adults}마리, 새끼 ${state.lambs}마리)예요. 축사 안에 ${state.inside}마리, 밖에 ${outside}마리가 있어요. 닭은 ${state.chickens}마리 중 ${state.chickensInside}마리가 축사 옆 닭장에 있어요. 축사 뒤편 2층 숙소에는 ${state.dogsInLodge}마리의 개가 쉬고 있고 ${state.shepherdInLodge?'저도 안에 있어요.':'저는 목장을 돌보고 있어요.'} 2층 발코니에서 목장을 내려다볼 수 있어요.${reason?' '+reason:''}${state.inBarn?' 목장주님은 지금 축사 안에 계세요.':''}${state.inLodge?` 목장주님은 지금 숙소 ${state.lodgeFloor}층에 계세요.`:''}${state.playingLambs?` 새끼 양 ${state.playingLambs}마리가 뛰놀고 있어요.`:''}`;
 }
 export async function handleShepherd(request,env={},fetcher=fetch){
+ const origin=request.headers.get('origin'),pages='https://kimsrain3-rgb.github.io';
+ if(origin&&origin!==new URL(request.url).origin&&origin!==pages)return json({error:'ORIGIN_DENIED'},403);
+ if(origin!==pages)return shepherdResponse(request,env,fetcher);
+ const response=request.method==='OPTIONS'?new Response(null,{status:204}):await shepherdResponse(request,env,fetcher);
+ response.headers.set('Access-Control-Allow-Origin',pages);
+ response.headers.set('Vary','Origin');
+ response.headers.set('Access-Control-Allow-Methods','GET, POST, OPTIONS');
+ response.headers.set('Access-Control-Allow-Headers','Content-Type');
+ return response;
+}
+async function shepherdResponse(request,env,fetcher){
  const url=new URL(request.url);
  if(url.pathname==='/api/shepherd/status')return json({connected:!!env.OPENAI_API_KEY,mode:env.OPENAI_API_KEY?'ai':'guide'});
  if(url.pathname!=='/api/shepherd')return json({error:'NOT_FOUND'},404);
  if(request.method!=='POST')return json({error:'METHOD_NOT_ALLOWED'},405);
- if(request.headers.get('origin')!==url.origin)return json({error:'ORIGIN_DENIED'},403);
+ if(!request.headers.get('origin'))return json({error:'ORIGIN_DENIED'},403);
  if(!request.headers.get('content-type')?.startsWith('application/json'))return json({error:'INVALID_CONTENT_TYPE'},415);
  if(Number(request.headers.get('content-length')||0)>12000)return json({error:'TOO_LARGE'},413);
  let body;try{const text=await request.text();if(text.length>12000)return json({error:'TOO_LARGE'},413);body=JSON.parse(text);}catch{return json({error:'INVALID_JSON'},400);}

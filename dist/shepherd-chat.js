@@ -27,7 +27,10 @@ export function setupShepherdChat({snapshot,execute,onOpen=()=>{},onClose=()=>{}
     const p=document.createElement('p');p.className=role==='user'?'chat-user':'chat-boy';p.textContent=text;log.append(p);while(log.children.length>24)log.firstElementChild.remove();log.scrollTop=log.scrollHeight;
     history.push({role:role==='user'?'user':'assistant',content:String(text).slice(0,1000)});while(history.length>12)history.shift();
   }
-  async function check(){try{const r=await fetcher('/api/shepherd/status');const data=await r.json();connected=r.ok&&data.connected===true;}catch{connected=false;}mode(connected?'AI 목동 · 하루':'목장 안내 모드 · AI 연결 전');}
+  const api=globalThis.location?.origin==='https://kimsrain3-rgb.github.io'
+    ? 'https://wind-sheep-meadow.kimsrain3.chatgpt.site/api/shepherd'
+    : '/api/shepherd';
+  async function check(){try{const r=await fetcher(api+'/status');const data=await r.json();connected=r.ok&&data.connected===true;}catch{connected=false;}mode(connected?'AI 목동 · 하루':'목장 안내 모드 · AI 연결 전');}
   function open(){if(!canTalk()){requestOpen();return;}panel.hidden=false;document.body.classList.add('chat-open');$('shepherd-talk').hidden=true;onOpen();if(!history.length)append('assistant','목장주님, 어서 오세요! 저는 하루예요. 양들과 축사를 살피고 있어요. 무엇을 도와드릴까요?');void check();}
   function close(){onClose();panel.hidden=true;document.body.classList.remove('chat-open');$('shepherd-talk').hidden=false;$('shepherd-talk').focus();}
   async function send(text){
@@ -38,7 +41,7 @@ export function setupShepherdChat({snapshot,execute,onOpen=()=>{},onClose=()=>{}
     if(!connected){append('assistant',localShepherdReply(text,snapshot(),receipt));busy=false;$('shepherd-send').disabled=false;return;}
     mode('하루가 생각하고 있어요…');
     try{
-      const response=await fetcher('/api/shepherd',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({messages:history.slice(-8),state:snapshot(),receipt}),signal:AbortSignal.timeout(18000)});
+      const response=await fetcher(api,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({messages:history.slice(-8),state:snapshot(),receipt}),signal:AbortSignal.timeout(18000)});
       const data=await response.json();if(!response.ok||typeof data.reply!=='string')throw Error('AI response unavailable');
       if(id===requestId)append('assistant',data.reply);
     }catch{if(id===requestId){append('assistant',localShepherdReply(text,snapshot(),receipt)+' (AI 연결이 지연되어 목장 안내로 답했어요.)');connected=false;}}
