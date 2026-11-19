@@ -23,7 +23,7 @@ import { Companions } from './game/companions.js?v=solid-buildings-2';
 import { MeadowAudio } from './game/audio.js?v=night-barn';
 import {dryRoute} from './game/navigation.js?v=windmill-1';
 import {drawBridgeDeck,drawBridgeRail,pickBridge} from './render/bridge.js?v=lake-bridge-1';
-import { CONFIG,keepDry,bridgePathClear,bridgeHeight,bridgePoint,BRIDGES } from './game/config.js?v=windmill-1';
+import { CONFIG,pondPoint,keepDry,bridgePathClear,bridgeHeight,bridgePoint,BRIDGES } from './game/config.js?v=windmill-1';
 import { drawSheep as renderSheep } from './render/sheep.js?v=lamb-8';
 import { drawCompanion } from './render/companions.js?v=night-barn';
 import { drawOwl,owlPosition } from './render/owl.js?v=1';
@@ -31,7 +31,7 @@ import { makeVegetation,drawVegetation,drawHayPile,drawRipples } from './render/
 import { drawInteraction } from './render/interactions.js?v=soft-elbow-5';
 import { MeadowView } from './orbit.js';
 import { drawVisitor,drawHammock,visitorPose } from './visitor.js?v=night-barn';
-import { drawPasture,trees,drawWindmill,drawFirTree,firTree } from './pasture.js?v=solid-buildings-2';
+import { drawPasture,trees,drawWindmill,drawFirTree,firTree } from './pasture.js?v=pond-bank-1';
 const canvas=document.querySelector('#world'),c=canvas.getContext('2d');
 const $=id=>document.getElementById(id);
 let W,H,dpr,started=false,feeding=false,seated=false,hammocking=false,walkingToHammock=false,sunset=false,selected=null,feedCount=0,friends=new Set(),t=0,last=0,toastUntil=0,paused=false;
@@ -472,6 +472,13 @@ function start(){
     const {x,z}=CONFIG.windmill.entrance;
     Object.assign(player,{x,z:z-8,tx:x,tz:z-8});
     view.zoom=.85;view.pitch=.10;
+  }
+  if(spawn==='lakeshore'){
+    const bank=pondPoint(4.82,1.29);
+    Object.assign(player,{x:bank.x,z:bank.z,tx:bank.x,tz:bank.z});
+    view.yaw=0;
+    view.pitch=.47;
+    view.zoom=2.35;
   }
   following=true;
   centerView();

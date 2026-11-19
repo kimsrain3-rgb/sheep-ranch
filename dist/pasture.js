@@ -1,4 +1,4 @@
-import {drawPond} from './render/pond.js?v=solid-buildings-2';
+import {drawPond} from './render/pond.js?v=pond-bank-1';
 import {drawRiverMountains,drawWaterways,drawRiverMouths} from './render/waterways.js?v=solid-buildings-2';
 import {CONFIG,keepDry,pondPoint,onBridge,WATERWAYS} from './game/config.js?v=solid-buildings-2';
 let seed=981;const rnd=()=>((seed=seed*16807%2147483647)-1)/2147483646;
