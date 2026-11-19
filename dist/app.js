@@ -4,7 +4,7 @@ import {BarnVisit} from './game/barn.js?v=solid-buildings-2';
 import {BarnInteriorView} from './game/barn-camera.js?v=immersive-barn-v2';
 import {FarmRoomVisit,FARM_ROOMS} from './game/farm-room.js?v=solid-buildings-2';
 import {LodgeVisit} from './game/lodge.js?v=solid-buildings-2';
-import {setupShepherdChat} from './shepherd-chat.js?v=haru-guide-1';
+import {setupShepherdChat} from './shepherd-chat.js?v=haru-voice-1';
 import {ShepherdBoy} from './game/shepherd.js?v=solid-buildings-2';
 import {drawShepherdBoy} from './render/shepherd.js?v=christmas';
 import {MeadowWeather} from './game/weather.js?v=coop-herding';
@@ -1044,8 +1044,8 @@ if(typeof document.querySelectorAll==='function')chat=setupShepherdChat({
     if(action==='enter_barn')return goBarn();
     if(action==='enter_lodge')return goLodge();
     if(action==='leave_barn'){if(!barnVisit.inside)return '지금은 목장 밖 풍경을 보고 있어요.';barnVisit.requestExit(player);return '축사 문으로 걸어가 밖으로 나갈게요.';}
-    if(action==='gather'){shelter.manual=true;return '네, 개들이 양은 축사로, 닭은 옆 닭장으로 차례로 몰아넣을게요.';}
-    if(action==='release'){if(atmosphere.night||atmosphere.wet)return '지금은 어둡거나 궂은 날씨라 양과 닭이 안에서 쉬는 게 좋아요. 밝아지고 하늘이 개면 내보낼게요.';shelter.manual=false;return '네, 양과 닭을 차례로 밖에 내보낼게요.';}
+    if(action==='gather'){shelter.manual=true;return '그래요. 개들과 함께 양은 축사로, 닭은 그 옆 닭장으로 천천히 들일게요.';}
+    if(action==='release'){if(atmosphere.night||atmosphere.wet)return '지금은 어둡거나 궂은 날씨라 양과 닭이 안에서 쉬는 게 좋아요. 밝아지고 하늘이 개면 내보낼게요.';shelter.manual=false;return '좋아요. 양이랑 닭이 제 걸음으로 나올 수 있게 차례로 내보낼게요.';}
     if(action==='inspect'){cancelShepherdTalk();if(shelter.active)return '양들이 축사로 들어오는지 문 앞에서 살펴볼게요.';shepherd.timer=0;shepherd.state='watch';shepherd.route=[];return '네, 양들과 축사 주변을 천천히 둘러볼게요.';}
     return '';
   }

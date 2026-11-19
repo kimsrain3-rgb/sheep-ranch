@@ -1,4 +1,4 @@
-import {guideFacts,liveIntent} from './game/ranch-guide.js';
+import {guideFacts,liveIntent} from './game/ranch-guide.js?v=haru-voice-1';
 export function parseShepherdIntent(text){
   const s=String(text).replace(/\s+/g,'');
   if(/(숙소|오두막|전망대|발코니).*(가자|가줘|가볼|들어|보러)/.test(s))return 'enter_lodge';
@@ -13,13 +13,13 @@ export function parseShepherdIntent(text){
 export function localShepherdReply(text,state,receipt=''){
   if(receipt)return receipt;
   const topic=liveIntent(text);if(topic)return guideFacts(state)[topic];
-  if(/안녕|반가|이름|누구/.test(text))return '안녕하세요, 목장주님! 저는 양들을 살피는 소년 목동 하루예요. 곁의 보리개와 목장을 둘러보고 있어요.';
-  if(/숙소|오두막|전망대|발코니/.test(text))return `제 숙소는 축사 뒤편의 2층 집이에요. 1층에는 목동의 침대와 식탁, 난로, 세면대, 바람이와 보리의 자리가 있어요. 2층 발코니에서는 지금 움직이는 목장 친구들을 내려다볼 수 있어요. ${state.shepherdInLodge?'저도 안에서 쉬고 있어요.':'저는 지금 목장을 돌보고 있어요.'}`;
+  if(/안녕|반가|너는 누구|네 이름/.test(text))return '반가워요. 전 양을 돌보는 하루예요. 저랑 잠깐 같이 걸어요.';
+  if(/숙소|오두막|전망대|발코니/.test(text))return `축사 뒤편 이층집이 제 숙소예요. 목장을 한눈에 담고 싶을 땐 이층 발코니가 좋아요. ${state.shepherdInLodge?'저도 안에서 쉬고 있어요.':'저는 지금 목장을 돌보고 있어요.'}`;
   if(/상태|몇\s*마리|마릿수|날씨|몇\s*시/.test(text))return `지금은 ${state.time}, ${state.weather}이에요. 양 ${state.total}마리 중 ${state.inside}마리가 축사에, 닭 ${state.chickens}마리 중 ${state.chickensInside}마리가 옆 닭장에 있어요.${state.night?' 해가 져서 개들이 나머지 동물들도 안으로 안내하고 있어요.':''}`;
   if(/쓰다듬|친해|내양|이름/.test(text))return '양을 자주 쓰다듬고 건초를 건네면 목장주님을 알아봐요. 내 양 메뉴에서 이름도 붙여줄 수 있어요.';
-  if(/닭장|닭/.test(text))return `닭장은 큰 양들의 축사 바로 옆에 있어요. 지금 닭 ${state.chickens}마리 중 ${state.chickensInside}마리가 안에서 쉬고 있어요. 개들이 닭을 그곳으로 안내합니다.`;
+  if(/닭장|닭/.test(text))return `닭장은 큰 양들의 축사 바로 옆에 있어요. 지금 닭 ${state.chickens}마리 중 ${state.chickensInside}마리가 안에서 쉬고 있어요. 안으로 들어갈 때면 개들이 길을 잡아 줘요.`;
   if(/축사/.test(text))return '큰 축사는 목장 왼쪽에 있어요. “축사로 가자”라고 하시면 문까지 걸어가서 안을 둘러볼 수 있어요.';
-  return '지금은 목장 안내 모드예요. 양과 닭의 상태를 알려드리고, 동물 모으기·순찰·축사 출입을 도와드릴 수 있어요. 자유로운 AI 대화는 아직 연결 전이에요.';
+  return '그 이야기는 제가 지금 답하기 어렵네요. 여기서 보이는 양이나 축사 이야기는 들려드릴 수 있어요.';
 }
 export function setupShepherdChat({snapshot,execute,onOpen=()=>{},onClose=()=>{},requestOpen=()=>{},canTalk=()=>true,fetcher=globalThis.fetch?.bind(globalThis)}){
   const $=id=>document.getElementById(id),panel=$('shepherd-chat'),log=$('shepherd-messages');let connected=false,busy=false,requestId=0;
@@ -34,7 +34,7 @@ export function setupShepherdChat({snapshot,execute,onOpen=()=>{},onClose=()=>{}
     ? 'https://wind-sheep-meadow.kimsrain3.chatgpt.site/api/shepherd'
     : '/api/shepherd';
   async function check(){try{const r=await fetcher(api+'/status');const data=await r.json();connected=r.ok&&data.connected===true;}catch{connected=false;}mode(connected?'AI 목동 · 하루':'목장 안내 모드 · AI 연결 전');}
-  function open(){if(!canTalk()){requestOpen();return;}panel.hidden=false;document.body.classList.add('chat-open');$('shepherd-talk').hidden=true;onOpen();if(!history.length)append('assistant','목장주님, 어서 오세요! 저는 하루예요. 양들과 축사를 살피고 있어요. 무엇을 도와드릴까요?');void check();}
+  function open(){if(!canTalk()){requestOpen();return;}panel.hidden=false;document.body.classList.add('chat-open');$('shepherd-talk').hidden=true;onOpen();if(!history.length)append('assistant','반가워요, 전 하루예요. 양들 보러 오셨어요? 제 곁에서 잠깐 쉬었다 가셔도 좋아요.');void check();}
   function close(){onClose();panel.hidden=true;document.body.classList.remove('chat-open');$('shepherd-talk').hidden=false;$('shepherd-talk').focus();}
   async function send(text){
     if(!canTalk()){close();return;}

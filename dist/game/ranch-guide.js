@@ -6,14 +6,19 @@ export function guideFacts(state,now=Date.now()){
   const month=Number(state.month)||new Date(now).getMonth()+1;
   const season=['겨울','겨울','봄','봄','봄','여름','여름','여름','가을','가을','가을','겨울'][month-1];
   const eggs=nestHasEggs(month),open=windmillStage(now)===10;
-  const windmill=open?'P09 풍차가 완공됐어요. 발코니에 올라 목장을 둘러볼 수 있어요.':
-    'P09 풍차는 공사 중이에요. '+windmillCountdown(now)+' 남았고, 한국 시간 '+windmillOpeningLabel+'에 발코니가 열려요.';
-  const time='목장주님이 고른 목장 시간은 '+(state.time||'확인 중')+'예요. '+(state.night?'밤하늘 아래 동물들이 안에서 쉬러 가요.':'밝은 하늘 아래 목장을 산책할 수 있어요.');
-  const friend=state.friend?'이 브라우저에서 목장주님과 짝이 된 양은 '+state.friend+'예요.':'이 브라우저에는 아직 짝이 된 양이 없어요.';
-  const place=state.night||state.shelterReason==='weather'?'양 축사에 가 보세요. '+(Number(state.inside)>0?'안에서 쉬는 양들을 볼 수 있어요.':'문 앞에서 동물들이 들어오는 모습을 기다려 보세요.'):
-    eggs?'연못가 풀숲으로 가 보세요. 둥지에 알이 있는 계절이에요.':
-    open?'P09 풍차 발코니에 올라 보세요. 목장 전체가 보여요.':'P09 풍차 공사 현장에 가 보세요. 지금 짓고 있는 전망대를 볼 수 있어요.';
-  return {windmill,time,friend,place:season+' 목장이에요. '+place,nest:eggs?'연못가 풀숲 둥지에 알이 있어요.':'지금은 연못가 풀숲 둥지가 비어 있어요.'};
+  const windmill=open?'P09 풍차가 다 지어졌어요. 발코니에 서면 우리가 걷던 풀밭이 한눈에 들어와요.':
+    'P09 풍차는 아직 짓고 있어요. '+windmillCountdown(now)+' 남았어요. 한국 시간 '+windmillOpeningLabel+'에 발코니가 열려요.';
+  const time=(state.time?'여긴 지금 '+state.time+'예요. ':'')+(state.night?'밤 목장을 걷고 계시네요. 축사 쪽으로 천천히 가 볼까요?':'아직 밖이 밝네요. 풀밭에서 조금 더 쉬다 가셔도 돼요.');
+  const friend=state.friend?'‘'+state.friend+'’ 말이지요? 여기서 짝이 된 양이에요. 다음에 만나면 건초 한 줌 건네 봐요.':'여기서 짝이 된 양은 아직 없어요. 마음이 가는 양이 있으면 건초 한 줌부터 건네 봐요.';
+  let place;
+  if(state.night||state.shelterReason==='weather'){
+    place=state.inside>0?'양 축사에 들러 봐요. 안에서 쉬는 녀석들을 가만히 보고 있으면 저도 덩달아 느긋해져요.':'저라면 양 축사 문가에 서 볼래요. 양들이 들어오는 길을 거기서 볼 수 있거든요.';
+  }else if(eggs){
+    place='연못가 풀숲으로 가 봐요. '+season+'에는 거기 둥지에 알이 있어요. 풀 사이를 가만히 들여다봐요.';
+  }else{
+    place=open?'P09 풍차 발코니에 올라가 봐요. 위에서 보면 방금 걷던 길도 제법 낯설어 보여요.':'오늘은 P09 풍차 쪽으로 발길을 돌려 봐요. 아직 짓는 중이라, 다 지어진 뒤엔 볼 수 없는 모습이거든요.';
+  }
+  return {windmill,time,friend,place,nest:eggs?'연못가 풀숲에 둥지가 하나 있어요. 살짝 들여다보면 알이 보여요.':'연못가 풀숲에 둥지는 그대로 있어요. 지금 들여다보면 속은 비어 있어요.'};
 }
 
 export function liveIntent(text){
