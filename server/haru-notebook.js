@@ -60,6 +60,26 @@ const guideManual={
   walk:'맘에 드는 풀밭을 짧게 눌러 보세요. 그쪽으로 걸어가요. 걷다가 옆이 궁금하면 화면을 살짝 밀어 봐요.'
 };
 
+async function speakWithoutAnswer(messages,env,fetcher,feedback){
+  const instructions=[
+    HARU_VOICE,
+    '방금 받은 질문에 대해 확인된 목장 정보가 없다. 상대의 말에 직접 답하며 모르는 부분을 솔직하게 짚는다. 질문에 없는 관찰, 날짜, 원인, 행동, 계획을 만들어 내지 않는다. 수첩이나 저장은 언급하지 않는다. 새 장소를 추천하거나 인사를 다시 하지 않는다.',
+    feedback?'방문자가 앞선 답이 질문과 달랐다고 알려주었다. 그 점을 받아들인다.':'짧은 뒷말은 바로 앞에서 나눈 주제에 이어 답한다.'
+  ].join(' ');
+  const format={type:'json_schema',name:'shepherd_reply',strict:true,schema:{
+    type:'object',properties:{reply:{type:'string'}},required:['reply'],additionalProperties:false
+  }};
+  const response=await fetcher('https://api.openai.com/v1/responses',{
+    method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+env.OPENAI_API_KEY},
+    body:JSON.stringify({model:env.OPENAI_MODEL||'gpt-4.1-mini',store:false,instructions,input:messages,max_output_tokens:200,text:{format}}),
+    signal:AbortSignal.timeout(7500)
+  });
+  if(!response.ok)throw Error('conversation unavailable');
+  const data=await response.json();
+  const output=(data.output||[]).flatMap(o=>o.content||[]).find(c=>c.type==='output_text');
+  return String(JSON.parse(output.text).reply||'').trim().slice(0,240);
+}
+
 async function guideDecision(messages,rows,env,fetcher,unanswered,feedback){
   const fields={source:{type:'string'},summary:{type:'string'},reply:{type:'string'}};
   const input=JSON.stringify({
@@ -74,7 +94,7 @@ async function guideDecision(messages,rows,env,fetcher,unanswered,feedback){
     'unknown, 답이 없는 주제, unanswered 또는 feedback이면 reply를 직접 쓴다. 방문자가 무엇을 기대하거나 궁금해하는지 헤아리고, 어떤 부분을 아직 모르는지 하루 자신의 말로 짧게 답한다. 후속 질문에는 인사를 되풀이하지 않는다. 날짜, 관찰, 이유나 미래 행동을 지어내지 않는다. 수첩, 일지, 저장, 분류나 처리 과정은 언급하지 않는다. 그 밖의 사실 답변은 서버가 채우므로 reply는 비운다.',
     'summary는 같은 뜻끼리 모을 수 있는 한국어 질문 요지 명사구(최대 55자)다. 후속 질문도 대상과 주제가 드러나게 한다. 원문, 사람이나 개인 양 이름, 연락처, 식별자, 사적인 사연과 수치를 제외한다.'
   ].join('\n');
-  const response=await fetcher('https://api.openai.com/v1/responses',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+env.OPENAI_API_KEY},body:JSON.stringify({model:env.OPENAI_MODEL||'gpt-4.1-mini',store:false,instructions,input,max_output_tokens:350,text:{format:{type:'json_schema',name:'ranch_source',strict:true,schema:{type:'object',properties:fields,required:Object.keys(fields),additionalProperties:false}}}}),signal:AbortSignal.timeout(13500)});
+  const response=await fetcher('https://api.openai.com/v1/responses',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+env.OPENAI_API_KEY},body:JSON.stringify({model:env.OPENAI_MODEL||'gpt-4.1-mini',store:false,instructions,input,max_output_tokens:350,text:{format:{type:'json_schema',name:'ranch_source',strict:true,schema:{type:'object',properties:fields,required:Object.keys(fields),additionalProperties:false}}}}),signal:AbortSignal.timeout(8000)});
   if(!response.ok)throw Error('classification unavailable');
   const data=await response.json();
   return JSON.parse((data.output||[]).flatMap(o=>o.content||[]).filter(c=>c.type==='output_text').map(c=>c.text).join(''));
@@ -99,16 +119,16 @@ export async function guideResponse(body,context,env,fetcher){
   if(match?.answer && !personalQuestion && !feedback)return json({reply:taughtAnswer(match,facts),mode:'journal'});
 
   const unanswered=personalQuestion || Boolean(match && !match.answer);
-  let decision;
-  try{
+  let decision={source:'unknown'};
+  if(!unanswered)try{
     decision=await guideDecision(body.messages,rows,env,fetcher,unanswered,feedback);
   }catch(error){
-    if(!unanswered)throw error;
-    decision={source:'unknown'};
+    if(!feedback)throw error;
   }
   const source=String(decision.source),row=match||rows.find(r=>String(r.id)===source);
-  const reply=String(decision.reply||'').trim().slice(0,240);
-  if(!unanswered && !feedback){
+  let reply=String(decision.reply||'').trim().slice(0,240);
+  const placeMismatch=source==='place' && !/어디|장소|추천|갈\s*만|가\s*볼|볼\s*거리|둘러볼/.test(question);
+  if(!unanswered && !feedback && !placeMismatch){
     if(Object.hasOwn(facts,source))return json({reply:facts[source],mode:'state'});
     if(source==='status')return json({reply:shepherdStateReply(context,question),mode:'state'});
     if(row?.answer)return json({reply:taughtAnswer(row,facts),mode:'journal'});
@@ -121,5 +141,9 @@ export async function guideResponse(body,context,env,fetcher){
   }
   let saved=false;
   try{saved=await noteQuestion(env.DB,body.event,summary);}catch{}
+  if(unanswered || feedback || placeMismatch || !reply){
+    try{reply=await speakWithoutAnswer(body.messages,env,fetcher,feedback);}
+    catch{reply='';}
+  }
   return json({reply:reply||'그건 저도 아직 잘 모르겠어요.',saved,mode:'notebook'});
 }
