@@ -3,7 +3,7 @@ const vm=require('node:vm'),fs=require('node:fs'),assert=require('node:assert/st
 const elements=new Map(),listeners=new Map(),captures=new Set();
 function el(id){if(!elements.has(id))elements.set(id,{style:{},classList:{add(){},toggle(){}},setAttribute(k,v){this[k]=v},querySelector(){return el(id+'child')},focus(){},addEventListener(k,fn){listeners.set(k,fn)},setPointerCapture(id){captures.add(id)},hasPointerCapture(id){return captures.has(id)},releasePointerCapture(id){captures.delete(id)}});return elements.get(id)}
 el('world').getContext=()=>({setTransform(){}});
-const ctx=vm.createContext({console,Math,Map,Set,Object,innerWidth:390,innerHeight:780,devicePixelRatio:1,document:{querySelector:()=>el('world'),getElementById:el,body:el('body')},addEventListener(){},requestAnimationFrame(){}});
+const ctx=vm.createContext({console,Math,Map,Set,Object,URLSearchParams,location:{search:''},innerWidth:390,innerHeight:780,devicePixelRatio:1,document:{querySelector:()=>el('world'),getElementById:el,body:el('body')},addEventListener(){},requestAnimationFrame(){}});
  const modules=await Promise.all(['flock','interactions','companions','audio','config','layout','weather','bond','shelter','lamb-play','shepherd','barn','barn-camera','lodge','navigation','farm-room','lodge-camera','meadow-time'].map(name=>import('../dist/game/'+name+'.js')));
 for(const module of modules)Object.assign(ctx,module);Object.assign(ctx,await import('../dist/render/details.js'));Object.assign(ctx,await import('../dist/render/bridge.js'));Object.assign(ctx,await import('../dist/render/occlusion.js'));
 const source=fs.readFileSync('dist/orbit.js','utf8').replace('export class','class')+'\n'+fs.readFileSync('dist/app.js','utf8').replace(/^import[\s\S]*?;\n/gm,'');

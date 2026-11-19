@@ -1,6 +1,6 @@
-import {CONFIG,keepDry,pondPoint,pondLevel,isWater} from './config.js?v=solid-buildings-2';
+import {CONFIG,keepDry,pondPoint,pondLevel,isWater} from './config.js?v=windmill-1';
 import {RIVER_WAYPOINTS,riverPathClear,segmentsCross} from './waterways.js?v=lake-bridge-1';
-import {actorRadius,buildingAccess,buildingPathClear,buildingWaypoints,doorAt} from './building-collision.js?v=solid-buildings-2';
+import {actorRadius,buildingAccess,buildingPathClear,buildingWaypoints,doorAt} from './building-collision.js?v=windmill-1';
 const shore=Array.from({length:96},(_,i)=>pondPoint(i/96*Math.PI*2,1.055));
 const clear=(a,b,radius,access=null)=>pondLevel(a)>=1.054&&pondLevel(b)>=1.054&&!shore.some((point,i)=>segmentsCross(a,b,point,shore[(i+1)%shore.length]))&&riverPathClear(a,b)&&buildingPathClear(a,b,CONFIG,{radius,access});
 const networks=new Map();

@@ -12,7 +12,7 @@ export function buildingAccess(a={}){
   return null;
 }
 export function buildingFootprints(config){
-  return [['barn',9.65,18,3.1],['coop',3.8,10.8,1.05],['lodge',5.6,13.5,1.2],['shed',5.75,10.8,1.5]].map(([kind,half,depth,doorHalf])=>{
+  return [['barn',9.65,18,3.1],['coop',3.8,10.8,1.05],['lodge',5.6,13.5,1.2],['shed',5.75,10.8,1.5],['windmill',4,8,1.1]].filter(([kind])=>config[kind]).map(([kind,half,depth,doorHalf])=>{
     const b=config[kind];return {kind,left:b.x-half,right:b.x+half,front:b.entrance.z,back:b.entrance.z+depth,doorX:b.entrance.x,doorHalf};
   });
 }

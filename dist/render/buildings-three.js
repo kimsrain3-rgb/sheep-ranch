@@ -1,7 +1,9 @@
 import {createLodgeRoomModel} from './lodge-room-model.js?v=lodge-eyes-2';
 import * as THREE from '../vendor/three/three.module.js';
 import {createBarnModel,createBarnRoomModel,createLodgeModel,createCoopModel,createFarmRoomModel} from './building-models.js?v=barn-three-1';
-import {CONFIG} from '../game/config.js?v=solid-buildings-2';
+import {CONFIG} from '../game/config.js?v=windmill-1';
+import {createWindmill,createSails,axle} from './windmill.js';
+import {windmillStage,windmillStatus} from '../game/windmill-construction.js';
 
 // The existing Canvas actors and these Three.js meshes use exactly the same
 // projection. A single transparent WebGL canvas is composited at each building's
@@ -40,7 +42,7 @@ function clippedPolygon(points,basis,near=.805){
 }
 
 function prepareBuilding(model,origin){
-  model.position.set(origin.x,0,-origin.z);model.updateMatrixWorld(true);
+  model.position.set(origin.x,origin.y??0,-origin.z);model.updateWorldMatrix(true,true);
   const bounds=new THREE.Box3().setFromObject(model),corners=[];
   for(const x of [bounds.min.x,bounds.max.x])for(const y of [bounds.min.y,bounds.max.y])for(const z of [bounds.min.z,bounds.max.z])corners.push([x,-z,y]);
   const faces=[];
@@ -87,6 +89,31 @@ export class BuildingRenderer{
       building.model.visible=false;this.scene.add(building.model);
     }
     this.renderer=null;this.attempted=false;this.lost=false;this.caches=new Map();this.lastMode=null;
+    this.setMillStage(windmillStage());
+  }
+  setMillStage(stage){
+    const previous=this.buildings.windmill;
+    if(previous?.stage===stage)return;
+    if(previous){
+      this.scene.remove(previous.model);
+      previous.model.traverse(node=>{
+        if(node.isMesh)node.geometry.dispose();
+        for(const material of Object.values(node.userData.palette||{}))material.dispose();
+      });
+      this.caches.delete('windmill');
+    }
+    const mill=prepareBuilding(createWindmill(stage),buildingOrigin('windmill'));
+    mill.stage=stage;mill.towerFaces=mill.faces;
+    this.buildings.windmill=mill;
+    if(stage>=9){
+      mill.sails=createSails();mill.model.add(mill.sails);
+      mill.sailOrigin={x:0,y:axle.height,z:axle.front};
+      for(const side of [-7,7])for(const height of [axle.height-7,axle.height+7])
+        mill.corners.push([mill.origin.x+side,mill.origin.z+axle.front-.6,height]);
+      this.turnSails(0);
+    }
+    mill.model.traverse(node=>{if(node.isMesh)node.material.side=THREE.DoubleSide;});
+    mill.model.visible=false;this.scene.add(mill.model);
   }
   initialise(){
     if(this.attempted)return;this.attempted=true;
@@ -99,6 +126,14 @@ export class BuildingRenderer{
       this.renderer.outputColorSpace=THREE.SRGBColorSpace;
       this.renderer.toneMapping=THREE.NoToneMapping;
     }catch{this.renderer=null;}
+  }
+  turnSails(time){
+    const mill=this.buildings.windmill,step=Math.floor(time*7)%48;
+    if(!mill.sails||step===mill.step)return;
+    mill.step=step;mill.sails.rotation.z=.55+step*Math.PI/96;
+    const rotor=prepareBuilding(mill.sails,mill.sailOrigin);
+    mill.faces=mill.towerFaces.concat(rotor.faces);
+    mill.dryOcclusion=mill.snowOcclusion=null;
   }
   appearance(building,{night=false,snow=false}){
     this.ambient.intensity=night?.75:2.1;this.sun.intensity=night?.4:2.2;
@@ -130,7 +165,7 @@ export class BuildingRenderer{
   drawWebGL(c,building,kind,basis,crop,W,H,options){
     const ratio=Math.min(globalThis.devicePixelRatio||1,1.5,Math.sqrt(1800000/(crop.w*crop.h)));
     const width=Math.max(1,Math.ceil(crop.w*ratio)),height=Math.max(1,Math.ceil(crop.h*ratio));
-    const key=[W,H,width,height,crop.x,crop.y,crop.w,crop.h,basis.x,basis.z,basis.height,basis.sy,basis.cy,basis.sp,basis.cp,!!options.night,!!options.snow,options.near??.8].join('|');
+    const key=[W,H,width,height,crop.x,crop.y,crop.w,crop.h,basis.x,basis.z,basis.height,basis.sy,basis.cy,basis.sp,basis.cp,basis.f,building.step,!!options.night,!!options.snow,options.near??.8].join('|');
     let cache=this.caches.get(kind);
     if(cache?.key!==key){
       const image=cache?.image||this.createCanvas(),context=image?.getContext?.('2d');
@@ -148,8 +183,8 @@ export class BuildingRenderer{
   label(c,kind,building,project,options){
     const {x,z}=building.origin,spec=building.model.userData.spec;
     const point=project(x,z+spec.depth*.2,spec.ridge+1.15);if(!point)return null;
-    const title=kind==='barn'?'양들의 축사':kind==='lodge'?'목동과 강아지의 집':'닭장';
-    const status=kind==='barn'?`쉬는 양 ${options.inside||0} / ${options.total??0}`:kind==='lodge'?`2층 전망대${options.occupants?` · 쉬는 친구 ${options.occupants}`:''}`:`쉬는 닭 ${options.inside||0} / ${options.total??10}`;
+    const title=kind==='windmill'?'풍차 전망대':kind==='barn'?'양들의 축사':kind==='lodge'?'목동과 강아지의 집':'닭장';
+    const status=kind==='windmill'?windmillStatus(building.stage):kind==='barn'?`쉬는 양 ${options.inside||0} / ${options.total??0}`:kind==='lodge'?`2층 전망대${options.occupants?` · 쉬는 친구 ${options.occupants}`:''}`:`쉬는 닭 ${options.inside||0} / ${options.total??10}`;
     const size=Math.max(10,Math.min(17,point.s*.38));
     c.font=`${size}px sans-serif`;c.textAlign='center';c.textBaseline='middle';
     const w=Math.max(c.measureText(title).width,c.measureText(status).width)+20,h=size*3.1;
@@ -240,8 +275,10 @@ export function drawFarmRoom3D(...args){shared??=new BuildingRenderer();return s
 export function drawLodgeRoom3D(...args){shared??=new BuildingRenderer();return shared.drawLodgeRoom(...args);}
 export function drawBarnRoom3D(...args){shared??=new BuildingRenderer();return shared.drawBarnRoom(...args);}
 
-export function getBuildingOcclusionMeshes({snow=false}={}){
+export function getBuildingOcclusionMeshes({snow=false,millTime}={}){
   shared??=new BuildingRenderer();
+  shared.setMillStage(windmillStage());
+  if(millTime!==undefined&&shared.buildings.windmill.stage===10)shared.turnSails(millTime);
   return Object.values(shared.buildings).map(building=>{
     const key=snow?'snowOcclusion':'dryOcclusion';
     return building[key]??={kind:building.model.userData.kind,near:.8,skipNearCrossing:building.model.userData.kind==='barn',polygons:building.faces.filter(face=>!face.snow||snow).map(face=>face.points)};

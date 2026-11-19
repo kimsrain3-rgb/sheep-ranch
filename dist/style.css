@@ -109,3 +109,8 @@ body:not(.walking) #camera-controls{display:none}canvas{cursor:grab}.walking can
 #meadow-panel #time-form button{font-size:14px;white-space:nowrap}
 #meadow-panel #time-form label{font-size:14px}
 #time-choice-status{font-size:14px;color:#3e5c43}
+#windmill-panel{position:fixed;inset:0;margin:0;width:100%;height:100%;max-width:none;max-height:none;box-sizing:border-box;border:0;padding:0;background:transparent;color:#344e3e;touch-action:none}
+#windmill-panel::backdrop{background:transparent}
+.mill-view> :not(#world):not(#windmill-panel){visibility:hidden}
+.mill-tools{position:absolute;bottom:max(18px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);display:grid;justify-items:center;gap:5px;width:max-content;max-width:94%;padding:12px 20px;border-radius:16px;background:#faf8eef0;text-align:center}
+.mill-tools button{margin-top:4px;padding:8px 14px;border:1px solid #9aab91;border-radius:18px;background:#faf8ee;color:#344e3e;font:inherit;cursor:pointer}
