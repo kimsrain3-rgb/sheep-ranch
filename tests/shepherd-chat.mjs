@@ -94,3 +94,4 @@ try{
   await new Promise(resolve=>setImmediate(resolve));
 }finally{delete globalThis.document;}
 console.log('Chat proximity gate: button, programmatic open and message send require a nearby face-to-face encounter.');
+await import('./haru-unknown.mjs');
