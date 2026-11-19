@@ -1,3 +1,4 @@
+import {nestHasEggs} from '../game/ranch-guide.js';
 import {CONFIG,pondPoint,pondLevel,pondEdge} from '../game/config.js?v=solid-buildings-2';
 
 const TAU=Math.PI*2;
@@ -142,7 +143,7 @@ export function drawPond(c,project,time,{sunset=false,night=false,snow=false,mon
     if(q)plants.push({x:tuft.x,z:tuft.z,draw:()=>drawBankGrass(c,q,tuft,time)});
   }
   const nestView=project(nest.x,nest.z,.05);
-  if(nestView)plants.push({...nest,draw:()=>drawShoreNest(c,nestView,month>=3&&month<=6)});
+  if(nestView)plants.push({...nest,draw:()=>drawShoreNest(c,nestView,nestHasEggs(month))});
   for(const [i,pad] of pads.entries()){
     const [shoreAngle,scale,r]=pad,{x,z}=pondPoint(shoreAngle,scale);
     plants.push({x,z,draw(){

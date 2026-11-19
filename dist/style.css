@@ -114,3 +114,18 @@ body:not(.walking) #camera-controls{display:none}canvas{cursor:grab}.walking can
 .mill-view> :not(#world):not(#windmill-panel){visibility:hidden}
 .mill-tools{position:absolute;bottom:max(18px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);display:grid;justify-items:center;gap:5px;width:max-content;max-width:94%;padding:12px 20px;border-radius:16px;background:#faf8eef0;text-align:center}
 .mill-tools button{margin-top:4px;padding:8px 14px;border:1px solid #9aab91;border-radius:18px;background:#faf8ee;color:#344e3e;font:inherit;cursor:pointer}
+
+dialog#welcome {
+  position:fixed; inset:0; margin:auto; width:min(29rem,calc(100% - 2rem)); max-height:calc(100dvh - 2rem);
+  padding:clamp(1.25rem,4vw,2.25rem); overflow:auto; color:#253d30; background:rgba(250,249,238,.92);
+  border:1px solid #fff9; border-radius:16px; box-shadow:0 12px 60px #233e373d; backdrop-filter:blur(5px);
+}
+#welcome::backdrop {background:#19382333}
+dialog#welcome h1 {font-size:clamp(1.45rem,4.2vw,2.05rem);line-height:1.4;letter-spacing:-.045em;margin:0 0 .85rem}
+dialog#welcome p.guide-copy,#help-panel .guide-copy {font-size:1rem;line-height:1.75;color:#304b39;word-break:keep-all}
+.guide-choice {display:flex;align-items:center;gap:.5rem;min-height:44px;font-size:.93rem}
+.guide-choice input {width:18px;height:18px;accent-color:#385b42}
+dialog#welcome #start {width:100%;margin:.5rem 0 0;text-align:center;font-size:1rem}
+#help-panel section {max-height:90dvh;overflow:auto}
+#help-panel summary {cursor:pointer;padding:.65rem 0}
+#haru-feedback {background:transparent;text-decoration:underline;text-underline-offset:3px;padding:.4rem .7rem;font-size:.85rem}

@@ -4,7 +4,7 @@ import {BarnVisit} from './game/barn.js?v=solid-buildings-2';
 import {BarnInteriorView} from './game/barn-camera.js?v=immersive-barn-v2';
 import {FarmRoomVisit,FARM_ROOMS} from './game/farm-room.js?v=solid-buildings-2';
 import {LodgeVisit} from './game/lodge.js?v=solid-buildings-2';
-import {setupShepherdChat} from './shepherd-chat.js?v=public-ai-1';
+import {setupShepherdChat} from './shepherd-chat.js?v=haru-guide-1';
 import {ShepherdBoy} from './game/shepherd.js?v=solid-buildings-2';
 import {drawShepherdBoy} from './render/shepherd.js?v=christmas';
 import {MeadowWeather} from './game/weather.js?v=coop-herding';
@@ -463,8 +463,9 @@ requestAnimationFrame(frame);
 function start(){
   if(started)return;
   started=true;
-  ensureSound();
+  if(globalThis.navigator?.userActivation?.isActive!==false)ensureSound();
   document.body.classList.add('walking');
+  $('welcome').close?.();
   $('welcome').hidden=true;
   view.zoom=1.65;
   const spawn=new URLSearchParams(location.search).get('start');
@@ -496,7 +497,13 @@ function start(){
   else $('toast').style.opacity=0;
   notify('양을 누르면 가까이서 쓰다듬어요. 우유와 건초는 메뉴에 있어요.');
 }
-$('start').onclick=start;
+const introKey='meadow.skipIntro.v1';
+function rememberIntro(skip){
+  try{localStorage.setItem(introKey,skip?'1':'0');}catch{}
+}
+$('start').onclick=()=>{rememberIntro($('skip-intro').checked);start();$('help').focus();};
+$('help-skip').onchange=()=>rememberIntro($('help-skip').checked);
+$('welcome').addEventListener('cancel',event=>event.preventDefault());
 function feed(){
   if(farmVisit.inside){notify('건물 밖으로 나와 양들에게 건초를 주세요.');return;}
   if(barnVisit.inside){notify('양들이 축사에서 쉬고 있어요.');return;}
@@ -759,7 +766,7 @@ addEventListener('blur',()=>{
 });
 addEventListener('keydown',e=>{
   if(millMode)return;
-  if(paused||['INPUT','TEXTAREA','SELECT'].includes(e.target?.tagName))return;const k=e.key.toLowerCase();if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright','f'].includes(k)){
+  if(!started||paused||['INPUT','TEXTAREA','SELECT'].includes(e.target?.tagName))return;const k=e.key.toLowerCase();if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright','f'].includes(k)){
     e.preventDefault();if(!started)start();if(k!=='f'){
       cancelHammockWalk();cancelBarnTrip();
       if(!lodgeVisit.inside)cancelLodgeTrip();
@@ -784,7 +791,10 @@ function help(open){
   $('help-panel').hidden=!open;
   paused=open;
   keys.clear();
-  if(open)$('close-help').focus();
+  if(open){
+    try{$('help-skip').checked=localStorage.getItem(introKey)==='1';}catch{}
+    $('close-help').focus();
+  }
   else $('help').focus();
 }
 $('help').onclick=()=>help(true);
@@ -1025,7 +1035,7 @@ function renderInsideBarn(){
 $('barn-enter').onclick=goBarn;
 $('barn-leave').onclick=()=>{barnVisit.requestExit(player);keys.clear();notify('문까지 걸어가 밖으로 나가요.');};
 if(typeof document.querySelectorAll==='function')chat=setupShepherdChat({
-  snapshot:()=>({time:atmosphere.text,weather:atmosphere.label,weatherSource:atmosphere.preview?'preview':atmosphere.live?'live':'local',location:weather.location?.name||'',night:atmosphere.night,total:sheep.length,lambs:lambs.length,inside:shelter.inside,chickens:companions.chickens.length,chickensInside:companions.coopInside,playingLambs:lambPlay.groups.length*2,dogs:companions.dogs.length,dogsInLodge:companions.dogs.filter(a=>a.hiddenInLodge).length,shepherdInLodge:shepherd.insideLodge,feeding,shelterReason:shelter.active?shelter.reason:'',inFarmRoom:farmVisit.inside?farmVisit.kind:null,inBarn:barnVisit.inside,inLodge:lodgeVisit.inside,lodgeFloor:lodgeVisit.inside?lodgeVisit.floor:0,friend:flock.adults.find(a=>a.id===bond.friendId)?.name||null}),
+  snapshot:()=>({month:new Date().getMonth()+1,time:atmosphere.text,weather:atmosphere.label,weatherSource:atmosphere.preview?'preview':atmosphere.live?'live':'local',location:weather.location?.name||'',night:atmosphere.night,total:sheep.length,lambs:lambs.length,inside:shelter.inside,chickens:companions.chickens.length,chickensInside:companions.coopInside,playingLambs:lambPlay.groups.length*2,dogs:companions.dogs.length,dogsInLodge:companions.dogs.filter(a=>a.hiddenInLodge).length,shepherdInLodge:shepherd.insideLodge,feeding,shelterReason:shelter.active?shelter.reason:'',inFarmRoom:farmVisit.inside?farmVisit.kind:null,inBarn:barnVisit.inside,inLodge:lodgeVisit.inside,lodgeFloor:lodgeVisit.inside?lodgeVisit.floor:0,friend:flock.adults.find(a=>a.id===bond.friendId)?.name||null}),
   requestOpen:requestShepherdTalk,
   canTalk:()=>!farmVisit.inside&&shepherd.canTalk(player,lodgeVisit.inside&&lodgeVisit.floor===1),
   onOpen:()=>keys.clear(),
@@ -1066,3 +1076,8 @@ function renderInsideFarmRoom(){
 $('coop-enter').onclick=()=>goFarmRoom('coop');
 $('shed-enter').onclick=()=>goFarmRoom('shed');
 $('farm-room-leave').onclick=()=>{farmVisit.requestExit(player);keys.clear();marker={x:0,z:.55};notify('문으로 걸어가 목장으로 나가요.');};
+
+let skipIntro=false;
+try{skipIntro=localStorage.getItem(introKey)==='1';}catch{}
+if(skipIntro)start();
+else $('welcome').showModal?.();
