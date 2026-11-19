@@ -8,12 +8,13 @@ import {setupShepherdChat} from './shepherd-chat.js?v=nearby-talk-7';
 import {ShepherdBoy} from './game/shepherd.js?v=solid-buildings-2';
 import {drawShepherdBoy} from './render/shepherd.js?v=christmas';
 import {MeadowWeather} from './game/weather.js?v=coop-herding';
+import {MeadowTime} from './game/meadow-time.js?v=chosen-time-2';
 import {SheepBond} from './game/bond.js?v=night-barn';
 import {WeatherShelter} from './game/shelter.js?v=solid-buildings-2';
 import {LambPlay} from './game/lamb-play.js?v=solid-buildings-2';
 import {drawBuilding3D,drawBuildingLabel3D,drawBarnRoom3D,drawFarmRoom3D,drawLodgeRoom3D,getBuildingOcclusionMeshes} from './render/buildings-three.js?v=barn-three-2';
 import {drawWeather,drawFriendBadge} from './render/weather.js?v=night-barn';
-import {setupMeadowPanel} from './meadow-panel.js?v=night-barn';
+import {setupMeadowPanel} from './meadow-panel.js?v=chosen-time-2';
 import { isCompactViewport } from './game/layout.js';
 import { Flock } from './game/flock.js?v=solid-buildings-2';
 import { Interactions } from './game/interactions.js?v=solid-buildings-2';
@@ -52,9 +53,8 @@ flock.adults.forEach((animal,i)=>{
 });
 const interaction=new Interactions(flock),companions=new Companions(),audioSystem=new MeadowAudio();
 const weather=new MeadowWeather(),bond=new SheepBond(),shelter=new WeatherShelter(),lambPlay=new LambPlay(rnd);
-// Temporary local testing mode: keep the ranch at midday.
-const testDay=()=>({...weather.snapshot(),hour:12,minute:0,text:'낮 12:00 (테스트)',night:false,dusk:false});
-let atmosphere=testDay(),environmentTimer=0;
+const meadowTime=new MeadowTime();
+let atmosphere=meadowTime.apply(weather.snapshot()),environmentTimer=0;
 bond.apply(flock);
 const shepherd=new ShepherdBoy(),barnVisit=new BarnVisit(),lodgeVisit=new LodgeVisit(),farmVisit=new FarmRoomVisit();
 let chat=null,pendingShepherdTalk=false;
@@ -187,11 +187,18 @@ function drawMarker(){
   c.ellipse(p.x,p.y,p.s*.28,p.s*.09,0,0,Math.PI*2);
   c.stroke();
 }
+function refreshMeadowTime(){
+  environmentTimer=0;
+  const next=meadowTime.apply(weather.snapshot());
+  // A deliberate daytime choice releases night shelter immediately. Animals
+  // still walk through their door; rain/snow and manual gathering keep priority.
+  if(!next.night&&!next.wet&&!shelter.manual)shelter.dryFor=20;
+}
 function update(dt){
   if(paused)return;
   weather.tick();environmentTimer-=dt;
   if(environmentTimer<=0){
-    atmosphere=testDay();environmentTimer=.5;sunset=atmosphere.dusk&&!atmosphere.night;
+    atmosphere=meadowTime.apply(weather.snapshot());environmentTimer=.5;sunset=atmosphere.dusk&&!atmosphere.night;
     $('clock').textContent=atmosphere.text;
     canvas.setAttribute('aria-label',`${farmVisit.inside?`${FARM_ROOMS[farmVisit.kind].title} 실내. 바닥을 누르거나 방향키로 걸어 다녀요.`:barnVisit.inside?'축사 실내. 쉬는 양들을 볼 수 있어요.':lodgeVisit.inside?`목동 숙소 ${lodgeVisit.floor}층. 방을 걸어 다니고 계단으로 층을 옮길 수 있어요.`:'양들이 지내는 목장.'} ${atmosphere.preview?'감상용 ':atmosphere.live?'지역 날씨 ':''}${atmosphere.label}. 축사에서 쉬는 양 ${shelter.inside}마리, 옆 닭장에서 쉬는 닭 ${companions.coopInside}마리. 목동을 누르면 대화합니다. 풀밭을 누르면 이동합니다.`);
     $('weather-label').textContent=atmosphere.preview?`${atmosphere.label} · 감상용`:atmosphere.live?`${atmosphere.location} · ${atmosphere.label}`:'바람목장 · 지역 날씨 미연결';
@@ -822,7 +829,7 @@ $('care-cancel').onclick=()=>{
 
 // Native modal panel is separate from simulation and responsive menu placement.
 if(typeof document.querySelectorAll==='function')setupMeadowPanel({
-  weather,bond,flock,getSelected:()=>selected,onMessage:notify,onPause:open=>{paused=open;keys.clear();if(!open){environmentTimer=0;bond.save();}},
+  weather,meadowTime,bond,flock,getSelected:()=>selected,onMessage:notify,onTimeChange:refreshMeadowTime,onPause:open=>{paused=open;keys.clear();if(!open){environmentTimer=0;bond.save();}},
   onFind:animal=>{
     if(!started)start();
     if(barnVisit.inside||lodgeVisit.inside||farmVisit.inside){notify('밖으로 나온 뒤 내 양을 만나러 가요.');return;}

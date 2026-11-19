@@ -1,10 +1,14 @@
 import {WEATHER_NAMES} from './game/weather.js?v=night-barn';
-export function setupMeadowPanel({weather,bond,flock,getSelected,onMessage,onPause,onFind}){
+export function setupMeadowPanel({weather,meadowTime,bond,flock,getSelected,onMessage,onPause,onFind,onTimeChange=()=>{}}){
   const $=id=>document.getElementById(id),dialog=$('meadow-panel');let candidate=null,searchVersion=0,returnFocus=null;
   const status=text=>$('weather-status').textContent=text;
   function refresh(){
-    const w=weather.snapshot(),friend=flock.adults.find(a=>a.id===bond.friendId);
-    $('weather-now').textContent=`${w.location||'기기 시간'} · ${w.text} · ${w.preview?'감상용 ':w.live?'':'기본 풍경 · '}${w.label}`;
+    const w=meadowTime.apply(weather.snapshot()),friend=flock.adults.find(a=>a.id===bond.friendId);
+    $('meadow-time').value=meadowTime.value;
+    $('time-choice-status').textContent=`${w.period} · ${w.text}에 머물러요.`;
+    $('time-choice-storage').textContent=meadowTime.persistent?'선택한 시간은 이 브라우저가 기억해요. 언제든 다시 바꿀 수 있어요.':'선택한 시간은 이번 방문 동안 유지돼요.';
+    for(const button of dialog.querySelectorAll('[data-meadow-time]'))button.setAttribute('aria-pressed',String(button.dataset.meadowTime===meadowTime.value));
+    $('weather-now').textContent=`${w.location||'목장의 하늘'} · ${w.preview?'감상용 ':w.live?'':'기본 풍경 · '}${w.label}`;
     status(weather.status);
     $('bond-storage').textContent=bond.persistent?'이름과 친밀도는 이 브라우저에 저장됩니다. 다른 기기와는 아직 연결되지 않아요.':'브라우저 저장이 제한되어 이번 방문 동안만 기억할 수 있어요.';
     $('bond-current').textContent=friend?`${friend.name} · ${(bond.points[friend.id]||0)>=6?'나를 알아보는 사이':'서로 알아가는 중'}`:'자주 쓰다듬으면 먼저 다가오는 양이 생겨요.';
@@ -22,6 +26,12 @@ export function setupMeadowPanel({weather,bond,flock,getSelected,onMessage,onPau
   $('my-sheep').onclick=$('time').onclick=open;
   $('name-form').onsubmit=e=>{e.preventDefault();if(bond.name(candidate,$('sheep-new-name').value,flock)){refresh();$('bond-candidate').textContent='이름을 기억했어요. 자주 만나며 친해져요.';onMessage(`${candidate.name}, 앞으로 이렇게 부를게요.`);}};
   $('friend-find').onclick=()=>{const a=flock.adults.find(a=>a.id===bond.friendId);if(a){dialog.close();onFind(a);}};
+  function chooseTime(value){
+    if(!meadowTime.set(value)){$('time-choice-status').textContent='00:00부터 23:59 사이의 시간을 골라 주세요.';return;}
+    onTimeChange();refresh();onMessage(`목장의 시간을 ${meadowTime.apply(weather.snapshot()).text}로 골랐어요.`);
+  }
+  $('time-form').onsubmit=e=>{e.preventDefault();chooseTime($('meadow-time').value);};
+  for(const button of dialog.querySelectorAll('[data-meadow-time]'))button.onclick=()=>chooseTime(button.dataset.meadowTime);
   $('weather-preview').onchange=e=>{weather.preview=e.target.value;refresh();};
   $('weather-forget').onclick=()=>{searchVersion++;weather.clear();$('weather-preview').value='live';$('city-results').replaceChildren();refresh();};
   $('city-form').onsubmit=async e=>{

@@ -4,7 +4,7 @@ const elements=new Map(),listeners=new Map(),captures=new Set();
 function el(id){if(!elements.has(id))elements.set(id,{style:{},classList:{add(){},toggle(){}},setAttribute(k,v){this[k]=v},querySelector(){return el(id+'child')},focus(){},addEventListener(k,fn){listeners.set(k,fn)},setPointerCapture(id){captures.add(id)},hasPointerCapture(id){return captures.has(id)},releasePointerCapture(id){captures.delete(id)}});return elements.get(id)}
 el('world').getContext=()=>({setTransform(){}});
 const ctx=vm.createContext({console,Math,Map,Set,Object,innerWidth:390,innerHeight:780,devicePixelRatio:1,document:{querySelector:()=>el('world'),getElementById:el,body:el('body')},addEventListener(){},requestAnimationFrame(){}});
- const modules=await Promise.all(['flock','interactions','companions','audio','config','layout','weather','bond','shelter','lamb-play','shepherd','barn','barn-camera','lodge','navigation','farm-room','lodge-camera'].map(name=>import('../dist/game/'+name+'.js')));
+ const modules=await Promise.all(['flock','interactions','companions','audio','config','layout','weather','bond','shelter','lamb-play','shepherd','barn','barn-camera','lodge','navigation','farm-room','lodge-camera','meadow-time'].map(name=>import('../dist/game/'+name+'.js')));
 for(const module of modules)Object.assign(ctx,module);Object.assign(ctx,await import('../dist/render/details.js'));Object.assign(ctx,await import('../dist/render/bridge.js'));Object.assign(ctx,await import('../dist/render/occlusion.js'));
 const source=fs.readFileSync('dist/orbit.js','utf8').replace('export class','class')+'\n'+fs.readFileSync('dist/app.js','utf8').replace(/^import[\s\S]*?;\n/gm,'');
 vm.runInContext(source,ctx);vm.runInContext('start()',ctx);
@@ -95,6 +95,19 @@ event('pointerdown',103,grassTap.x,grassTap.y);event('pointerup',103,grassTap.x,
 assert.equal(read('barnVisit.trip'),null,'grass inside the old bounding rectangle never enters the barn');
 assert.ok(read('outdoorWalk'),'grass creates an ordinary walking route');
 console.log('Outdoor tap picking: foreground sheep before buildings, no hidden sheep through walls, actual wall entry and ordinary grass movement passed.');
+
+
+// Choosing daylight after night must release shelter without the real-weather
+// 20-second delay. Manual gathering and rainy weather still keep animals safe.
+read(`cancelBarnTrip();cancelLodgeTrip();interaction.cancel(view);cancelOutdoorWalk();shelter.active=false;shelter.manual=false;weather.preview='clear';meadowTime.set('22:00');refreshMeadowTime();update(.05)`);
+assert.equal(read('atmosphere.night'),true);assert.equal(read('shelter.active'),true,'a user-selected night triggers normal herding');
+read(`meadowTime.set('12:00');refreshMeadowTime();update(.05)`);
+assert.equal(read('atmosphere.night'),false);assert.equal(read('shelter.active'),false,'choosing day immediately begins the normal walking exit');
+read(`shelter.manual=true;meadowTime.set('07:00');refreshMeadowTime();update(.05)`);
+assert.equal(read('shelter.active'),true,'time selection preserves explicit gathering');
+read(`shelter.manual=false;weather.preview='rain';meadowTime.set('12:00');refreshMeadowTime();update(.05)`);
+assert.equal(read('shelter.active'),true,'daylight never forces animals out in rain');
+console.log('App time choice: selected night herds, selected daylight releases promptly, rain and manual gathering retain priority.');
 
 console.log('App bridge: continuous dry crossing, raised feet, destination arrival and replacement-action cancellation passed.');
 console.log('Hammock: continuous normal-speed walk, rest only on arrival, stand in place, cancellation and replacement actions.');
