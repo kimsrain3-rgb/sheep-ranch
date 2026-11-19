@@ -53,10 +53,7 @@ export function drawPasture(c,W,H,t,sunset,view,project,ellipse,path,weather={})
  drawRiverMountains(c,project,view.basis?.(W,H));
  for(let layer=0;layer<3;layer++){c.beginPath();c.moveTo(0,H);for(let x=0;x<=W+16;x+=16){const a=(x/W-.5)*1.4+view.yaw;const y=horizon+layer*9-18-Math.sin(a*3.1+layer)*17-Math.sin(a*7-layer)*8;c.lineTo(x,y);}c.lineTo(W,H);c.closePath();c.fillStyle=['#a2b7a4','#8fa984','#829e69'][layer];c.fill();}
  const ground=c.createLinearGradient(0,Math.max(0,horizon),0,H);ground.addColorStop(0,sunset?'#98a36e':'#a1b979');ground.addColorStop(1,sunset?'#5d7447':'#668b47');c.fillStyle=ground;c.fillRect(0,Math.max(0,horizon+7),W,H);
- function polygon(points,color){const pp=points.map(p=>project(p[0],p[1],p[2]||.015));if(pp.some(p=>!p))return;path(pp.map(p=>[p.x,p.y]),color);}
  if(weather.kind==='snow'){c.fillStyle='#eeeedd48';c.fillRect(0,Math.max(0,horizon+7),W,H);}
- // World-space pond and a walking path remain anchored while the camera turns.
- polygon([[-2,CONFIG.playerBounds.minZ],[3,CONFIG.playerBounds.minZ],[11,CONFIG.playerBounds.maxZ],[7,CONFIG.playerBounds.maxZ]],'#c6c39366');
  const camera=view.basis?.(W,H);
  const water=pondWaterColors(sunset,weather.night);
  // Paint both banks before open water so neither shore cuts across a channel.
