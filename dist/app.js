@@ -31,7 +31,7 @@ import { makeVegetation,drawVegetation,drawHayPile,drawRipples } from './render/
 import { drawInteraction } from './render/interactions.js?v=soft-elbow-5';
 import { MeadowView } from './orbit.js';
 import { drawVisitor,drawHammock,visitorPose } from './visitor.js?v=night-barn';
-import { drawPasture,trees,drawWindmill,drawFirTree,firTree } from './pasture.js?v=pond-bank-1';
+import { drawPasture,trees,drawWindmill,drawFirTree,firTree } from './pasture.js?v=water-join-1';
 const canvas=document.querySelector('#world'),c=canvas.getContext('2d');
 const $=id=>document.getElementById(id);
 let W,H,dpr,started=false,feeding=false,seated=false,hammocking=false,walkingToHammock=false,sunset=false,selected=null,feedCount=0,friends=new Set(),t=0,last=0,toastUntil=0,paused=false;

@@ -1,5 +1,5 @@
-import {drawPond} from './render/pond.js?v=pond-bank-1';
-import {drawRiverMountains,drawWaterways,drawRiverMouths} from './render/waterways.js?v=solid-buildings-2';
+import {drawPond,drawPondBank,pondWaterColors} from './render/pond.js?v=water-join-1';
+import {drawRiverMountains,drawRiverBanks,drawWaterways} from './render/waterways.js?v=water-join-1';
 import {CONFIG,keepDry,pondPoint,onBridge,WATERWAYS} from './game/config.js?v=solid-buildings-2';
 let seed=981;const rnd=()=>((seed=seed*16807%2147483647)-1)/2147483646;
 export const trees=Array.from({length:105},(_,i)=>{const a=rnd()*Math.PI*2,r=(34+rnd()*85)*(i>=70?1.8:1),tree={x:Math.sin(a)*r,z:Math.cos(a)*r,size:1.1+rnd()*1.1,phase:rnd()*6.28};if(i<16){
@@ -57,9 +57,13 @@ export function drawPasture(c,W,H,t,sunset,view,project,ellipse,path,weather={})
  if(weather.kind==='snow'){c.fillStyle='#eeeedd48';c.fillRect(0,Math.max(0,horizon+7),W,H);}
  // World-space pond and a walking path remain anchored while the camera turns.
  polygon([[-2,CONFIG.playerBounds.minZ],[3,CONFIG.playerBounds.minZ],[11,CONFIG.playerBounds.maxZ],[7,CONFIG.playerBounds.maxZ]],'#c6c39366');
- drawWaterways(c,project,t,view.basis?.(W,H));
- drawPond(c,project,t,{sunset,night:weather.night,snow:weather.kind==='snow',month:christmas.getMonth()+1},view.basis?.(W,H));
- drawRiverMouths(c,project,view.basis?.(W,H));
+ const camera=view.basis?.(W,H);
+ const water=pondWaterColors(sunset,weather.night);
+ // Paint both banks before open water so neither shore cuts across a channel.
+ drawRiverBanks(c,project,camera);
+ drawPondBank(c,project,camera,water);
+ drawWaterways(c,project,t,camera,water);
+ drawPond(c,project,t,{sunset,night:weather.night,snow:weather.kind==='snow',month:christmas.getMonth()+1},camera);
  const bounds=CONFIG.bounds;
  function fence(x,z,nx,nz){
   const a=project(x,z),b=project(x,z,1.1),next=project(nx,nz,.75),rail=project(x,z,.75);

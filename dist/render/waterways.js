@@ -1,6 +1,5 @@
-import {pondLevel} from '../game/config.js?v=solid-buildings-2';
 import {WATERWAYS} from '../game/waterways.js?v=river-14';
-import {clipPondPolygon} from './pond.js?v=solid-buildings-2';
+import {clipPondPolygon,pondWaterColors} from './pond.js?v=water-join-1';
 const meshes=WATERWAYS.map(river=>{
   let length=0;
   const points=river.points.map((point,i)=>{
@@ -25,13 +24,21 @@ export function drawRiverMountains(c,project,camera){
     polygon(c,project,points,range.color,camera);
   }
 }
-export function drawWaterways(c,project,time,camera){
+function ribbon(c,project,river,scale,color,height,camera){
+  const side=sign=>river.points.map(p=>[p.x+p.nx*p.width*scale*sign,p.z+p.nz*p.width*scale*sign,height]);
+  polygon(c,project,[...side(1),...side(-1).reverse()],color,camera);
+}
+export function drawRiverBanks(c,project,camera){
+  for(const river of meshes){
+    ribbon(c,project,river,1.30,'#7c9566',.012,camera);
+    ribbon(c,project,river,1.12,'#a3af88',.02,camera);
+  }
+}
+export function drawWaterways(c,project,time,camera,water=pondWaterColors()){
   c.save();c.lineCap='round';
   for(const river of meshes){
-    for(const [scale,color,y] of [[1.30,'#7c9566',.012],[1.12,'#a3af88',.02],[1,'#99bcac',.035],[.85,'#7aa99f',.045]]){
-      const side=sign=>river.points.map(p=>[p.x+p.nx*p.width*scale*sign,p.z+p.nz*p.width*scale*sign,y]);
-      polygon(c,project,[...side(1),...side(-1).reverse()],color,camera);
-    }
+    ribbon(c,project,river,1,water.shallow,.035,camera);
+    ribbon(c,project,river,.85,water.deep,.045,camera);
     for(let i=0;i<24;i++){
       const progress=(time*1.45+i/24*river.length)%river.length;
       const index=Math.max(1,river.points.findIndex(p=>p.length>=progress)),a=river.points[index-1],b=river.points[index];
@@ -40,22 +47,6 @@ export function drawWaterways(c,project,time,camera){
       const tail=project(x-dx/d*.7+a.nx*offset,z-dz/d*.7+a.nz*offset,.055),head=project(x+dx/d*.45+a.nx*offset,z+dz/d*.45+a.nz*offset,.055);
       if(!tail||!head)continue;
       c.strokeStyle='#e3eee16b';c.lineWidth=Math.max(.65,head.s*.018);c.beginPath();c.moveTo(tail.x,tail.y);c.lineTo(head.x,head.y);c.stroke();
-    }
-  }
-  c.restore();
-}
-
-// Continue open water across the lake's painted bank at both river mouths.
-// The main bank ribbons are drawn beneath the lake; these small patches join
-// only the water, leaving the rest of the shore and its plants intact.
-export function drawRiverMouths(c,project,camera){
-  c.save();
-  for(const river of meshes)for(let i=1;i<river.points.length;i++){
-    const a=river.points[i-1],b=river.points[i],levels=[pondLevel(a),pondLevel(b)];
-    if(Math.min(...levels)>1.16||Math.max(...levels)<.8)continue;
-    for(const [scale,color] of [[1,'#9ab9a9'],[.85,'#80b0a7']]){
-      const point=(p,side)=>[p.x+p.nx*p.width*scale*side,p.z+p.nz*p.width*scale*side,.052];
-      polygon(c,project,[point(a,1),point(b,1),point(b,-1),point(a,-1)],color,camera);
     }
   }
   c.restore();

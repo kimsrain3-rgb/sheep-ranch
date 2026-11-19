@@ -94,19 +94,20 @@ export function clipPondPolygon(points,camera){
   return out;
 }
 
-export function drawPond(c,project,time,{sunset=false,night=false,snow=false,month}={},camera){
-  function polygon(points,color){
-    const clipped=clipPondPolygon(points,camera);
-    if(clipped.length<3)return;
-    const screen=clipped.map(([x,z,y])=>project(x,z,y));
-    if(screen.some(point=>!point))return;
-    c.fillStyle=color;c.beginPath();screen.forEach((point,i)=>i?c.lineTo(point.x,point.y):c.moveTo(point.x,point.y));c.closePath();c.fill();
-  }
-  function stroke(points,color,width){
-    const screen=points.map(([x,z,y])=>project(x,z,y));if(screen.some(point=>!point))return;
-    c.strokeStyle=color;c.lineWidth=width;c.beginPath();screen.forEach((point,i)=>i?c.lineTo(point.x,point.y):c.moveTo(point.x,point.y));c.stroke();
-  }
-  c.save();c.lineCap='round';c.lineJoin='round';
+function fillPondPolygon(c,project,camera,points,color){
+  const clipped=clipPondPolygon(points,camera);
+  if(clipped.length<3)return;
+  const screen=clipped.map(([x,z,y])=>project(x,z,y));
+  if(screen.some(point=>!point))return;
+  c.fillStyle=color;c.beginPath();screen.forEach((point,i)=>i?c.lineTo(point.x,point.y):c.moveTo(point.x,point.y));c.closePath();c.fill();
+}
+
+export function pondWaterColors(sunset=false,night=false){
+  return {shallow:sunset?'#8da99b':'#9ab9a9',deep:night?'#65918b':sunset?'#7b9e98':'#80b0a7'};
+}
+
+export function drawPondBank(c,project,camera,water=pondWaterColors()){
+  const polygon=(points,color)=>fillPondPolygon(c,project,camera,points,color);
   polygon(rim.map(([x,z],i)=>{
     const width=1.04+.014*Math.sin(i/rim.length*TAU*3);
     return [p.x+(x-p.x)*width,p.z+(z-p.z)*width,.012];
@@ -116,8 +117,18 @@ export function drawPond(c,project,time,{sunset=false,night=false,snow=false,mon
     const beach=[...Array.from({length:17},(_,i)=>shore(start+(end-start)*i/16,1.014)),...Array.from({length:17},(_,i)=>shore(end-(end-start)*i/16,.974))];
     polygon(beach,'#b9b994');
   }
-  polygon(rim.map(([x,z])=>[p.x+(x-p.x)*.987,p.z+(z-p.z)*.987,.035]),sunset?'#8da99b':'#9ab9a9');
-  polygon(rim.map(([x,z])=>[p.x+(x-p.x)*.94,p.z+(z-p.z)*.94,.04]),night?'#65918b':sunset?'#7b9e98':'#80b0a7');
+  polygon(rim.map(([x,z])=>[p.x+(x-p.x)*.987,p.z+(z-p.z)*.987,.035]),water.shallow);
+}
+
+export function drawPond(c,project,time,{sunset=false,night=false,snow=false,month}={},camera){
+  const polygon=(points,color)=>fillPondPolygon(c,project,camera,points,color);
+  function stroke(points,color,width){
+    const screen=points.map(([x,z,y])=>project(x,z,y));if(screen.some(point=>!point))return;
+    c.strokeStyle=color;c.lineWidth=width;c.beginPath();screen.forEach((point,i)=>i?c.lineTo(point.x,point.y):c.moveTo(point.x,point.y));c.stroke();
+  }
+  c.save();c.lineCap='round';c.lineJoin='round';
+  const water=pondWaterColors(sunset,night);
+  polygon(rim.map(([x,z])=>[p.x+(x-p.x)*.94,p.z+(z-p.z)*.94,.04]),water.deep);
   polygon(rim.map(([x,z])=>[p.x+(x-p.x)*.72-.3,p.z+(z-p.z)*.72+.2,.045]),'#6b9f993b');
   for(let i=0;i<13;i++){
     const z=p.z+(i/12-.5)*p.rz*1.45,x=p.x+Math.sin(i*2.4)*p.rx*.4;

@@ -3,7 +3,7 @@ import {CONFIG,WATERWAYS,BRIDGE,LAKE_BRIDGE,BRIDGES,bridgePoint,bridgeHeight,bri
 import {riverPathClear} from '../dist/game/waterways.js';
 import {dryRoute} from '../dist/game/navigation.js';
 import {Flock} from '../dist/game/flock.js';
-import {drawWaterways,drawRiverMountains,drawRiverMouths} from '../dist/render/waterways.js';
+import {drawWaterways,drawRiverMountains,drawRiverBanks} from '../dist/render/waterways.js';
 import {drawBridgeDeck,drawBridgeRail,pickBridge} from '../dist/render/bridge.js';
 import {MeadowView} from '../dist/orbit.js';
 import {trees} from '../dist/pasture.js';
@@ -73,8 +73,7 @@ for(const yaw of [0,Math.PI/2,Math.PI,Math.PI*1.5]){
   if(['moveTo','lineTo','translate','scale'].includes(k))return (...v)=>assert.ok(v.every(Number.isFinite),'scenery projects to finite coordinates');
   return ()=>{};
  }});
- drawRiverMountains(c,project,view.basis(W,H));drawWaterways(c,project,13,view.basis(W,H));
- drawRiverMouths(c,project,view.basis(W,H));
+ drawRiverMountains(c,project,view.basis(W,H));drawRiverBanks(c,project,view.basis(W,H));drawWaterways(c,project,13,view.basis(W,H));
  drawBridgeDeck(c,project);drawBridgeRail(c,project,-1);drawBridgeRail(c,project,1);
  assert.equal(saves,0);assert.ok(fills>50,'water and bridge render in every direction');
  const center=project(BRIDGE.x,BRIDGE.z,BRIDGE.rise),picked=pickBridge(center.x,center.y,project);
