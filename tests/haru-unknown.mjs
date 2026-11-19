@@ -63,9 +63,14 @@ assert.ok(db.prepare('SELECT id FROM haru_topics WHERE summary=?').get('개인 �
 const feedbackReply='아, 그걸 물으셨군요. 그날 올지는 저도 몰라요.';
 assert.equal((await ask(history,secondEvent,mockModel('unknown',feedbackReply),true)).reply,feedbackReply);
 assert.equal(lastInput.feedback,true);
+db.prepare('UPDATE haru_topics SET answer=? WHERE id=?').run('',id);
 const misplaced=await ask(history,'test-event-haru-0004',mockModel('place',secondReply));
 assert.equal(misplaced.mode,'notebook');
 assert.equal(misplaced.reply,secondReply);
 assert.deepEqual(spokenMessages,history);
+const invented=await ask(history,'test-event-haru-0005',mockModel('time','내일 풍차에서 볼 수 있어요.'));
+assert.equal(invented.mode,'notebook');
+assert.match(invented.reply,/내일.*기러기.*몰라요/);
+assert.equal(invented.saved,true);
 db.close();
 console.log('Haru guide: conversational unknowns, follow-ups, private sheep, silent notes, deduplication, feedback and taught answers passed.');

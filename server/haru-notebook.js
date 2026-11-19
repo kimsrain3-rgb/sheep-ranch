@@ -125,25 +125,45 @@ export async function guideResponse(body,context,env,fetcher){
   }catch(error){
     if(!feedback)throw error;
   }
-  const source=String(decision.source),row=match||rows.find(r=>String(r.id)===source);
+  const source=String(decision.source);
+  let row=match||rows.find(r=>String(r.id)===source);
   let reply=String(decision.reply||'').trim().slice(0,240);
+  const asksArrival=/기러기|철새|도래|도착|날아오/.test(question);
+  const timeFollowup=/^(?:그럼|그러면|그렇다면|혹시)?(?:모레|내일|다음주|올겨울|오늘)은?요?[?.!~]*$/.test(question.replace(/\s/g,''));
+  const priorQuestion=body.messages.slice(0,-1).findLast(m=>m.role==='user')?.content||'';
+  const specificEvent=asksArrival || (timeFollowup && /기러기|철새|도래|도착|날아오/.test(priorQuestion));
+  const gooseArrival=specificEvent && /기러기/.test(question+' '+priorQuestion) && /올|오나|오는|도착|내일|날아|언제/.test(question);
+  if(gooseArrival && !row)row=rows.find(r=>r.summary==='기러기의 도착 시기');
+  const unsupportedTime=source==='time' && (timeFollowup || /언제|내일|모레|다음\s*주/.test(question));
   const placeMismatch=source==='place' && !/어디|장소|추천|갈\s*만|가\s*볼|볼\s*거리|둘러볼/.test(question);
-  if(!unanswered && !feedback && !placeMismatch){
+  if(row?.answer && !unanswered && !feedback)return json({reply:taughtAnswer(row,facts),mode:'journal'});
+  const wrongSource=placeMismatch || unsupportedTime || (specificEvent && !row?.answer);
+  if(!unanswered && !feedback && !wrongSource){
     if(Object.hasOwn(facts,source))return json({reply:facts[source],mode:'state'});
     if(source==='status')return json({reply:shepherdStateReply(context,question),mode:'state'});
-    if(row?.answer)return json({reply:taughtAnswer(row,facts),mode:'journal'});
     if(source==='greeting' && reply)return json({reply,mode:'ai'});
     if(Object.hasOwn(guideManual,source))return json({reply:guideManual[source],mode:'guide'});
   }
   let summary=row?.summary||publicSummary(decision.summary,context.friend);
+  if(gooseArrival && !row)summary='기러기의 도착 시기';
   if(personalQuestion){
     summary=/출산|임신|새끼/.test(question)?'개인 양의 출산 정보':/깎|깍|양털/.test(question)?'개인 양의 털 깎기 정보':'개인 양의 개별 상태';
   }
   let saved=false;
   try{saved=await noteQuestion(env.DB,body.event,summary);}catch{}
-  if(unanswered || feedback || placeMismatch || !reply){
+  if(unanswered || feedback || wrongSource || !reply){
     try{reply=await speakWithoutAnswer(body.messages,env,fetcher,feedback);}
     catch{reply='';}
   }
-  return json({reply:reply||'그건 저도 아직 잘 모르겠어요.',saved,mode:'notebook'});
+  // An unverified event cannot acquire a date or location through generated dialogue.
+  const uncertainty=/모르|몰라|알지 못|알 수 없|알기 어렵|확실하지|장담|확인하지 못|확인하기 어려|정해지지|말하기 어려|궁금해/;
+  if(!uncertainty.test(reply) || /수첩|노트|저장|기록에 남/.test(reply)){
+    if(specificEvent && /기러기/.test(question+' '+priorQuestion)){
+      const when=question.match(/내일|모레|오늘|올겨울/)?.[0];
+      reply=when ? when+' 기러기가 올지는 저도 아직 몰라요.' : '기러기가 언제 찾아올지는 저도 모르겠어요.';
+    }else{
+      reply='그건 저도 아직 잘 모르겠어요.';
+    }
+  }
+  return json({reply,saved,mode:'notebook'});
 }
