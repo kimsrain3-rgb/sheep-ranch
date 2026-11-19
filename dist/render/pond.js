@@ -1,4 +1,4 @@
-import {CONFIG,pondPoint,pondLevel} from '../game/config.js?v=solid-buildings-2';
+import {CONFIG,pondPoint,pondLevel,pondEdge} from '../game/config.js?v=solid-buildings-2';
 
 const TAU=Math.PI*2;
 const p=CONFIG.pond;
@@ -9,6 +9,72 @@ const shore=(angle,scale=1,height=.025)=>{
 const rim=Array.from({length:96},(_,i)=>shore(i/96*TAU));
 const pads=[[2.0,.77,.72],[2.15,.82,.62],[2.32,.76,.59],[2.48,.83,.77],[2.65,.78,.47],[3.55,.80,.7],[3.72,.75,.8],[3.90,.82,.66],[5.38,.77,.52],[5.58,.83,.55],[5.73,.74,.7]];
 const reeds=[.18,.36,.62,.91,2.2,2.7,3.6,4.15,5.65].map((angle,i)=>({angle,i,point:shore(angle,.995)}));
+// Short, staggered beds leave long stretches of bank open for drinking and views.
+const nestBank=4.82;
+const nest=pondPoint(nestBank,1.09);
+const bankGrass=[];
+const bedAreaScale=3;
+const shoreLengthScale=Math.sqrt(bedAreaScale);
+const innerBank=.99;
+for(const [center,arc,originalRows] of [[3.12,.39,2],[nestBank,.53,3],[5.62,.31,2]]){
+  const count=Math.ceil(arc*23*shoreLengthScale);
+  const rows=Math.ceil((originalRows-1)*shoreLengthScale)+1;
+  for(let row=0;row<rows;row++){
+    for(let i=0;i<count;i++){
+      const along=(i+(row%2)*.42)/(count-1)-.5;
+      const originalAngle=center+arc*along;
+      const angle=center+arc*shoreLengthScale*along;
+      const seed=i*2.4+row*4.7+center;
+      const originalRadius=innerBank+(originalRows-1)*.046*row/(rows-1)+.012*Math.sin(seed);
+      // Sector area is proportional to angle times the difference of squared radii.
+      // Account for the irregular shoreline so each bed gains the same area ratio.
+      const edgeRatio=pondEdge(originalAngle)/pondEdge(angle);
+      const radius=Math.sqrt(innerBank**2+(originalRadius**2-innerBank**2)*edgeRatio**2*bedAreaScale/shoreLengthScale);
+      const point=pondPoint(angle,radius);
+      if(Math.hypot(point.x-nest.x,point.z-nest.z)<.90)continue;
+      bankGrass.push({...point,seed,size:(1.03+.29*Math.sin(seed))*(1-.64*Math.abs(along))});
+    }
+  }
+}
+
+function drawBankGrass(c,q,tuft,time){
+  const width=q.s*tuft.size,height=2*width,wind=.09*Math.sin(time+tuft.seed);
+  for(let layer=0;layer<2;layer++){
+    c.fillStyle=layer?'#879452':'#5a7949';c.beginPath();
+    for(let j=0;j<5;j++){
+      const fan=(j-2)*.27+(layer-.5)*.12;
+      const length=height*(.65+.29*Math.cos(j*2.3+tuft.seed+layer));
+      const root=q.x+fan*width*.6,tip=root+(fan+wind)*length;
+      c.moveTo(root-width*.055,q.y);
+      c.quadraticCurveTo(root,q.y-length*.6,tip,q.y-length);
+      c.quadraticCurveTo(root+width*.11,q.y-length*.36,root+width*.065,q.y);
+      c.closePath();
+    }
+    c.fill();
+  }
+}
+
+function drawShoreNest(c,q,withEggs){
+  c.save();c.translate(q.x,q.y);c.scale(q.s,q.s);
+  function oval(x,y,w,h,tilt,color){
+    c.fillStyle=color;c.beginPath();c.ellipse(x,y,w,h,tilt,0,TAU);c.fill();
+  }
+  oval(0,-.08,.46,.20,0,'#9b8257');
+  oval(0,-.11,.36,.13,0,'#665a44');
+  if(withEggs){
+    oval(-.10,-.15,.07,.096,-.32,'#dcdcc2');
+    oval(.05,-.16,.07,.098,.26,'#e8e3c9');
+    oval(.17,-.12,.067,.086,.52,'#d3d6b9');
+  }
+  c.strokeStyle='#bc9e6b';c.lineWidth=.025;
+  c.beginPath();
+  for(let i=0;i<8;i++){
+    const a=i/7*Math.PI;
+    c.moveTo(Math.cos(a)*.39,Math.sin(a)*.15-.09);
+    c.lineTo(Math.cos(a+.55)*.44,Math.sin(a+.55)*.16-.08);
+  }
+  c.stroke();c.restore();
+}
 
 // Clip world polygons at the camera's near plane, so a large pond stays visible
 // when some of its bank passes behind the camera.
@@ -28,7 +94,7 @@ export function clipPondPolygon(points,camera){
   return out;
 }
 
-export function drawPond(c,project,time,{sunset=false,night=false,snow=false}={},camera){
+export function drawPond(c,project,time,{sunset=false,night=false,snow=false,month}={},camera){
   function polygon(points,color){
     const clipped=clipPondPolygon(points,camera);
     if(clipped.length<3)return;
@@ -60,6 +126,12 @@ export function drawPond(c,project,time,{sunset=false,night=false,snow=false}={}
     stroke([[x-length+drift,z,.055],[x+drift,z+.025,.055],[x+length*.7+drift,z,.055]],'#d4e6d450',1.1);
   }
   const plants=[];
+  for(const tuft of bankGrass){
+    const q=project(tuft.x,tuft.z,.04);
+    if(q)plants.push({x:tuft.x,z:tuft.z,draw:()=>drawBankGrass(c,q,tuft,time)});
+  }
+  const nestView=project(nest.x,nest.z,.05);
+  if(nestView)plants.push({...nest,draw:()=>drawShoreNest(c,nestView,month>=3&&month<=6)});
   for(const [i,pad] of pads.entries()){
     const [shoreAngle,scale,r]=pad,{x,z}=pondPoint(shoreAngle,scale);
     plants.push({x,z,draw(){
@@ -100,7 +172,8 @@ export function drawPond(c,project,time,{sunset=false,night=false,snow=false}={}
       c.fillStyle='#c5c3a46b';c.beginPath();c.ellipse(q.x-q.s*radius*.18,q.y-q.s*radius*.48,q.s*radius*.65,q.s*radius*.19,-.2,0,TAU);c.fill();
     }});
   }
-  plants.sort((a,b)=>(project(b.x,b.z)?.depth??-1)-(project(a.x,a.z)?.depth??-1));
+  for(const plant of plants)plant.depth=project(plant.x,plant.z)?.depth??-1;
+  plants.sort((a,b)=>b.depth-a.depth);
   for(const plant of plants)plant.draw();
   if(snow)polygon(rim.map(([x,z])=>[p.x+(x-p.x)*.94,p.z+(z-p.z)*.94,.08]),'#dce5d124');
   c.restore();

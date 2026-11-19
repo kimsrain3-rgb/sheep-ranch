@@ -58,7 +58,7 @@ export function drawPasture(c,W,H,t,sunset,view,project,ellipse,path,weather={})
  // World-space pond and a walking path remain anchored while the camera turns.
  polygon([[-2,CONFIG.playerBounds.minZ],[3,CONFIG.playerBounds.minZ],[11,CONFIG.playerBounds.maxZ],[7,CONFIG.playerBounds.maxZ]],'#c6c39366');
  drawWaterways(c,project,t,view.basis?.(W,H));
- drawPond(c,project,t,{sunset,night:weather.night,snow:weather.kind==='snow'},view.basis?.(W,H));
+ drawPond(c,project,t,{sunset,night:weather.night,snow:weather.kind==='snow',month:christmas.getMonth()+1},view.basis?.(W,H));
  drawRiverMouths(c,project,view.basis?.(W,H));
  const bounds=CONFIG.bounds;
  function fence(x,z,nx,nz){

@@ -227,3 +227,7 @@ PC는 건물 자체나 각 둘러보기 버튼을 누르고, 휴대폰은 메뉴
 원격 main의 c45e78b를 기준으로 GitHub Pages의 대화창을 기존 공개 목동 서버에 연결했다. 로컬과 Sites에서는 같은 출처의 API를 사용한다. Sites 서버는 GitHub Pages 출처의 상태 조회, 대화 전송과 브라우저 사전 요청을 지원한다. 기존 서버 비밀 설정과 요청 횟수 제한을 사용한다. 변경 파일은 dist/shepherd-chat.js, 앱과 페이지의 모듈 버전, server/shepherd-api.js, tests/shepherd-chat.mjs 및 README.md다.
 
 전체 npm test를 통과했다. 배포된 Sites 서버에서 GitHub 출처로 상태 조회 200, AI 활성 표시, 사전 요청 204를 확인했다.
+
+## 연못가 풀숲과 계절 둥지 (2026-11-19)
+
+GitHub main의 풍차 커밋 c45e78b를 기준으로 연못가 세 곳에 풀숲을 넓히고 새 둥지를 배치했다. dist/render/pond.js에서 풀과 둥지를 그리고, dist/pasture.js에서 달을 전달해 3월부터 6월까지 알 세 개가 보이도록 했다. 전체 npm test 통과. PC 1280×800과 휴대폰 390×844에서 목장 입장 후 연못 장면 렌더링을 확인했다. 공개 반영은 해당 커밋의 GitHub Pages 배포 기록을 따른다.
