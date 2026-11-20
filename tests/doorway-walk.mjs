@@ -34,6 +34,10 @@ const hooks=`
     view=visit===barnVisit?indoorView:visit===lodgeVisit?lodgeView:farmView;
     view.yaw=Math.PI+.08;view.pitch=-.09;centerView();return visit;
   }
+  export function visitorFrame(yaw){
+    view.yaw=yaw;centerView();
+    return {sprite:roomVisitorProjection(view,player,W,H),eye:view.basis(W,H)};
+  }
   export function screen(x,z){return view.project(x,z,0,W,H);}
 `;
 const game=await import('data:text/javascript;base64,'+Buffer.from(source+hooks).toString('base64'));
@@ -46,10 +50,11 @@ for(const [w,h] of [[1000,700],[390,760]]){
   globalThis.innerWidth=w;globalThis.innerHeight=h;game.resize();
   for(const kind of ['barn','coop','shed','lodge']){
     const visit=game.enter(kind),door=CONFIG[kind].entrance;
-    tap(2.1,-11);
+    const x=kind==='barn'?2.1:.65;
+    tap(x,-11);
     assert.equal(visit.trip,'exit',kind+' starts walking to door');
     assert.equal(visit.inside,true,'no teleport on touch');
-    const end={x:door.x+2.1,z:door.z-11};
+    const end={x:door.x+x,z:door.z-11};
     for(let i=0;i<200;i++){
       game.update(.05);
       if(visit.inside)assert.ok(game.player.z>=.45,'eye stays clear of the doorway plane');
@@ -72,3 +77,20 @@ const balcony=game.enter('lodge',2);
 tap(0,-11);
 assert.equal(balcony.trip,null,'balcony view cannot be used as a ground-floor exit');
 console.log('Touch walking through four open doors, indoor retargeting, walls and balcony passed.');
+
+for(const [w,h] of [[390,760],[900,390],[1000,700]]){
+  globalThis.innerWidth=w;globalThis.innerHeight=h;game.resize();
+  for(const [kind,floor] of [['barn',1],['coop',1],['shed',1],['lodge',1],['lodge',2]]){
+    game.enter(kind,floor);
+    for(const z of [.55,1,4]){
+      game.player.z=z;
+      for(const yaw of [0,Math.PI/2,Math.PI,Math.PI*1.5]){
+        const {sprite,eye}=game.visitorFrame(yaw);
+        assert.ok(sprite.y-2.32*sprite.s>=0&&sprite.y+.16*sprite.s<h,'hat and feet stay in view');
+        assert.ok(sprite.x-.5*sprite.s>=0&&sprite.x+.5*sprite.s<w,'whole visitor fits the screen');
+        assert.ok(eye.z>=(floor===2?-1.35:.34),'camera stays within the room or its balcony');
+      }
+    }
+  }
+}
+console.log('Indoor visitor framing at the threshold and along the aisle passed.');

@@ -58,7 +58,7 @@ const assert=require('node:assert/strict');
    }
    {
     await page.evaluate(()=>__buildingQA.place(-46,40));if(name==='phone')await page.locator('#mobile-menu-toggle').click();await page.locator('#lodge-enter').click();await page.evaluate(()=>__buildingQA.step(12));
-    let house=await page.evaluate(()=>__buildingQA.state());assert.equal(house.lodge,true);assert.equal(house.lodgeCamera.x,house.player.x);assert.equal(house.lodgeCamera.z,house.player.z);assert.equal(house.lodgeCamera.height,1.65);
+    let house=await page.evaluate(()=>__buildingQA.state());assert.equal(house.lodge,true);assert.ok(Math.abs(house.lodgeCamera.x-house.player.x)<1);assert.ok(house.lodgeCamera.z>0&&house.lodgeCamera.z<house.player.z);assert.equal(house.lodgeCamera.height,1.65);
     assert.equal(await page.locator('#world').getAttribute('data-lodge-interior'),'eye-height-three');
     await page.screenshot({path:path.join(output,name+'-lodge-entry.png')});
     const beforeTurn=await page.evaluate(()=>__buildingQA.state());
@@ -66,7 +66,7 @@ const assert=require('node:assert/strict');
     await page.mouse.move(viewport.width*.5+60,viewport.height*.55-45,{steps:5});await page.mouse.up();
     const afterTurn=await page.evaluate(()=>__buildingQA.state());
     assert.ok(Math.abs(afterTurn.lodgeCamera.sy-beforeTurn.lodgeCamera.sy)>.15,'dragging turns the head');
-    assert.ok(Math.hypot(afterTurn.lodgeCamera.x-beforeTurn.lodgeCamera.x,afterTurn.lodgeCamera.z-beforeTurn.lodgeCamera.z)<.001,'looking around never orbits outside the house');
+    assert.ok(afterTurn.lodgeCamera.z>0&&Math.abs(afterTurn.lodgeCamera.x)<5.5,'the rotating camera stays inside the house');
 
     await page.evaluate(()=>{__buildingQA.houseWalk(0,5);__buildingQA.step(8);__buildingQA.rotate(-Math.PI/2,.08);});
     await page.screenshot({path:path.join(output,name+'-lodge-bed.png')});

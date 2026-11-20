@@ -1,3 +1,4 @@
+import {followRoomVisitor,roomVisitorProjection} from './game/room-follow.js';
 import {groundThroughDoor} from './game/doorway.js';
 import {BuildingOcclusion,spriteBounds} from './render/occlusion.js?v=visible-picking-1';
 import {LodgeInteriorView} from './game/lodge-camera.js?v=lodge-eyes-2';
@@ -91,6 +92,11 @@ function centerView(){
     const radius=millMode==='balcony'?3.65:-Math.min(34,12+windmillStage()*2.75);
     view.target.x=CONFIG.windmill.x+Math.sin(view.yaw)*radius;
     view.target.z=CONFIG.windmill.z+Math.cos(view.yaw)*radius;
+    return;
+  }
+  if(barnVisit.inside||farmVisit.inside||lodgeVisit.inside){
+    const kind=barnVisit.inside?'barn':lodgeVisit.inside?'lodge':farmVisit.kind;
+    followRoomVisitor(view,player,kind,lodgeVisit.floor,W,H);
     return;
   }
   const target=interaction.cameraTarget(player);
@@ -1039,6 +1045,14 @@ function renderRoomOutlook(kind,floor=1){
     c.restore();
   }
 }
+function drawRoomOccupants(guests){
+  const visitor=roomVisitorProjection(view,player,W,H);
+  const layers=guests.map(guest=>({depth:project(guest.x,guest.z)?.depth??-1,draw:guest.draw}));
+  layers.push({depth:visitor.depth,draw:()=>drawVisitor(c,visitor,{
+    time:t,walking:player.walking,pose:visitorPose(player.headingX??0,player.headingZ??1,view.yaw)
+  })});
+  layers.sort((a,b)=>b.depth-a.depth).forEach(layer=>layer.draw());
+}
 function renderInsideLodge(){
   centerView();c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,W,H);
   renderRoomOutlook('lodge',lodgeVisit.floor);
@@ -1049,7 +1063,7 @@ function renderInsideLodge(){
     if(shepherd.insideLodge){const guest={...shepherd,x:-3.1,z:7.8,walking:false};people.push({x:guest.x,z:guest.z,draw:()=>{drawShepherdBoy(c,project(guest.x,guest.z),guest,view.yaw);shepherd.screen=guest.screen;}});}
     for(const [index,dog] of companions.dogs.entries())if(dog.hiddenInLodge){const guest={...dog,x:index?1.65:-1.65,z:11.9,walking:false};people.push({x:guest.x,z:guest.z,draw:()=>drawCompanion(c,project(guest.x,guest.z),guest,t)});}
   }
-  people.sort((a,b)=>(project(b.x,b.z)?.depth??-1)-(project(a.x,a.z)?.depth??-1)).forEach(a=>a.draw());
+  drawRoomOccupants(people);
   $('sheep-label').hidden=true;
   if(t>toastUntil)$('toast').style.opacity=0;
 }
@@ -1062,8 +1076,8 @@ function renderInsideBarn(){
   renderRoomOutlook('barn');
   drawBarnRoom3D(c,view,W,H,options);
   drawMarker();
-  const inside=barnVisit.animals(flock),layers=inside.map(a=>({depth:project(a.x,a.z)?.depth||0,draw:()=>drawSheep(a)}));
-  layers.sort((a,b)=>b.depth-a.depth).forEach(a=>a.draw());$('sheep-label').hidden=true;
+  drawRoomOccupants(barnVisit.animals(flock).map(a=>({x:a.x,z:a.z,draw:()=>drawSheep(a)})));
+  $('sheep-label').hidden=true;
   if(t>toastUntil)$('toast').style.opacity=0;
 }
 $('barn-enter').onclick=goBarn;
@@ -1100,11 +1114,12 @@ function renderInsideFarmRoom(){
   renderRoomOutlook(farmVisit.kind);
   drawFarmRoom3D(c,farmVisit.kind,view,W,H,{night:atmosphere.night});
   drawMarker();
+  const occupants=[];
   if(farmVisit.kind==='coop'){
     const guests=companions.chickens.filter(a=>a.hiddenInCoop).map((a,i)=>({...a,x:i%2?1.7:-1.7,z:3.1+Math.floor(i/2)*1.05,walking:false}));
-    guests.sort((a,b)=>(project(b.x,b.z)?.depth??-1)-(project(a.x,a.z)?.depth??-1));
-    for(const guest of guests)drawCompanion(c,project(guest.x,guest.z),guest,t);
+    for(const guest of guests)occupants.push({x:guest.x,z:guest.z,draw:()=>drawCompanion(c,project(guest.x,guest.z),guest,t)});
   }
+  drawRoomOccupants(occupants);
   $('sheep-label').hidden=true;
   if(t>toastUntil)$('toast').style.opacity=0;
 }

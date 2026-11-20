@@ -25,27 +25,38 @@ const assert=require('node:assert/strict');
           barnVisit.inside=kind==='barn';lodgeVisit.inside=kind==='lodge';
           lodgeVisit.floor=floor;farmVisit.inside=kind==='shed'||kind==='coop';farmVisit.kind=kind;
           view=barnVisit.inside?indoorView:lodgeVisit.inside?lodgeView:farmView;
-          const room=view;player.x=player.tx=.15;player.z=player.tz=5;
+          const room=view;player.x=player.tx=.6;player.z=player.tz=2.2;
           room.yaw=yaw;room.pitch=-.03;room.zoom=1.25;centerView();
           const door=CONFIG[kind].entrance;
-          lookoutView.target.x=door.x+player.x;lookoutView.target.z=door.z+player.z;
+          lookoutView.target.x=door.x+room.target.x;lookoutView.target.z=door.z+room.target.z;
           lookoutView.yaw=yaw;lookoutView.pitch=room.pitch;lookoutView.zoom=room.zoom;
           lookoutView.eyeHeight=room.eyeHeight+(floor-1)*4.2;
           view=lookoutView;drawOutdoorScenery(kind);drawWeather(c,W,H,t,atmosphere);
           const sample=()=>c.getImageData(0,0,canvas.width,canvas.height).data;
-          const outside=sample();view=room;render();const inside=sample();
+          const outside=sample();view=room;
+          const avatar=roomVisitorProjection(room,player,W,H);
+          drawRoomOccupants([]);
+          const withVisitor=sample();render();const inside=sample();
+          let coatPixels=0;
+          const coat=[213,174,94];
+          for(let y=Math.floor(avatar.y-2.4*avatar.s);y<=avatar.y;y++)
+            for(let x=Math.floor(avatar.x-.5*avatar.s);x<=avatar.x+.5*avatar.s;x++){
+              const n=(Math.floor(y*dpr)*canvas.width+Math.floor(x*dpr))*4;
+              if(coat.every((v,k)=>Math.abs(inside[n+k]-v)<=2))coatPixels++;
+            }
           function compare(xs){
             let total=0,same=0;const colors=new Set();
-            for(const x of xs)for(let y=1.4;y<=2.55;y+=.07){
+            for(const x of xs)for(let y=1.5;y<=2.55;y+=.04){
               const p=project(x,0,y);if(!p||p.x<1||p.y<1||p.x>=W-1||p.y>=H-1)continue;
               const n=(Math.floor(p.y*dpr)*canvas.width+Math.floor(p.x*dpr))*4;
+              if([0,1,2].some(k=>withVisitor[n+k]!==outside[n+k]))continue;
               total++;if([0,1,2].every(k=>Math.abs(outside[n+k]-inside[n+k])<=3))same++;
               colors.add(outside[n]*65536+outside[n+1]*256+outside[n+2]);
             }
             return {total,same,colors:colors.size};
           }
           const jamb=kind==='barn'?3.1:kind==='lodge'?1.1:1;
-          return {door:compare([-.5,-.2,0,.2,.5]),wall:compare([jamb+.25,jamb+.45,-jamb-.3]),
+          return {coatPixels,door:compare([-.48,-.26,0,.26,.48,.72,.88]),wall:compare([jamb+.25,jamb+.45,-jamb-.3]),
             renderer:canvas.dataset.buildings};
         };
       `}));
@@ -55,6 +66,7 @@ const assert=require('node:assert/strict');
         for(const yaw of [Math.PI,Math.PI+.19]){
           const result=await page.evaluate(([kind,floor,yaw])=>checkDoor(kind,floor,yaw),[kind,floor,yaw]);
           const label=[width,height,kind,floor,yaw].join('/');
+          assert.ok(result.coatPixels>20,label+' visible visitor');
           assert.equal(result.renderer,fallback?'three-mesh-canvas':'three-webgl',label);
           assert.ok(result.door.total>12&&result.door.colors>3&&result.door.same/result.door.total>.88,label+' doorway '+JSON.stringify(result));
           assert.ok(result.wall.total>0&&result.wall.same/result.wall.total<.1,label+' wall '+JSON.stringify(result));
