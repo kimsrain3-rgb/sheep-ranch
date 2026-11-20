@@ -64,7 +64,7 @@ UI 수정 시에는 390×760과 320×568의 실제 iframe viewport 또는 휴대
 
 합성 바람 잡음은 제거했습니다. 현재 소리 버튼은 음악과 양 울음을 함께 제어합니다. 배경음악은 사용자 MP3를 반복 재생합니다.
 
-배경음악은 `dist/assets/pastoral-loop.mp3`입니다. `MeadowAudio`가 HTMLAudioElement 하나로 스트리밍하며 loop=true, volume=0.22로 재생합니다. 소리 버튼은 음악과 양 울음을 함께 제어하고, 끄면 현재 위치에서 일시정지합니다. MP3 전체를 PCM으로 메모리에 올리지 않습니다. 연속 클릭은 진행 중인 재생 요청 하나로 합쳐 처리합니다. 바람 소리는 생성하지 않습니다.
+배경음악은 `dist/assets/pastoral-loop.mp3`입니다. `MeadowAudio`가 HTMLAudioElement 하나로 스트리밍하며 loop=true, volume=0.45로 재생합니다. 소리 버튼은 음악과 양 울음을 함께 제어하고, 끄면 현재 위치에서 일시정지합니다. MP3 전체를 PCM으로 메모리에 올리지 않습니다. 연속 클릭은 진행 중인 재생 요청 하나로 합쳐 처리합니다. 바람 소리는 생성하지 않습니다.
 
 간소한 UI는 너비 700px 이하 **또는 높이 540px 이하**에서 사용합니다. `game/layout.js`의 COMPACT_UI_QUERY와 style.css의 미디어 쿼리를 함께 유지하세요. 폰 가로 회전은 너비가 커져도 높이가 낮으므로 PC 메뉴로 바뀌지 않습니다. tests/layout.mjs가 양쪽 기준과 대표 가로/세로 크기를 검증합니다.
 

@@ -4,7 +4,7 @@ let count=0,plays=0,pauses=0,fail=false,release=null;
 globalThis.Audio=class{constructor(src){this.src=src;this.currentTime=0;count++;}play(){plays++;if(fail)return Promise.reject(Error('blocked'));if(release!==null)return new Promise(resolve=>{release=resolve;});return Promise.resolve();}pause(){pauses++;}};
 globalThis.AudioContext=class{resume(){this.state='running';return Promise.resolve();}suspend(){this.state='suspended';return Promise.resolve();}};
 const audio=new MeadowAudio();
-assert.equal(await audio.toggle(),true);assert.equal(audio.music.loop,true);assert.equal(audio.music.volume,.22);assert.ok(audio.music.src.endsWith('/assets/sounds/pastoral-loop.mp3'));
+assert.equal(await audio.toggle(),true);assert.equal(audio.music.loop,true);assert.equal(audio.music.volume,.45);assert.ok(audio.music.src.endsWith('/assets/sounds/pastoral-loop.mp3'));
 audio.music.currentTime=40;assert.equal(await audio.toggle(),false);assert.equal(audio.music.currentTime,40);assert.equal(audio.context.state,'suspended');assert.ok(pauses>0);
 assert.equal(await audio.toggle(),true);assert.equal(count,1);await audio.toggle();
 fail=true;await assert.rejects(audio.toggle());assert.equal(audio.enabled,false);assert.equal(audio.context.state,'suspended');
