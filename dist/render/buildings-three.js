@@ -1,4 +1,4 @@
-import {createLodgeRoomModel} from './lodge-room-model.js?v=lodge-eyes-2';
+import {createLodgeRoomModel} from './lodge-room-model.js?v=open-doorways-1';
 import * as THREE from '../vendor/three/three.module.js';
 import {createBarnModel,createBarnRoomModel,createLodgeModel,createCoopModel,createFarmRoomModel} from './building-models.js?v=barn-three-1';
 import {CONFIG} from '../game/config.js?v=windmill-1';
@@ -39,6 +39,19 @@ function clippedPolygon(points,basis,near=.805){
     if(cd>=near)output.push(current);previous=current;pd=cd;
   }
   return output;
+}
+
+// Door openings are in room-local coordinates, with the threshold at z=0.
+export function clipRoomDoorway(c,kind,view,W,H){
+  const halfWidth=kind==='barn'?3.1:1, height=kind==='barn'?3.5:2.6;
+  const opening=[[-halfWidth,0,0],[halfWidth,0,0],[halfWidth,0,height],[-halfWidth,0,height]];
+  const points=clippedPolygon(opening,view.basis(W,H),.121).map(p=>view.project(...p,W,H));
+  if(points.length<3 || points.every(p=>p.x<0) || points.every(p=>p.x>W) ||
+     points.every(p=>p.y<0) || points.every(p=>p.y>H))return false;
+  c.beginPath();
+  points.forEach((p,i)=>i?c.lineTo(p.x,p.y):c.moveTo(p.x,p.y));
+  c.closePath();c.clip();
+  return true;
 }
 
 function prepareBuilding(model,origin){
@@ -219,7 +232,7 @@ export class BuildingRenderer{
     const building=this.rooms.get(kind),basis=view.basis(W,H),settings={...options,near:.12,snow:false};
     const project=(x,z,y=0)=>view.project(x,z,y,W,H);
     this.initialise();this.appearance(building,settings);this.roomLight.intensity=options.night?.65:1.35;
-    c.save();c.fillStyle=options.night?'#584c39':'#c3b08a';c.fillRect(0,0,W,H);
+    c.save();
     if(this.renderer&&!this.lost){
       try{this.drawWebGL(c,building,'room-'+kind,basis,{x:0,y:0,w:W,h:H},W,H,settings);}
       catch{this.lost=true;this.caches.clear();this.drawSoftware(c,building,project,basis,settings);}
@@ -235,7 +248,7 @@ export class BuildingRenderer{
     const building=this.rooms.get(key),basis=view.basis(W,H),settings={...options,near:.12,snow:false};
     const project=(x,z,y=0)=>view.project(x,z,y,W,H);
     this.initialise();this.appearance(building,settings);this.roomLight.intensity=options.night?.8:1.3;
-    c.save();c.fillStyle=options.night?'#443b34':'#b4a17e';c.fillRect(0,0,W,H);
+    c.save();
     if(this.renderer&&!this.lost){
       try{this.drawWebGL(c,building,key,basis,{x:0,y:0,w:W,h:H},W,H,settings);}
       catch{this.lost=true;this.caches.clear();this.drawSoftware(c,building,project,basis,settings);}

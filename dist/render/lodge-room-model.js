@@ -52,13 +52,15 @@ export function createLodgeRoomModel(floor=1){
   }
   for(const z of [1.3,5.9,10.25])box('ceiling beam',0,H-.17,z,11,.24,.2,p.wood);
   for(const side of [-1,1])box('wall skirting',side*5.38,.17,D/2,.09,.24,D,p.trim);
-  for(const z of [.12,D-.12])box('wall skirting',0,.17,z,10.8,.24,.09,p.trim);
+  box('back wall skirting',0,.17,D-.12,10.8,.24,.09,p.trim);
+  for(const side of [-1,1])box('front wall skirting',side*3.25,.17,.12,4.3,.24,.09,p.trim);
   for(const x of [-1.15,1.15])box('door frame',x,1.57,.1,.13,3.25,.16,p.wood);
   box('door lintel',0,3.16,.1,2.4,.14,.16,p.wood);
   if(floor===1){
-    box('closed front door',0,1.5,-.01,2.1,3,.1,p.door);
-    for(const x of [-.7,0,.7])box('door stile',x,1.5,.055,.06,2.8,.04,p.trim);
-    sphere('door handle',.78,1.4,.13,.075,.075,.075,p.straw);
+    // The leaf swings outward from the left jamb; its full width runs along z.
+    box('open front door',-1.06,1.5,-1.05,.10,3,2.1,p.door);
+    for(const z of [-.35,-1.05,-1.75])box('open door stile',-1,1.5,z,.04,2.8,.06,p.trim);
+    sphere('open door handle',-.94,1.4,-1.85,.075,.075,.075,p.straw);
   }else{
     box('balcony deck',0,-.04,-.8,8.3,.16,1.65,p.trim);
     for(let x=-4.05;x<=4.06;x+=.81)box('balcony spindle',x,.59,-1.6,.09,1.18,.09,p.wood);
