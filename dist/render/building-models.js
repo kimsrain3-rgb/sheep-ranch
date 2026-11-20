@@ -119,14 +119,34 @@ function builder(name){
   return {root,palette,box,beam,sphere,add,material,gable,roof,frontWindow,sideWindow,finish};
 }
 
-export function createLodgeModel(){
+function addLodgeDoor(b,x,z){
+  const p=b.palette;
+  b.box('front door',x+1.125,1.5,z,2.25,3,.14,p.door);
+  for(const offset of [.455,1.125,1.795])b.box('door planks',x+offset,1.55,z-.09,.045,2.65,.035,p.trim);
+  b.box('door cross rail',x+1.125,.8,z-.11,2.1,.12,.08,p.wood);
+  b.sphere('brass handle',x+1.925,1.45,z-.15,.08,.08,.08,p.straw);
+}
+
+export function createLodgeDoor(){
+  const b=builder('lodge');addLodgeDoor(b,0,0);return b.finish();
+}
+
+export function createLodgeModel(withDoor=true){
   const b=builder('lodge'),p=b.palette,{box,beam,sphere}=b;
   box('foundation',0,.13,6.75,11.7,.26,14,p.stone);
-  box('house walls',0,4.18,6.75,11.2,8.1,13.5,p.wall);
+  // Recess the entrance so opening the leaf reveals depth, including from the side.
+  box('house walls',0,4.18,7.75,11.2,8.1,11.5,p.wall);
+  for(const side of [-1,1])box('front wall beside entry',side*3.3625,4.18,1,4.475,8.1,2,p.wall);
+  box('wall above entry',0,5.64,1,2.25,5.16,2,p.wall);
+  box('entry shadow',0,1.55,1.98,2.25,3.1,.08,p.dark);
   b.gable('plaster gables',11.2,13.5,8.2,11.2,p.wall);
   for(const x of [-5.6,5.6])for(const z of [0,6.75,13.5])box('timber post',x,4.2,z,.19,8.3,.19);
   for(const y of [.35,4.2,8.15]){
-    for(const z of [-.07,13.57])box('horizontal timber',0,y,z,11.5,.19,.18);
+    for(const z of [-.07,13.57]){
+      if(y===.35&&z<0){
+        for(const side of [-1,1])box('entry base trim',side*3.475,y,z,4.55,.19,.18);
+      }else box('horizontal timber',0,y,z,11.5,.19,.18);
+    }
     for(const x of [-5.64,5.64])box('side timber',x,y,6.75,.18,.19,13.65);
   }
   b.roof(11.2,13.5,8.2,11.2);
@@ -136,11 +156,9 @@ export function createLodgeModel(){
   box('chimney opening',3.5,11.57,10,.75,.03,.8,p.dark);
   for(const y of [9.1,9.65,10.2,10.75])box('chimney mortar',3.5,y,9.46,1.02,.055,.02,p.trim);
   // Door is aligned with the existing entrance / return position.
-  box('door frame',0,1.55,-.13,2.65,3.1,.2,p.wood);
-  box('front door',0,1.5,-.27,2.25,3,.14,p.door);
-  for(const x of [-.67,0,.67])box('door planks',x,1.55,-.36,.045,2.65,.035,p.trim);
-  box('door cross rail',0,.8,-.38,2.1,.12,.08,p.wood);
-  sphere('brass handle',.8,1.45,-.42,.08,.08,.08,p.straw);
+  for(const side of [-1,1])box('door jamb',side*1.21,1.55,-.13,.17,3.1,.2,p.wood);
+  box('door lintel',0,3.12,-.13,2.65,.2,.2,p.wood);
+  if(withDoor)addLodgeDoor(b,-1.125,-.27);
   box('porch deck',0,.08,-.72,4.7,.16,1.5,p.trim);
   for(const x of [-2.35,2.35])box('porch support',x,1.95,-1.3,.16,3.8,.16,p.wood);
   box('porch canopy',0,3.75,-.75,5.2,.15,2,p.roof,[.12,0,0]);

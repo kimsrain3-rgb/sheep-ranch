@@ -34,6 +34,16 @@ const hooks=`
     view=visit===barnVisit?indoorView:visit===lodgeVisit?lodgeView:farmView;
     view.yaw=Math.PI+.08;view.pitch=-.09;centerView();return visit;
   }
+  export function approachDoor(kind,distance){
+    started=true;paused=false;doorwayWalk=null;outdoorWalk=null;
+    barnVisit.inside=lodgeVisit.inside=farmVisit.inside=false;view=outdoorView;
+    const door=CONFIG[kind].entrance;
+    Object.assign(player,{x:door.x,tx:door.x,z:door.z-distance,tz:door.z-distance});
+    entranceDoors[kind]=0;
+    if(kind==='lodge'){goLodge();return lodgeVisit;}
+    goFarmRoom(kind);return farmVisit;
+  }
+  export {entranceDoors};
   export function visitorFrame(yaw){
     view.yaw=yaw;centerView();
     return {sprite:roomVisitorProjection(view,player,W,H),eye:view.basis(W,H)};
@@ -117,5 +127,31 @@ for(const [kind,place] of rooms){
       }
       assert.ok(sawIntermediate&&visit.floor===to,kind+': each stair flight must reach the next landing');
     }
+  }
+}
+
+for(const kind of Object.keys(game.entranceDoors)){
+  for(const startDistance of [4,.05]){
+    const visit=game.approachDoor(kind,startDistance);
+    const threshold=CONFIG[kind].entrance;
+    let openingFrames=0,waited=false;
+    for(let i=0;i<250&&!visit.inside;i++){
+      const previous={...game.player};
+      game.update(1/60);
+      const open=game.entranceDoors[kind];
+      if(open>0&&open<1){
+        openingFrames++;
+        assert.equal(visit.inside,false,kind+' waits outside a moving door');
+        if(distance(previous,threshold)<1.72&&distance(previous,game.player)<1e-8)waited=true;
+      }
+    }
+    assert.ok(waited&&openingFrames>20&&visit.inside,kind+' visibly opens before entry');
+    assert.equal(game.entranceDoors[kind],1);
+    visit.requestExit(game.player);
+    for(let i=0;i<250&&visit.inside;i++)game.update(1/60);
+    assert.ok(!visit.inside&&game.entranceDoors[kind]===1,kind+' exits through an open door');
+    Object.assign(game.player,{z:threshold.z-7,tz:threshold.z-7});
+    for(let i=0;i<100;i++)game.update(1/60);
+    assert.equal(game.entranceDoors[kind],0,kind+' closes after the visitor walks away');
   }
 }

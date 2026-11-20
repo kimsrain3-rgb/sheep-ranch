@@ -14,7 +14,7 @@ import {MeadowTime} from './game/meadow-time.js?v=chosen-time-2';
 import {SheepBond} from './game/bond.js?v=night-barn';
 import {WeatherShelter} from './game/shelter.js?v=solid-buildings-2';
 import {LambPlay} from './game/lamb-play.js?v=solid-buildings-2';
-import {pickLodgeStairs,clipRoomDoorway,drawBuilding3D,drawBuildingLabel3D,drawBarnRoom3D,drawFarmRoom3D,drawLodgeRoom3D,getBuildingOcclusionMeshes} from './render/buildings-three.js?v=lodge-stair-scale-1';
+import {pickLodgeStairs,clipRoomDoorway,drawBuilding3D,drawBuildingLabel3D,drawBarnRoom3D,drawFarmRoom3D,drawLodgeRoom3D,getBuildingOcclusionMeshes} from './render/buildings-three.js?v=entry-motion-1';
 import {windmillStage,windmillStatus,windmillCountdown,windmillOpeningLabel} from './game/windmill-construction.js?v=countdown-1';
 import {drawWeather,drawFriendBadge} from './render/weather.js?v=night-barn';
 import {setupMeadowPanel} from './meadow-panel.js?v=chosen-time-2';
@@ -43,6 +43,25 @@ const player={
   x:0,z:0,tx:0,tz:0
 },keys=new Set();
 let marker=null,outdoorWalk=null,doorwayWalk=null;
+const entranceDoors={lodge:0,shed:0};
+function updateEntranceDoors(dt){
+  const indoors=lodgeVisit.inside||farmVisit.inside||barnVisit.inside;
+  for(const kind of Object.keys(entranceDoors)){
+    const door=CONFIG[kind].entrance;
+    const near=!indoors&&Math.hypot(player.x-door.x,player.z-door.z)<2.8;
+    const inside=kind==='lodge'?lodgeVisit.inside:farmVisit.inside&&farmVisit.kind==='shed';
+    const npcNear=kind==='lodge'&&[shepherd,...companions.dogs].some(a=>
+      !a.insideLodge&&!a.hiddenInLodge&&(a.lodgeBound||a.buildingAccess==='lodge'||a.state==='lodge-go')&&Math.hypot(a.x-door.x,a.z-door.z)<2.8);
+    const opening=inside||npcNear||(near&&(player.buildingAccess===kind||entranceDoors[kind]>0));
+    entranceDoors[kind]=clamp(entranceDoors[kind]+dt*(opening?1.65:-1.25),0,1);
+  }
+}
+function waitingForDoor(point){
+  const kind=player.buildingAccess;
+  if(!(kind in entranceDoors)||entranceDoors[kind]>=1)return false;
+  const door=CONFIG[kind].entrance;
+  return Math.hypot(point.x-door.x,point.z-door.z)<1.65;
+}
 const outdoorView=new MeadowView(),indoorView=new BarnInteriorView();
 const lodgeView=new LodgeInteriorView(),lookoutView=new LodgeInteriorView(),farmView=new BarnInteriorView();
 lodgeView.zoom=1.25;lodgeView.pitch=.025;
@@ -193,14 +212,16 @@ function barn(x,y,s){
   ellipse(0,20,70,9,'#4c66332b');
   path([[-46,-38],[45,-38],[45,22],[-46,22]],'#d3c8a6');
   path([[-60,-38],[0,-77],[58,-38]],sunset?'#76604d':'#7d6650');
-  c.fillStyle='#656e55';
+  c.fillStyle='#433f32';
   c.fillRect(-14,-15,26,37);
   c.fillStyle='#ebe5cb';
   c.fillRect(-34,-21,13,13);
   c.fillRect(24,-21,13,13);
-  c.strokeStyle='#c8c6a7';
-  c.lineWidth=2;
-  c.strokeRect(-13,-14,24,35);
+  // Slide the panel along the wall to reveal the entrance.
+  const panel=-14-entranceDoors.shed*27;
+  c.fillStyle='#656e55';c.fillRect(panel,-15,26,37);
+  c.strokeStyle='#c8c6a7';c.lineWidth=2;c.strokeRect(panel+1,-14,24,35);
+  c.fillStyle='#423e32';c.fillRect(panel+21,1,2,5);
   c.restore();
 }
 function tree(x,y,s){
@@ -250,6 +271,7 @@ function update(dt){
   }
   let dx=Number(keys.has('d')||keys.has('arrowright'))-Number(keys.has('a')||keys.has('arrowleft')),dz=Number(keys.has('w')||keys.has('arrowup'))-Number(keys.has('s')||keys.has('arrowdown'));
   if(!barnVisit.inside&&!lodgeVisit.inside&&!farmVisit.inside)player.buildingAccess=barnVisit.trip==='enter'?'barn':lodgeVisit.trip==='enter'?'lodge':farmVisit.trip==='enter'?farmVisit.kind:interaction.supplyTrip?'shed':null;
+  updateEntranceDoors(dt);
   advanceOutdoorWalk();
   player.walking=false;
   if(started&&!seated&&!hammocking&&interaction.active?.phase!=='playing'&&(dx||dz)){
@@ -269,7 +291,8 @@ function update(dt){
       player.facing=x>=0?1:-1;
       const move=Math.min(d,dt*3.2);
       const next={x:player.x+x/d*move,z:player.z+z/d*move};
-      if(lodgeVisit.inside)lodgeVisit.move(player,next,!!(dx||dz));
+      if(!farmVisit.inside&&!lodgeVisit.inside&&!barnVisit.inside&&waitingForDoor(next))player.walking=false;
+      else if(lodgeVisit.inside)lodgeVisit.move(player,next,!!(dx||dz));
       else if(barnVisit.inside||farmVisit.inside||bridgePathClear(player,next)){
         player.x=next.x;player.z=next.z;
         if(!barnVisit.inside&&!lodgeVisit.inside&&!farmVisit.inside)keepDry(player);
@@ -278,7 +301,7 @@ function update(dt){
     else marker=null;
   }
   if(walkingToHammock&&Math.hypot(player.x-CONFIG.hammock.x,player.z-CONFIG.hammock.z)<=.08)lieInHammock();
-  const farmTransition=farmVisit.tick(player);
+  const farmTransition=farmVisit.trip==='enter'&&farmVisit.kind==='shed'&&waitingForDoor(player)?null:farmVisit.tick(player);
   if(farmTransition){
     if(farmTransition==='blocked')notify('그곳으로 가는 길이 막혀 있어요. 다른 위치에서 다시 걸어가요.');
     else{
@@ -299,7 +322,7 @@ function update(dt){
     notify(barnVisit.inside?'축사 안으로 들어왔어요. 중앙 통로를 걸어보세요.':'축사 문을 나왔어요.');
   }
   if(barnVisit.inside)$('barn-room-status').textContent=`큰 양들의 축사 · 쉬는 양 ${shelter.inside} / ${sheep.length}`;
-  const lodgeTransition=lodgeVisit.tick(player,dt);
+  const lodgeTransition=lodgeVisit.trip==='enter'&&waitingForDoor(player)?null:lodgeVisit.tick(player,dt);
   if(lodgeTransition){
     interaction.cancel(view);keys.clear();selected=null;marker=null;feeding=false;
     view=lodgeVisit.inside?lodgeView:outdoorView;
@@ -379,7 +402,7 @@ function paintWorldLayers(layers){
   const visibleBuildings=new Set(layers.filter(layer=>layer.building).map(layer=>layer.building));
   const hub=project(CONFIG.windmill.x,CONFIG.windmill.entrance.z,17.8);
   const sailsInView=hub&&hub.x>-8*hub.s&&hub.x<W+8*hub.s&&hub.y>-8*hub.s&&hub.y<H+8*hub.s;
-  const meshes=[...getBuildingOcclusionMeshes({snow:atmosphere.kind==='snow',millTime:sailsInView?t:undefined}).filter(mesh=>visibleBuildings.has(mesh.kind)),...(visibleBuildings.has('shed')?[shedOccluder]:[])];
+  const meshes=[...getBuildingOcclusionMeshes({snow:atmosphere.kind==='snow',millTime:sailsInView?t:undefined,lodgeDoor:entranceDoors.lodge}).filter(mesh=>visibleBuildings.has(mesh.kind)),...(visibleBuildings.has('shed')?[shedOccluder]:[])];
   buildingOcclusion.prepare(view.basis(W,H),W,H,meshes,view===lookoutView?.12:.8);
   layers.forEach(layer=>layer.depth=project(layer.x??0,layer.z,layer.height)?.depth??-1);
   layers.sort((a,b)=>b.depth-a.depth);

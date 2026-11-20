@@ -55,6 +55,17 @@ const makeContext=()=>new Proxy({canvas:{dataset:{}},measureText:text=>({width:S
   return ()=>{};
  }});
 const software=new BuildingRenderer({createCanvas:()=>null}),context=makeContext();
+const lodgeBuilding=software.buildings.lodge;
+const entrance=CONFIG.lodge.entrance;
+const ray=new THREE.Raycaster(new THREE.Vector3(entrance.x,1.5,-entrance.z+3),new THREE.Vector3(0,0,-1));
+const entranceDepth=()=>ray.intersectObject(lodgeBuilding.model,true)[0].distance;
+const closedDepth=entranceDepth();
+software.setLodgeDoor(.5);
+assert.ok(Math.abs(entranceDepth()-closedDepth)>.15,'the rendered leaf swings around its hinge');
+software.setLodgeDoor(1);
+assert.ok(entranceDepth()>closedDepth+1.7,'the open leaf reveals a recessed doorway');
+software.setLodgeDoor(0);
+assert.ok(Math.abs(entranceDepth()-closedDepth)<1e-6,'closing returns the door to its frame');
 for(const yaw of [0,Math.PI/2,Math.PI,Math.PI*1.5])for(const kind of ['barn','lodge','coop']){
  const view=new MeadowView();view.target={x:CONFIG[kind].x,z:CONFIG[kind].entrance.z+5};view.yaw=yaw;view.zoom=.9;
  const project=(x,z,y=0)=>view.project(x,z,y,900,700);

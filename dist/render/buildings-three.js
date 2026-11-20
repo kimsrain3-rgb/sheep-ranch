@@ -2,7 +2,7 @@ import {ROOM_DOORS} from '../game/doorway.js';
 import {FLIGHT,LODGE_ROOM} from '../game/lodge-layout.js?v=lodge-flight-1';
 import {createLodgeRoomModel} from './lodge-room-model.js?v=lodge-stair-scale-1';
 import * as THREE from '../vendor/three/three.module.js';
-import {createBarnModel,createBarnRoomModel,createLodgeModel,createCoopModel,createFarmRoomModel} from './building-models.js?v=barn-three-1';
+import {createBarnModel,createBarnRoomModel,createLodgeModel,createLodgeDoor,createCoopModel,createFarmRoomModel} from './building-models.js?v=entry-motion-1';
 import {CONFIG} from '../game/config.js?v=windmill-1';
 import {createWindmill,createSails,axle} from './windmill.js';
 import {windmillStage,windmillStatus} from '../game/windmill-construction.js';
@@ -97,14 +97,28 @@ export class BuildingRenderer{
     this.roomLight=new THREE.AmbientLight('#fff0d2',0);
     this.sun=new THREE.DirectionalLight('#fff0cf',2.2);this.sun.position.set(-35,65,45);
     this.scene.add(this.ambient,this.sun,this.roomLight);
-    this.buildings={barn:prepareBuilding(createBarnModel(),buildingOrigin('barn')),lodge:prepareBuilding(createLodgeModel(),buildingOrigin('lodge')),coop:prepareBuilding(createCoopModel(),buildingOrigin('coop'))};
+    this.buildings={barn:prepareBuilding(createBarnModel(),buildingOrigin('barn')),lodge:prepareBuilding(createLodgeModel(false),buildingOrigin('lodge')),coop:prepareBuilding(createCoopModel(),buildingOrigin('coop'))};
+    const lodge=this.buildings.lodge;
+    lodge.staticFaces=lodge.faces;
+    lodge.door=createLodgeDoor();lodge.model.add(lodge.door);
     this.rooms=new Map();
     for(const building of Object.values(this.buildings)){
       for(const material of Object.values(building.model.userData.palette))material.side=THREE.DoubleSide;
       building.model.visible=false;this.scene.add(building.model);
     }
     this.renderer=null;this.attempted=false;this.lost=false;this.caches=new Map();this.lastMode=null;
+    this.setLodgeDoor(0);
     this.setMillStage(windmillStage());
+  }
+  setLodgeDoor(open){
+    const lodge=this.buildings.lodge,step=Math.round(open*30);
+    if(lodge.doorStep===step)return;
+    lodge.doorStep=step;
+    lodge.door.rotation.y=-step/30*Math.PI*.49;
+    const leaf=prepareBuilding(lodge.door,{x:-1.125,z:-.27});
+    lodge.faces=lodge.staticFaces.concat(leaf.faces);
+    lodge.dryOcclusion=lodge.snowOcclusion=null;
+    this.caches.delete('lodge');
   }
   setMillStage(stage){
     const previous=this.buildings.windmill;
@@ -326,8 +340,9 @@ export function pickLodgeStairs(...args){shared??=new BuildingRenderer();return 
 export function drawLodgeRoom3D(...args){shared??=new BuildingRenderer();return shared.drawLodgeRoom(...args);}
 export function drawBarnRoom3D(...args){shared??=new BuildingRenderer();return shared.drawBarnRoom(...args);}
 
-export function getBuildingOcclusionMeshes({snow=false,millTime}={}){
+export function getBuildingOcclusionMeshes({snow=false,millTime,lodgeDoor=0}={}){
   shared??=new BuildingRenderer();
+  shared.setLodgeDoor(lodgeDoor);
   shared.setMillStage(windmillStage());
   if(millTime!==undefined&&shared.buildings.windmill.stage===10)shared.turnSails(millTime);
   return Object.values(shared.buildings).map(building=>{
