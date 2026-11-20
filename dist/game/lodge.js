@@ -1,4 +1,4 @@
-import {lodgeRoute,moveLodgePlayer,LODGE_STAIRS,UPPER_LANDING,FLIGHT,LODGE_ROOM} from './lodge-layout.js?v=lodge-flight-1';
+import {lodgeRoute,moveLodgePlayer,LODGE_STAIRS,UPPER_LANDING,FLIGHT,LODGE_ROOM} from './lodge-layout.js?v=lodge-hearth-1';
 import {CONFIG,distance} from './config.js?v=solid-buildings-2';
 import {dryRoute} from './navigation.js?v=solid-buildings-2';
 

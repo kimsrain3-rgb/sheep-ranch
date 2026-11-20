@@ -3,13 +3,17 @@ export const LODGE_ROOM=Object.freeze({halfWidth:5.5,depth:13.5,height:3.95,floo
 export const FLIGHT=Object.freeze({x:3.8,front:9.65,back:12.65,width:1.65,steps:16,opening:9.5});
 export const LODGE_STAIRS=Object.freeze({x:FLIGHT.x,z:FLIGHT.opening-.4});
 export const UPPER_LANDING=Object.freeze({x:2.55,z:12.85});
+// Ground-floor stove against the right wall beside the entrance; the hearth
+// defines both the visible footprint and the visitor's walking clearance.
+export const LODGE_STOVE=Object.freeze({x:4.25,z:1.5,halfWidth:1,halfDepth:1});
 export const LODGE_OBSTACLES=Object.freeze({
   1:[
     {name:'bed',minX:-5,maxX:-2.25,minZ:2.9,maxZ:6.8},
     {name:'table',minX:2.05,maxX:4.8,minZ:3.0,maxZ:5.55},
     {name:'washstand',minX:-5,maxX:-3.3,minZ:.9,maxZ:2.2},
     {name:'bookcase',minX:-5.05,maxX:-3.75,minZ:9.0,maxZ:11.7},
-    {name:'stove',minX:3.15,maxX:4.95,minZ:7,maxZ:8.8},
+    {name:'stove',minX:LODGE_STOVE.x-LODGE_STOVE.halfWidth,maxX:LODGE_STOVE.x+LODGE_STOVE.halfWidth,
+      minZ:LODGE_STOVE.z-LODGE_STOVE.halfDepth,maxZ:LODGE_STOVE.z+LODGE_STOVE.halfDepth},
     {name:'stairs',minX:2.95,maxX:5.5,minZ:FLIGHT.opening,maxZ:13.5}
   ],
   2:[

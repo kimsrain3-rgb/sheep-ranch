@@ -1,6 +1,6 @@
 import * as THREE from '../vendor/three/three.module.js';
 import {createBuildingBuilder} from './building-models.js?v=lodge-eyes-2';
-import {LODGE_ROOM,FLIGHT} from '../game/lodge-layout.js?v=lodge-flight-1';
+import {LODGE_ROOM,LODGE_STOVE,FLIGHT} from '../game/lodge-layout.js?v=lodge-hearth-1';
 
 // Local floor coordinates are shared with the walking controller. Windows are
 // genuine openings: the live meadow is rendered behind this opaque room shell.
@@ -122,11 +122,12 @@ export function createLodgeRoomModel(floor=1){
     for(const y of [.2,1.15,2.1,3.05])box('book shelf',-4.4,y,10.35,1.3,.12,2.7,p.wood);
     for(const z of [9,11.7])box('bookcase side',-4.4,1.6,z,1.3,3.2,.1,p.wood);
     for(let i=0;i<9;i++)box('book spine',-3.71,1.55,9.25+i*.27,.07,.65+(i%3)*.13,.18,i%3===0?red:i%3===1?fabric:paper);
-    box('stone hearth',4.05,.1,7.9,2,.2,2,p.stone);
-    box('iron stove',4.05,.85,7.9,1.35,1.4,1.25,iron);
-    box('stove glass',4.05,.85,7.255,.9,.75,.04,p.dark);
-    box('stove fire',4.05,.72,7.224,.61,.28,.02,material('warm fire','#ddad61'));
-    cylinder('stove chimney',4.05,2.6,8.15,.14,2.6,iron);
+    const stove=LODGE_STOVE;
+    box('stone hearth',stove.x,.1,stove.z,2*stove.halfWidth,.2,2*stove.halfDepth,p.stone);
+    box('iron stove',stove.x,.85,stove.z,1.25,1.4,1.35,iron);
+    box('stove glass',stove.x-.645,.85,stove.z,.04,.75,.9,p.dark);
+    box('stove fire',stove.x-.676,.72,stove.z,.02,.28,.61,material('warm fire','#ddad61'));
+    cylinder('stove chimney',stove.x+.25,2.6,stove.z,.14,2.6,iron);
     for(const x of [-1.65,1.65]){
       box('dog bed',x,.13,11.9,1.8,.2,1.55,terracotta);
       box('dog blanket',x,.25,11.9,1.55,.08,1.3,fabric);

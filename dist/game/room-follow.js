@@ -1,4 +1,4 @@
-import {lodgeWalkable,FLIGHT,LODGE_ROOM} from './lodge-layout.js?v=lodge-flight-1';
+import {lodgeWalkable,FLIGHT,LODGE_ROOM} from './lodge-layout.js?v=lodge-hearth-1';
 import {FARM_ROOMS} from './farm-room.js?v=solid-buildings-2';
 
 function cameraFits(kind,floor,x,z,elevation){

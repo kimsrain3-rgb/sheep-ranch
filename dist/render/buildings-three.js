@@ -1,6 +1,6 @@
 import {ROOM_DOORS} from '../game/doorway.js';
-import {FLIGHT,LODGE_ROOM} from '../game/lodge-layout.js?v=lodge-flight-1';
-import {createLodgeRoomModel} from './lodge-room-model.js?v=lodge-stair-scale-1';
+import {FLIGHT,LODGE_ROOM} from '../game/lodge-layout.js?v=lodge-hearth-1';
+import {createLodgeRoomModel} from './lodge-room-model.js?v=lodge-hearth-1';
 import * as THREE from '../vendor/three/three.module.js';
 import {createBarnModel,createBarnRoomModel,createLodgeModel,createLodgeDoor,createCoopModel,createFarmRoomModel} from './building-models.js?v=entry-motion-1';
 import {CONFIG} from '../game/config.js?v=windmill-1';

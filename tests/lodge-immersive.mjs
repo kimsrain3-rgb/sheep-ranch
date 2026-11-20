@@ -5,7 +5,7 @@ import {frameLodgeStairs,roomVisitorProjection} from '../dist/game/room-follow.j
 import {LodgeVisit} from '../dist/game/lodge.js';
 import {BuildingRenderer} from '../dist/render/buildings-three.js';
 import {LodgeInteriorView} from '../dist/game/lodge-camera.js';
-import {lodgeRoute,lodgeWalkable,moveLodgePlayer,LODGE_STAIRS,FLIGHT,LODGE_ROOM} from '../dist/game/lodge-layout.js';
+import {lodgeRoute,lodgeWalkable,moveLodgePlayer,LODGE_STAIRS,FLIGHT,LODGE_ROOM,LODGE_OBSTACLES} from '../dist/game/lodge-layout.js';
 
 for(const floor of [1,2]){
  const model=createLodgeRoomModel(floor);model.updateMatrixWorld(true);
@@ -27,6 +27,15 @@ for(const floor of [1,2]){
    if(to===LODGE_STAIRS||to.x===0)assert.ok(Math.hypot(previous.x-to.x,previous.z-to.z)<1e-6,'stairs, exit and balcony remain reachable');
  }
 }
+// Use the actual hearth geometry as the reference for the walking boundary.
+const stove=LODGE_OBSTACLES[1].find(part=>part.name==='stove');
+const hearth=createLodgeRoomModel(1).userData.parts.find(part=>part.name==='stone hearth');
+assert.deepEqual([stove.minX,stove.maxX,stove.minZ,stove.maxZ],[hearth.min[0],hearth.max[0],-hearth.max[2],-hearth.min[2]]);
+const approach={x:FLIGHT.x,z:LODGE_STAIRS.z-3};
+assert.deepEqual(lodgeRoute(approach,LODGE_STAIRS,1),[LODGE_STAIRS],'approach the foot of the stairs in a straight line');
+for(let z=approach.z;z<=LODGE_STAIRS.z;z+=.05)assert.ok(lodgeWalkable({x:FLIGHT.x,z},1));
+assert.equal(lodgeWalkable({x:(stove.minX+stove.maxX)/2,z:(stove.minZ+stove.maxZ)/2},1),false);
+const stoveBounds=new THREE.Box3(new THREE.Vector3(stove.minX,0,-stove.maxZ),new THREE.Vector3(stove.maxX,3.95,-stove.minZ));
 const view=new LodgeInteriorView();view.target={x:1.2,z:5.7};
 for(const [W,H] of [[1440,900],[390,844]]){
  const b=view.basis(W,H);assert.equal(b.x,view.target.x);assert.equal(b.z,view.target.z);assert.equal(b.height,1.65);
@@ -59,6 +68,12 @@ for(const [w,h] of [[1912,948],[390,760],[900,390]]){
      if(camera.stairShot.grounded){
        const actor=roomVisitorProjection(camera,player,w,h,visit.footLift);
        const foot=camera.project(player.x,player.z,visit.footLift,w,h);
+       const eye=camera.basis(w,h);
+       const segment=new THREE.Line3(new THREE.Vector3(eye.x,eye.height+visit.elevation,-eye.z),
+         new THREE.Vector3(player.x,visit.elevation+1,-player.z));
+       const direction=segment.delta(new THREE.Vector3()).normalize();
+       const hit=new THREE.Ray(segment.start,direction).intersectBox(stoveBounds,new THREE.Vector3());
+       assert.ok(!hit||hit.distanceTo(segment.start)>segment.distance(),'stove stays clear of the stair camera');
        assert.deepEqual(actor,foot,'feet and stairs use the same camera');
        const scaleNow=camera.project(player.x,player.z,0,w,h).s;
        scale??=scaleNow;
