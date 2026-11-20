@@ -16,14 +16,15 @@ export class BarnVisit{
   nextTarget(player){if(this.route[0]){player.tx=this.route[0].x;player.tz=this.route[0].z;}}
   cancel(player){if(this.inside)return;this.trip=null;this.route=[];player.buildingAccess=null;player.tx=player.x;player.tz=player.z;}
   walkTo(point,player){
-    const target={x:clamp(point.x,-8.7,8.7),z:clamp(point.z,0,18)};
+    this.trip=null;
+    const target={x:clamp(point.x,-8.7,8.7),z:clamp(point.z,.55,18)};
     if(target.z>2&&target.z<16)target.x=clamp(target.x,-1.45,1.45);
     this.route=[];
     if(Math.abs(player.x)>1.5&&Math.abs(target.z-player.z)>1)this.route.push({x:0,z:player.z});
     if(Math.abs(target.x)>1.5&&Math.abs(target.z-player.z)>1)this.route.push({x:0,z:target.z});
     this.route.push(target);this.nextTarget(player);
   }
-  requestExit(player){this.trip='exit';this.walkTo({x:0,z:0},player);}
+  requestExit(player){this.walkTo({x:0,z:.55},player);this.trip='exit';}
   tick(player){
     if(this.route.length&&distance(player,this.route[0])<.1){this.route.shift();this.nextTarget(player);}
     if(!this.inside&&this.trip==='enter'&&!this.route.length){

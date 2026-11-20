@@ -1,3 +1,4 @@
+import {ROOM_DOORS} from '../game/doorway.js';
 import {createLodgeRoomModel} from './lodge-room-model.js?v=open-doorways-1';
 import * as THREE from '../vendor/three/three.module.js';
 import {createBarnModel,createBarnRoomModel,createLodgeModel,createCoopModel,createFarmRoomModel} from './building-models.js?v=barn-three-1';
@@ -43,7 +44,7 @@ function clippedPolygon(points,basis,near=.805){
 
 // Door openings are in room-local coordinates, with the threshold at z=0.
 export function clipRoomDoorway(c,kind,view,W,H){
-  const halfWidth=kind==='barn'?3.1:1, height=kind==='barn'?3.5:2.6;
+  const {halfWidth,height}=ROOM_DOORS[kind];
   const opening=[[-halfWidth,0,0],[halfWidth,0,0],[halfWidth,0,height],[-halfWidth,0,height]];
   const points=clippedPolygon(opening,view.basis(W,H),.121).map(p=>view.project(...p,W,H));
   if(points.length<3 || points.every(p=>p.x<0) || points.every(p=>p.x>W) ||

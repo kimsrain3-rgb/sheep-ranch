@@ -1,6 +1,7 @@
+import {groundThroughDoor} from './game/doorway.js';
 import {BuildingOcclusion,spriteBounds} from './render/occlusion.js?v=visible-picking-1';
 import {LodgeInteriorView} from './game/lodge-camera.js?v=lodge-eyes-2';
-import {BarnVisit} from './game/barn.js?v=solid-buildings-2';
+import {BarnVisit} from './game/barn.js?v=doorway-walk-1';
 import {BarnInteriorView} from './game/barn-camera.js?v=immersive-barn-v2';
 import {FarmRoomVisit,FARM_ROOMS} from './game/farm-room.js?v=solid-buildings-2';
 import {LodgeVisit} from './game/lodge.js?v=solid-buildings-2';
@@ -12,7 +13,7 @@ import {MeadowTime} from './game/meadow-time.js?v=chosen-time-2';
 import {SheepBond} from './game/bond.js?v=night-barn';
 import {WeatherShelter} from './game/shelter.js?v=solid-buildings-2';
 import {LambPlay} from './game/lamb-play.js?v=solid-buildings-2';
-import {clipRoomDoorway,drawBuilding3D,drawBuildingLabel3D,drawBarnRoom3D,drawFarmRoom3D,drawLodgeRoom3D,getBuildingOcclusionMeshes} from './render/buildings-three.js?v=open-doorways-1';
+import {clipRoomDoorway,drawBuilding3D,drawBuildingLabel3D,drawBarnRoom3D,drawFarmRoom3D,drawLodgeRoom3D,getBuildingOcclusionMeshes} from './render/buildings-three.js?v=doorway-walk-1';
 import {windmillStage,windmillStatus,windmillCountdown,windmillOpeningLabel} from './game/windmill-construction.js?v=countdown-1';
 import {drawWeather,drawFriendBadge} from './render/weather.js?v=night-barn';
 import {setupMeadowPanel} from './meadow-panel.js?v=chosen-time-2';
@@ -40,7 +41,7 @@ const rnd=()=>((seed=seed*16807%2147483647)-1)/2147483646,clamp=(v,a,b)=>Math.ma
 const player={
   x:0,z:0,tx:0,tz:0
 },keys=new Set();
-let marker=null,outdoorWalk=null;
+let marker=null,outdoorWalk=null,doorwayWalk=null;
 const outdoorView=new MeadowView(),indoorView=new BarnInteriorView();
 const lodgeView=new LodgeInteriorView(),lookoutView=new LodgeInteriorView(),farmView=new BarnInteriorView();
 lodgeView.zoom=1.25;lodgeView.pitch=.025;
@@ -128,6 +129,29 @@ function walkToOutdoor(point){
   const route=dryRoute(player,goal),target=route.shift();
   outdoorWalk={goal,route,target};
   player.tx=target.x;player.tz=target.z;marker=goal;
+}
+// Test the sightline at the doorway, rather than the distant field point's x.
+function tapBeyondDoor(kind,visit,ground,x,y){
+  if(!ground||ground.z>=0)return false;
+  if(!groundThroughDoor(kind,view.basis(W,H),ground))return true;
+  const door=CONFIG[kind].entrance;
+  const bridge=pickBridge(x,y,(wx,wz,height)=>view.project(wx-door.x,wz-door.z,height,W,H));
+  const goal=bridge||{x:door.x+ground.x,z:door.z+ground.z};
+  visit.requestExit(player);
+  doorwayWalk={visit,route:visit.route,goal};
+  keys.clear();marker=null;
+  return true;
+}
+function continueThroughDoor(){
+  if(!doorwayWalk)return;
+  const {visit,route,goal}=doorwayWalk;
+  if(visit.route!==route){doorwayWalk=null;return;}
+  if(visit.inside)return;
+  doorwayWalk=null;
+  // All front doors face -z. Keep the outdoor orbit camera on the field side.
+  if(Math.cos(outdoorView.yaw)<0)outdoorView.yaw=Math.sign(Math.sin(outdoorView.yaw))*Math.PI/2;
+  following=true;
+  walkToOutdoor(goal);
 }
 function cancelOutdoorWalk(){
   if(!outdoorWalk)return;
@@ -279,6 +303,7 @@ function update(dt){
     $('lodge-room-status').hidden=!lodgeVisit.inside;
     notify(lodgeTransition==='entered'?'집 안에 들어왔어요. 화면을 밀어 둘러보고 바닥을 눌러 걸어보세요.':lodgeTransition==='upstairs'?'2층에 올라왔어요. 발코니 너머 목장을 둘러보세요.':lodgeTransition==='downstairs'?'1층으로 내려왔어요.':'목동의 집을 나왔어요.');
   }
+  continueThroughDoor();
   if(lodgeVisit.inside){
     $('lodge-stairs').textContent=lodgeVisit.floor===1?'↑ 2층 전망대로':'↓ 1층 휴식 공간으로';
     $('lodge-room-status').textContent=`${lodgeVisit.floor}층 · ${lodgeVisit.floor===1?'목동과 강아지의 휴식 공간':'목장 전망 발코니'} · 목동 ${shepherd.insideLodge?'휴식 중':'목장 순찰 중'} · 개 ${companions.dogs.filter(a=>a.hiddenInLodge).length}마리 휴식 중`;
@@ -628,6 +653,7 @@ function tapWorld(screenX,screenY){
   =view.toWorld(screenX,screenY);
   if(farmVisit.inside){
     const ground=view.ground(x,y,W,H);if(!ground)return;
+    if(tapBeyondDoor(farmVisit.kind,farmVisit,ground,x,y))return;
     if(ground.z<.8&&Math.abs(ground.x)<1.2)farmVisit.requestExit(player);
     else farmVisit.walkTo(ground,player);
     marker={x:player.tx,z:player.tz};return;
@@ -637,6 +663,7 @@ function tapWorld(screenX,screenY){
     if(lodgeVisit.floor===1&&shepherd.insideLodge&&npc&&Math.abs(x-npc.x)<npc.w*.5&&y<npc.y+8&&y>npc.y-npc.h){requestShepherdTalk();return;}
     const ground=view.ground(x,y,W,H);
     if(!ground)return;
+    if(lodgeVisit.floor===1&&tapBeyondDoor('lodge',lodgeVisit,ground,x,y))return;
     if(Math.hypot(ground.x-3.65,ground.z-10.5)<1.7){lodgeVisit.requestFloor(lodgeVisit.floor===1?2:1,player);marker={x:3.65,z:10.5};return;}
     if(lodgeVisit.floor===1&&Math.hypot(ground.x,ground.z-.55)<1.3){lodgeVisit.requestExit(player);marker={x:0,z:.55};return;}
     lodgeVisit.walkTo(ground,player);marker={x:player.tx,z:player.tz};return;
@@ -644,7 +671,11 @@ function tapWorld(screenX,screenY){
   if(barnVisit.inside){
     const hit=barnVisit.visibleAnimals.find(a=>a.screen&&Math.abs(x-a.screen.x)<a.screen.w*.5&&y<a.screen.y+8&&y>a.screen.y-a.screen.h);
     if(hit){notify(`${hit.name}가 포근한 짚 위에서 쉬고 있어요.`);return;}
-    const ground=view.ground(x,y,W,H);if(ground){barnVisit.walkTo(ground,player);marker={x:player.tx,z:player.tz};}return;
+    const ground=view.ground(x,y,W,H);if(!ground)return;
+    if(tapBeyondDoor('barn',barnVisit,ground,x,y))return;
+    if(ground.z<.8&&Math.abs(ground.x)<2.9)barnVisit.requestExit(player);
+    else barnVisit.walkTo(ground,player);
+    marker={x:player.tx,z:player.tz};return;
   }
   // Visible animals/NPCs have priority over the wall behind them. Buildings
   // are picked from the same nearest-surface map used to draw them, never
