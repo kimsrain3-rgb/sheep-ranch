@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
 import * as THREE from '../dist/vendor/three/three.module.js';
 import {createLodgeRoomModel} from '../dist/render/lodge-room-model.js';
+import {BuildingRenderer} from '../dist/render/buildings-three.js';
 import {LodgeInteriorView} from '../dist/game/lodge-camera.js';
-import {lodgeRoute,lodgeWalkable,moveLodgePlayer,LODGE_STAIRS} from '../dist/game/lodge-layout.js';
+import {lodgeRoute,lodgeWalkable,moveLodgePlayer,LODGE_STAIRS,FLIGHT,LODGE_ROOM} from '../dist/game/lodge-layout.js';
 
 for(const floor of [1,2]){
  const model=createLodgeRoomModel(floor);model.updateMatrixWorld(true);
@@ -30,6 +31,17 @@ for(const [W,H] of [[1440,900],[390,844]]){
  const point=view.project(1.2,9.7,0,W,H),floor=view.ground(point.x,point.y,W,H);
  assert.ok(Math.hypot(floor.x-1.2,floor.z-9.7)<1e-7,'first-person floor picking matches the visible floor');
 }
+const renderer=new BuildingRenderer();
+for(const level of [1,2]){
+ const camera=new LodgeInteriorView(),height=(level-1)*LODGE_ROOM.floorHeight;
+ camera.target=level===1?{x:FLIGHT.x,z:LODGE_STAIRS.z}:{x:2.5,z:12.85};
+ camera.yaw=level===1?0:Math.PI/2;
+ camera.pitch=level===1?1:.8;
+ const z=level===1?FLIGHT.front+.04:12.85,y=level===1?LODGE_ROOM.floorHeight/FLIGHT.steps:height;
+ const target=camera.project(FLIGHT.x,z,y-height,800,520);
+ assert.ok(target&&renderer.pickLodgeStairs(target.x,target.y,camera,800,520,height),'visible tread or top landing can be tapped on floor '+level);
+}
+renderer.dispose();
 view.pan(0,-2000);assert.ok(view.pitch<-.9,'the visitor can look up at the ceiling');
 view.eyeHeight=5.85;assert.equal(view.basis(1440,900).height,5.85,'the upper-floor outside view uses real elevation');
 const walker={x:-1.95,z:5};moveLodgePlayer(walker,{x:-2.2,z:5},1);assert.ok(walker.x>-2.03,'manual walking cannot enter the bed');

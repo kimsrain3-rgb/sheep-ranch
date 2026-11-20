@@ -1,6 +1,8 @@
 // Shared physical layout for first-person room geometry and walking clearance.
 export const LODGE_ROOM=Object.freeze({halfWidth:5.5,depth:13.5,height:3.95,floorHeight:4.2,radius:.22});
-export const LODGE_STAIRS=Object.freeze({x:3.65,z:10.5});
+export const FLIGHT=Object.freeze({x:3.8,front:9.65,back:12.65,width:1.65,steps:16,opening:9.5});
+export const LODGE_STAIRS=Object.freeze({x:FLIGHT.x,z:FLIGHT.opening-.4});
+export const UPPER_LANDING=Object.freeze({x:2.55,z:12.85});
 export const LODGE_OBSTACLES=Object.freeze({
   1:[
     {name:'bed',minX:-5,maxX:-2.25,minZ:2.9,maxZ:6.8},
@@ -8,13 +10,13 @@ export const LODGE_OBSTACLES=Object.freeze({
     {name:'washstand',minX:-5,maxX:-3.3,minZ:.9,maxZ:2.2},
     {name:'bookcase',minX:-5.05,maxX:-3.75,minZ:9.0,maxZ:11.7},
     {name:'stove',minX:3.15,maxX:4.95,minZ:7,maxZ:8.8},
-    {name:'stairs',minX:2.95,maxX:5.5,minZ:10.85,maxZ:13.5}
+    {name:'stairs',minX:2.95,maxX:5.5,minZ:FLIGHT.opening,maxZ:13.5}
   ],
   2:[
     {name:'reading bench',minX:-4.85,maxX:-2.5,minZ:3.0,maxZ:5.1},
     {name:'tea table',minX:-.85,maxX:.85,minZ:6.2,maxZ:7.55},
     {name:'cabinet',minX:-5.05,maxX:-3.9,minZ:9.3,maxZ:11.9},
-    {name:'stairwell',minX:2.95,maxX:5.5,minZ:10.85,maxZ:13.5},
+    {name:'stairwell',minX:2.95,maxX:5.5,minZ:FLIGHT.opening,maxZ:13.5},
     {name:'telescope',minX:2.55,maxX:3.3,minZ:-1.2,maxZ:-.5}
   ]
 });

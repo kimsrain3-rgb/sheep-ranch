@@ -1,11 +1,11 @@
-import {followRoomVisitor,roomVisitorProjection} from './game/room-follow.js';
+import {followRoomVisitor,roomVisitorProjection} from './game/room-follow.js?v=lodge-flight-1';
 import {groundThroughDoor} from './game/doorway.js';
 import {BuildingOcclusion,spriteBounds} from './render/occlusion.js?v=visible-picking-1';
 import {LodgeInteriorView} from './game/lodge-camera.js?v=lodge-eyes-2';
 import {BarnVisit} from './game/barn.js?v=doorway-walk-1';
 import {BarnInteriorView} from './game/barn-camera.js?v=immersive-barn-v2';
 import {FarmRoomVisit,FARM_ROOMS} from './game/farm-room.js?v=solid-buildings-2';
-import {LodgeVisit} from './game/lodge.js?v=solid-buildings-2';
+import {LodgeVisit} from './game/lodge.js?v=lodge-flight-1';
 import {setupShepherdChat} from './shepherd-chat.js?v=haru-voice-1';
 import {ShepherdBoy} from './game/shepherd.js?v=solid-buildings-2';
 import {drawShepherdBoy} from './render/shepherd.js?v=christmas';
@@ -14,7 +14,7 @@ import {MeadowTime} from './game/meadow-time.js?v=chosen-time-2';
 import {SheepBond} from './game/bond.js?v=night-barn';
 import {WeatherShelter} from './game/shelter.js?v=solid-buildings-2';
 import {LambPlay} from './game/lamb-play.js?v=solid-buildings-2';
-import {clipRoomDoorway,drawBuilding3D,drawBuildingLabel3D,drawBarnRoom3D,drawFarmRoom3D,drawLodgeRoom3D,getBuildingOcclusionMeshes} from './render/buildings-three.js?v=doorway-walk-1';
+import {pickLodgeStairs,clipRoomDoorway,drawBuilding3D,drawBuildingLabel3D,drawBarnRoom3D,drawFarmRoom3D,drawLodgeRoom3D,getBuildingOcclusionMeshes} from './render/buildings-three.js?v=lodge-flight-1';
 import {windmillStage,windmillStatus,windmillCountdown,windmillOpeningLabel} from './game/windmill-construction.js?v=countdown-1';
 import {drawWeather,drawFriendBadge} from './render/weather.js?v=night-barn';
 import {setupMeadowPanel} from './meadow-panel.js?v=chosen-time-2';
@@ -96,7 +96,10 @@ function centerView(){
   }
   if(barnVisit.inside||farmVisit.inside||lodgeVisit.inside){
     const kind=barnVisit.inside?'barn':lodgeVisit.inside?'lodge':farmVisit.kind;
-    followRoomVisitor(view,player,kind,lodgeVisit.floor,W,H);
+    if(kind==='lodge'){
+      if(lodgeVisit.stair)lodgeView.settleUntil=t+.7;
+      followRoomVisitor(view,player,kind,lodgeVisit.floor,W,H,lodgeVisit.elevation,t<lodgeView.settleUntil?t:null);
+    }else followRoomVisitor(view,player,kind,1,W,H);
     return;
   }
   const target=interaction.cameraTarget(player);
@@ -267,7 +270,7 @@ function update(dt){
       player.facing=x>=0?1:-1;
       const move=Math.min(d,dt*3.2);
       const next={x:player.x+x/d*move,z:player.z+z/d*move};
-      if(lodgeVisit.inside)lodgeVisit.move(player,next);
+      if(lodgeVisit.inside)lodgeVisit.move(player,next,!!(dx||dz));
       else if(barnVisit.inside||farmVisit.inside||bridgePathClear(player,next)){
         player.x=next.x;player.z=next.z;
         if(!barnVisit.inside&&!lodgeVisit.inside&&!farmVisit.inside)keepDry(player);
@@ -297,12 +300,11 @@ function update(dt){
     notify(barnVisit.inside?'축사 안으로 들어왔어요. 중앙 통로를 걸어보세요.':'축사 문을 나왔어요.');
   }
   if(barnVisit.inside)$('barn-room-status').textContent=`큰 양들의 축사 · 쉬는 양 ${shelter.inside} / ${sheep.length}`;
-  const lodgeTransition=lodgeVisit.tick(player);
+  const lodgeTransition=lodgeVisit.tick(player,dt);
   if(lodgeTransition){
     interaction.cancel(view);keys.clear();selected=null;marker=null;feeding=false;
     view=lodgeVisit.inside?lodgeView:outdoorView;
     if(lodgeTransition==='entered'){lodgeView.yaw=0;lodgeView.pitch=.025;lodgeView.zoom=1.25;}
-    else if(lodgeTransition==='upstairs'||lodgeTransition==='downstairs'){lodgeView.yaw=Math.PI;lodgeView.pitch=.035;}
     document.body.classList.toggle('in-lodge',lodgeVisit.inside);
     $('lodge-leave').hidden=!lodgeVisit.inside;
     $('lodge-stairs').hidden=!lodgeVisit.inside;
@@ -311,10 +313,11 @@ function update(dt){
   }
   continueThroughDoor();
   if(lodgeVisit.inside){
-    $('lodge-stairs').textContent=lodgeVisit.floor===1?'↑ 2층 전망대로':'↓ 1층 휴식 공간으로';
+    $('lodge-stairs').disabled=!!lodgeVisit.stair;
+    $('lodge-stairs').textContent=lodgeVisit.stair?(lodgeVisit.trip==='up'?'계단 올라가는 중':'계단 내려가는 중'):lodgeVisit.floor===1?'↑ 2층 전망대로':'↓ 1층 휴식 공간으로';
     $('lodge-room-status').textContent=`${lodgeVisit.floor}층 · ${lodgeVisit.floor===1?'목동과 강아지의 휴식 공간':'목장 전망 발코니'} · 목동 ${shepherd.insideLodge?'휴식 중':'목장 순찰 중'} · 개 ${companions.dogs.filter(a=>a.hiddenInLodge).length}마리 휴식 중`;
   }
-  if(pendingShepherdTalk&&!farmVisit.inside&&!barnVisit.trip&&!lodgeVisit.trip&&!farmVisit.trip&&!barnVisit.inside&&(!lodgeVisit.inside||lodgeVisit.floor===1)){
+  if(pendingShepherdTalk&&!lodgeVisit.stair&&!farmVisit.inside&&!barnVisit.trip&&!lodgeVisit.trip&&!farmVisit.trip&&!barnVisit.inside&&(!lodgeVisit.inside||lodgeVisit.floor===1)){
     pendingShepherdTalk=false;requestShepherdTalk();
   }
   const talkEvent=shepherd.updateTalk(player,{indoors:lodgeVisit.inside&&lodgeVisit.floor===1});
@@ -652,6 +655,7 @@ function tapWorld(screenX,screenY){
     start();
     return;
   }
+  if(lodgeVisit.stair)return;
   cancelHammockWalk();cancelShepherdTalk();cancelOutdoorWalk();
   const {
     x,y
@@ -667,10 +671,11 @@ function tapWorld(screenX,screenY){
   if(lodgeVisit.inside){
     const npc=shepherd.screen;
     if(lodgeVisit.floor===1&&shepherd.insideLodge&&npc&&Math.abs(x-npc.x)<npc.w*.5&&y<npc.y+8&&y>npc.y-npc.h){requestShepherdTalk();return;}
+    if(pickLodgeStairs(x,y,view,W,H,lodgeVisit.elevation)){takeLodgeStairs();return;}
     const ground=view.ground(x,y,W,H);
     if(!ground)return;
     if(lodgeVisit.floor===1&&tapBeyondDoor('lodge',lodgeVisit,ground,x,y))return;
-    if(Math.hypot(ground.x-3.65,ground.z-10.5)<1.7){lodgeVisit.requestFloor(lodgeVisit.floor===1?2:1,player);marker={x:3.65,z:10.5};return;}
+    if(Math.hypot(ground.x-lodgeVisit.landing.x,ground.z-lodgeVisit.landing.z)<.75){takeLodgeStairs();return;}
     if(lodgeVisit.floor===1&&Math.hypot(ground.x,ground.z-.55)<1.3){lodgeVisit.requestExit(player);marker={x:0,z:.55};return;}
     lodgeVisit.walkTo(ground,player);marker={x:player.tx,z:player.tz};return;
   }
@@ -805,7 +810,7 @@ addEventListener('blur',()=>{
   pointers.clear();gesture=null;
 });
 addEventListener('keydown',e=>{
-  if(millMode)return;
+  if(millMode||lodgeVisit.stair)return;
   if(!started||paused||['INPUT','TEXTAREA','SELECT'].includes(e.target?.tagName))return;const k=e.key.toLowerCase();if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright','f'].includes(k)){
     e.preventDefault();if(!started)start();if(k!=='f'){
       cancelHammockWalk();cancelBarnTrip();
@@ -822,7 +827,7 @@ addEventListener('keydown',e=>{
 });
 addEventListener('keyup',e=>{
   const key=e.key.toLowerCase();keys.delete(key);
-  if(lodgeVisit.inside&&['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'].includes(key)&&!keys.size){
+  if(lodgeVisit.inside&&!lodgeVisit.stair&&['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'].includes(key)&&!keys.size){
     lodgeVisit.route=[];player.tx=player.x;player.tz=player.z;player.walking=false;
   }
 });
@@ -931,6 +936,7 @@ function cancelShepherdTalk(){
   shepherd.endTalk(player);chat?.close();
 }
 function requestShepherdTalk(){
+  if(lodgeVisit.stair){notify('계단을 다 걷고 나면 목동과 이야기할 수 있어요.');return;}
   if(farmVisit.inside){farmVisit.requestExit(player);pendingShepherdTalk=true;notify('밖으로 나와 목동에게 걸어가요.');return;}
   if(!started)start();
   if(hammocking||seated){notify('자리에서 일어난 뒤 목동에게 다가가요.');return;}
@@ -1023,7 +1029,7 @@ millPanel.onkeydown=e=>{
   const delta={ArrowLeft:[28,0],ArrowRight:[-28,0],ArrowUp:[0,-25],ArrowDown:[0,25]}[e.key];
   if(delta){e.preventDefault();millView.pan(...delta);}
 };
-function renderRoomOutlook(kind,floor=1){
+function renderRoomOutlook(kind,elevation=0){
   const roomView=view;
   c.save();
   try{
@@ -1034,7 +1040,7 @@ function renderRoomOutlook(kind,floor=1){
     }
     const door=CONFIG[kind].entrance;
     lookoutView.yaw=roomView.yaw;lookoutView.pitch=roomView.pitch;lookoutView.zoom=roomView.zoom;
-    lookoutView.eyeHeight=roomView.eyeHeight+(floor-1)*4.2;
+    lookoutView.eyeHeight=roomView.eyeHeight+elevation;
     lookoutView.target.x=door.x+roomView.target.x;
     lookoutView.target.z=door.z+roomView.target.z;
     view=lookoutView;
@@ -1046,7 +1052,7 @@ function renderRoomOutlook(kind,floor=1){
   }
 }
 function drawRoomOccupants(guests){
-  const visitor=roomVisitorProjection(view,player,W,H);
+  const visitor=roomVisitorProjection(view,player,W,H,lodgeVisit.inside?lodgeVisit.footLift:0);
   const layers=guests.map(guest=>({depth:project(guest.x,guest.z)?.depth??-1,draw:guest.draw}));
   layers.push({depth:visitor.depth,draw:()=>drawVisitor(c,visitor,{
     time:t,walking:player.walking,pose:visitorPose(player.headingX??0,player.headingZ??1,view.yaw)
@@ -1055,13 +1061,13 @@ function drawRoomOccupants(guests){
 }
 function renderInsideLodge(){
   centerView();c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,W,H);
-  renderRoomOutlook('lodge',lodgeVisit.floor);
-  drawLodgeRoom3D(c,lodgeVisit.floor,view,W,H,{night:atmosphere.night});
-  drawMarker();
+  renderRoomOutlook('lodge',lodgeVisit.elevation);
+  drawLodgeRoom3D(c,lodgeVisit.floor,view,W,H,{night:atmosphere.night,elevation:lodgeVisit.elevation});
+  if(!lodgeVisit.stair)drawMarker();
   const people=[];shepherd.screen=null;
-  if(lodgeVisit.floor===1){
-    if(shepherd.insideLodge){const guest={...shepherd,x:-3.1,z:7.8,walking:false};people.push({x:guest.x,z:guest.z,draw:()=>{drawShepherdBoy(c,project(guest.x,guest.z),guest,view.yaw);shepherd.screen=guest.screen;}});}
-    for(const [index,dog] of companions.dogs.entries())if(dog.hiddenInLodge){const guest={...dog,x:index?1.65:-1.65,z:11.9,walking:false};people.push({x:guest.x,z:guest.z,draw:()=>drawCompanion(c,project(guest.x,guest.z),guest,t)});}
+  if(lodgeVisit.elevation<1.8){
+    if(shepherd.insideLodge){const guest={...shepherd,x:-3.1,z:7.8,walking:false};people.push({x:guest.x,z:guest.z,draw:()=>{drawShepherdBoy(c,project(guest.x,guest.z,-lodgeVisit.elevation),guest,view.yaw);shepherd.screen=guest.screen;}});}
+    for(const [index,dog] of companions.dogs.entries())if(dog.hiddenInLodge){const guest={...dog,x:index?1.65:-1.65,z:11.9,walking:false};people.push({x:guest.x,z:guest.z,draw:()=>drawCompanion(c,project(guest.x,guest.z,-lodgeVisit.elevation),guest,t)});}
   }
   drawRoomOccupants(people);
   $('sheep-label').hidden=true;
@@ -1069,7 +1075,12 @@ function renderInsideLodge(){
 }
 $('lodge-enter').onclick=goLodge;
 $('lodge-leave').onclick=()=>{lodgeVisit.requestExit(player);keys.clear();notify('계단과 문을 지나 목장으로 나가요.');};
-$('lodge-stairs').onclick=()=>{lodgeVisit.requestFloor(lodgeVisit.floor===1?2:1,player);keys.clear();marker={x:3.65,z:10.5};notify(lodgeVisit.floor===1?'계단으로 걸어가 2층으로 올라가요.':'계단으로 걸어가 1층으로 내려가요.');};
+function takeLodgeStairs(){
+  if(lodgeVisit.stair)return;
+  lodgeVisit.requestFloor(lodgeVisit.floor===1?2:1,player);keys.clear();marker={...lodgeVisit.landing};
+  notify(lodgeVisit.floor===1?'계단으로 걸어가 2층으로 올라가요.':'계단을 따라 1층으로 내려가요.');
+}
+$('lodge-stairs').onclick=takeLodgeStairs;
 function renderInsideBarn(){
   centerView();c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,W,H);
   const options={night:atmosphere.night,inside:shelter.inside,total:sheep.length};

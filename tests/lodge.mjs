@@ -3,6 +3,7 @@ import {CONFIG,distance} from '../dist/game/config.js';
 import {ShepherdBoy} from '../dist/game/shepherd.js';
 import {Companions} from '../dist/game/companions.js';
 import {LodgeVisit} from '../dist/game/lodge.js';
+import {FLIGHT,LODGE_ROOM,LODGE_STAIRS,UPPER_LANDING} from '../dist/game/lodge-layout.js';
 import {drawLodge,drawLodgeInterior} from '../dist/render/lodge.js';
 import {MeadowView} from '../dist/orbit.js';
 
@@ -38,6 +39,32 @@ assert.equal(walkUntilTransition(),'downstairs');
 assert.equal(walkUntilTransition(),'exited');
 assert.equal(visit.inside,false);
 assert.ok(distance(visitor,CONFIG.lodge.entrance)<1,'exit returns beside the real lodge');
+// A real manual step onto each landing must traverse every riser in order.
+for(const fps of [20,60]){
+  const v=new LodgeVisit();
+  v.inside=true;
+  const p={...LODGE_STAIRS};
+  for(const ascending of [true,false]){
+    const landing=ascending?LODGE_STAIRS:UPPER_LANDING;
+    assert.ok(distance(p,landing)<.01);
+    v.move(p,{x:p.x+(ascending?0:.08),z:p.z+(ascending?.08:0)},true);
+    assert.ok(v.stair);
+    const treads=new Set();
+    let elapsed=0,event=null;
+    while(!event&&elapsed<10){
+      const y=v.elevation,before={...p};
+      event=v.tick(p,1/fps);elapsed+=1/fps;
+      assert.ok(Math.hypot(p.x-before.x,p.z-before.z,v.elevation-y)<2.06/fps,'no teleport at either end');
+      assert.ok(ascending?v.elevation>=y-1e-8:v.elevation<=y+1e-8);
+      if(v.elevation>0&&v.elevation<LODGE_ROOM.floorHeight){
+        assert.ok(Math.abs(p.x-FLIGHT.x)<.01&&p.z>=FLIGHT.front&&p.z<=FLIGHT.back);
+        assert.ok(p.walking);treads.add(Math.floor(v.elevation/LODGE_ROOM.floorHeight*FLIGHT.steps));
+      }
+    }
+    assert.equal(event,ascending?'upstairs':'downstairs');
+    assert.equal(treads.size,FLIGHT.steps);assert.ok(elapsed>3&&elapsed<5);
+  }
+}
 const lookout=new MeadowView();lookout.zoom=.65;lookout.yaw=2.5;lookout.pitch=.18;lookout.target={x:-20,z:15};
 const eye=lookout.basis(960,640);
 assert.ok(distance({x:eye.x,z:eye.z},CONFIG.lodge)<2,'upper-floor view is anchored at the lodge');

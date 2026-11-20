@@ -1,5 +1,6 @@
 import {ROOM_DOORS} from '../game/doorway.js';
-import {createLodgeRoomModel} from './lodge-room-model.js?v=open-doorways-1';
+import {FLIGHT,LODGE_ROOM} from '../game/lodge-layout.js?v=lodge-flight-1';
+import {createLodgeRoomModel} from './lodge-room-model.js?v=lodge-flight-1';
 import * as THREE from '../vendor/three/three.module.js';
 import {createBarnModel,createBarnRoomModel,createLodgeModel,createCoopModel,createFarmRoomModel} from './building-models.js?v=barn-three-1';
 import {CONFIG} from '../game/config.js?v=windmill-1';
@@ -256,14 +257,33 @@ export class BuildingRenderer{
     }else this.drawSoftware(c,building,project,basis,settings);
     c.restore();if(c.canvas?.dataset)c.canvas.dataset.barnInterior='eye-height-three';
   }
-  drawLodgeRoom(c,floor,view,W,H,options={}){
-    const key='lodge-floor-'+floor;
+  lodgeBuilding(){
+    const key='lodge-interior';
     if(!this.rooms.has(key)){
-      const room=prepareBuilding(createLodgeRoomModel(floor),{x:0,z:0});
-      room.model.visible=false;this.scene.add(room.model);this.rooms.set(key,room);
+      const model=createLodgeRoomModel(1),upper=createLodgeRoomModel(2);
+      upper.position.y=LODGE_ROOM.floorHeight;model.add(upper);
+      const room=prepareBuilding(model,{x:0,z:0});
+      model.visible=false;this.scene.add(model);this.rooms.set(key,room);
     }
-    const building=this.rooms.get(key),basis=view.basis(W,H),settings={...options,near:.12,snow:false};
-    const project=(x,z,y=0)=>view.project(x,z,y,W,H);
+    return this.rooms.get(key);
+  }
+  pickLodgeStairs(x,y,view,W,H,elevation){
+    const room=this.lodgeBuilding(),b=view.basis(W,H);
+    const side=(x-b.cx)/b.f,vertical=(b.screenY-y)/b.f,forward=vertical*b.sp+b.cp;
+    const direction=new THREE.Vector3(side*b.cy+forward*b.sy,vertical*b.cp-b.sp,side*b.sy-forward*b.cy).normalize();
+    const ray=new THREE.Raycaster(new THREE.Vector3(b.x,b.height+elevation,-b.z),direction,.12);
+    const hit=ray.intersectObject(room.model,true)[0];
+    if(!hit)return false;
+    const point=hit.point,z=-point.z;
+    return Math.abs(point.x-FLIGHT.x)<=FLIGHT.width/2+.12&&z>=FLIGHT.front-.03&&z<=LODGE_ROOM.depth&&
+      Math.abs(point.y-Math.min(1,(z-FLIGHT.front)/(FLIGHT.back-FLIGHT.front))*LODGE_ROOM.floorHeight)<.32;
+  }
+  drawLodgeRoom(c,floor,view,W,H,options={}){
+    const key='lodge-interior',building=this.lodgeBuilding();
+    const elevation=options.elevation??(floor-1)*LODGE_ROOM.floorHeight;
+    const eye=view.basis(W,H),basis={...eye,height:eye.height+elevation};
+    const settings={...options,near:.12,snow:false};
+    const project=(x,z,y=0)=>view.project(x,z,y-elevation,W,H);
     this.initialise();this.appearance(building,settings);this.roomLight.intensity=options.night?.8:1.15;
     c.save();
     if(this.renderer&&!this.lost){
@@ -286,6 +306,7 @@ export function drawBuilding3D(...args){shared??=new BuildingRenderer();return s
 export function drawBuildingLabel3D(...args){shared??=new BuildingRenderer();return shared.drawLabel(...args);}
 export function drawFarmRoom3D(...args){shared??=new BuildingRenderer();return shared.drawInterior(...args);}
 
+export function pickLodgeStairs(...args){shared??=new BuildingRenderer();return shared.pickLodgeStairs(...args);}
 export function drawLodgeRoom3D(...args){shared??=new BuildingRenderer();return shared.drawLodgeRoom(...args);}
 export function drawBarnRoom3D(...args){shared??=new BuildingRenderer();return shared.drawBarnRoom(...args);}
 

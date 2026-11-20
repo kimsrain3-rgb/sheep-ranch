@@ -1,12 +1,12 @@
 import * as THREE from '../vendor/three/three.module.js';
 import {createBuildingBuilder} from './building-models.js?v=lodge-eyes-2';
-import {LODGE_ROOM} from '../game/lodge-layout.js?v=lodge-eyes-2';
+import {LODGE_ROOM,FLIGHT} from '../game/lodge-layout.js?v=lodge-flight-1';
 
 // Local floor coordinates are shared with the walking controller. Windows are
 // genuine openings: the live meadow is rendered behind this opaque room shell.
 export function createLodgeRoomModel(floor=1){
   const b=createBuildingBuilder('lodge'),p=b.palette,{box,beam,sphere,add,material}=b;
-  const H=LODGE_ROOM.height,D=LODGE_ROOM.depth;
+  const H=floor===1?LODGE_ROOM.floorHeight:LODGE_ROOM.height,D=LODGE_ROOM.depth;
   const linen=material('linen','#eee1bd'),fabric=material('sage upholstery','#8c9c7c'),iron=material('stove iron','#514d40');
   const terracotta=material('terracotta','#b37f60'),paper=material('book paper','#e9d9ae'),red=material('book red','#a36953');
   const cylinder=(name,x,y,z,r,h,mat,rotation)=>add(new THREE.CylinderGeometry(r,r,h,12),mat,name,x,y,z,rotation);
@@ -40,17 +40,20 @@ export function createLodgeRoomModel(floor=1){
   // Floor and ceiling stay closed around the real stair opening at the rear.
   const slab=(name,y,mat)=>{
     box(name,-1.275,y,D/2,8.45,.16,D,mat);
-    box(name,4.225,y,5.425,2.55,.16,10.85,mat);
+    box(name,4.225,y,FLIGHT.opening/2,2.55,.16,FLIGHT.opening,mat);
   };
   if(floor===1)box('closed wooden floor',0,-.04,D/2,11,.16,D,p.trim);
   else slab('upper wooden floor',-.04,p.trim);
-  if(floor===1)slab('closed ceiling',H,p.wood);
+  if(floor===1)slab('closed ceiling',LODGE_ROOM.height,p.wood);
   else box('closed ceiling',0,H,D/2,11,.17,D,p.wood);
   for(let z=.25;z<D;z+=.65){
-    const width=floor===2&&z>10.85?8.4:10.95,x=floor===2&&z>10.85?-1.275:0;
+    const width=floor===2&&z>FLIGHT.opening?8.4:10.95,x=floor===2&&z>FLIGHT.opening?-1.275:0;
     box('floor board seam',x,.047,z,width,.008,.015,p.wood);
   }
-  for(const z of [1.3,5.9,10.25])box('ceiling beam',0,H-.17,z,11,.24,.2,p.wood);
+  for(const z of [1.3,5.9,10.25]){
+    const cut=floor===1&&z>FLIGHT.opening;
+    box('ceiling beam',cut?-1.275:0,LODGE_ROOM.height-.17,z,cut?8.45:11,.24,.2,p.wood);
+  }
   for(const side of [-1,1])box('wall skirting',side*5.38,.17,D/2,.09,.24,D,p.trim);
   box('back wall skirting',0,.17,D-.12,10.8,.24,.09,p.trim);
   for(const side of [-1,1])box('front wall skirting',side*3.25,.17,.12,4.3,.24,.09,p.trim);
@@ -70,25 +73,26 @@ export function createLodgeRoomModel(floor=1){
       for(const z of [-.8,-.08])box('balcony side post',x,.6,z,.1,1.2,.1,p.wood);
     }
   }
-  // Continuous stair treads remain visible through the upper floor opening.
-  for(let i=0;i<14;i++){
-    const y=(i+1)/14*4.2-(floor===2?4.2:0),z=10.9+(i+.5)/14*2.5;
-    box('stair tread',3.8,y-.10,z,1.65,.2,2.5/14+.025,p.trim);
-  }
+  // One flight serves both storeys, with room to turn left at the top.
   if(floor===1){
-    box('upper stairwell ceiling',4.15,7.8,12.17,2.7,.16,2.7,p.wood);
-    for(const x of [2.8,5.5])box('upper stairwell wall',x,5.9,12.17,.16,3.9,2.7,p.wall);
-    box('upper stairwell back',4.15,5.9,13.5,2.7,3.9,.16,p.wall);
+    const rise=LODGE_ROOM.floorHeight,run=FLIGHT.back-FLIGHT.front,going=run/FLIGHT.steps;
+    for(let i=0;i<FLIGHT.steps;i++){
+      const top=(i+1)/FLIGHT.steps*rise,z=FLIGHT.front+(i+.5)*going;
+      box('stair tread',FLIGHT.x,top-rise/FLIGHT.steps/2,z,FLIGHT.width,rise/FLIGHT.steps,going+.01,p.trim);
+      box('stair nosing',FLIGHT.x,top-.025,z-going/2,FLIGHT.width+.025,.05,.055,p.wood);
+    }
+    box('top landing',3.8,rise-.09,(FLIGHT.back+D)/2,1.9,.18,D-FLIGHT.back);
+    for(const x of [3.02,4.58])beam('stair stringer',[x,-.12,FLIGHT.front],[x,rise-.12,FLIGHT.back],.18,p.wood);
+    for(const f of [.02,.36,.69,.98]){
+      const y=f*rise,z=FLIGHT.front+f*run;
+      beam('stair rail post',[4.72,y,z],[4.72,y+.8,z],.09,p.wood);
+    }
+    beam('stair handrail',[4.72,.8,FLIGHT.front],[4.72,rise+.8,FLIGHT.back],.12,p.wood);
   }else{
-    for(const x of [2.95,5.4])box('stairwell post',x,.55,10.85,.1,1.1,.1,p.wood);
-    box('stairwell left rail',2.95,1.1,12.1,.12,.12,2.6,p.wood);
+    const end=FLIGHT.back-.2;
+    for(const z of [FLIGHT.opening,end])box('stairwell post',2.95,.55,z,.1,1.1,.1,p.wood);
+    box('stairwell left rail',2.95,1.1,(FLIGHT.opening+end)/2,.12,.12,end-FLIGHT.opening,p.wood);
   }
-  for(const x of [3.02,4.58])beam('stair stringer',[x,-.12-(floor===2?4.2:0),10.85],[x,4.08-(floor===2?4.2:0),13.4],.18,p.wood);
-  for(const f of [.08,.48,.88]){
-    const y=f*4.2-(floor===2?4.2:0),z=10.8+f*2.6;
-    beam('stair rail post',[4.72,y,z],[4.72,y+.8,z],.09,p.wood);
-  }
-  beam('stair handrail',[4.72,.8-(floor===2?4.2:0),10.8],[4.72,4.95-(floor===2?4.2:0),13.4],.12,p.wood);
 
   if(floor===1){
     // A real bed, separate mattress, pillows and folded blanket.
