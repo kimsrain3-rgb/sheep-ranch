@@ -129,3 +129,23 @@ dialog#welcome #start {width:100%;margin:.5rem 0 0;text-align:center;font-size:1
 #help-panel section {max-height:90dvh;overflow:auto}
 #help-panel summary {cursor:pointer;padding:.65rem 0}
 #haru-feedback {background:transparent;text-decoration:underline;text-underline-offset:3px;padding:.4rem .7rem;font-size:.85rem}
+
+/* Portraits share the game's visitor drawing. */
+#avatar-panel { width:min(540px,94vw); max-height:90vh; max-height:90dvh; overflow:auto; overscroll-behavior:contain; padding:clamp(16px,4vw,28px); color:var(--ink); background:#faf8ee; border:1px solid #d6d6c4; border-radius:16px; box-shadow:0 16px 70px #22392440 }
+#avatar-panel::backdrop { background:#26392c66 }
+.avatar-heading { display:flex; align-items:center; justify-content:space-between }
+.avatar-heading h2 { margin:0; font:600 24px 'Noto Serif KR',serif }
+#avatar-close { background:transparent; width:44px; height:44px; font-size:24px }
+#avatar-panel fieldset { border:0; min-width:0; padding:0; margin:15px 0 0 }
+#avatar-panel legend { padding:0; margin:0 0 8px; font-size:13px; font-weight:bold }
+#avatar-presets,.avatar-colors { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px }
+#avatar-panel label { position:relative; display:flex; align-items:center; justify-content:center; min-height:44px; gap:5px; padding:4px; background:#f1f0e3; border:2px solid transparent; border-radius:9px; cursor:pointer; text-align:center; font-size:clamp(10px,2.6vw,13px) }
+#avatar-panel label:has(:checked) { border-color:#45694e; background:#e6ecdb }
+#avatar-panel label:has(:focus-visible) { outline:2px solid #95672e; outline-offset:2px }
+#avatar-panel label input { position:absolute; opacity:0; width:1px; height:1px }
+#avatar-presets label { flex-direction:column; padding-bottom:8px }
+#avatar-panel canvas { position:static; width:100%; max-width:106px; height:auto; aspect-ratio:8/9; pointer-events:none }
+.avatar-colors i { width:15px; height:15px; flex:none; border-radius:50%; border:1px solid #273c312a }
+#avatar-apply { width:100%; margin-top:21px; padding:13px; border-radius:8px; color:#fff9e9; background:#385b42 }
+#avatar-storage-note { position:fixed; z-index:90; inset:auto 10% 18%; text-align:center; padding:10px; color:white; background:#344e3e; border-radius:8px }
+#mobile-menu-help #help, #mobile-menu-help #avatar-open { flex:1; width:auto; white-space:nowrap }

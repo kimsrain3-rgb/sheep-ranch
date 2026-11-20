@@ -1,6 +1,6 @@
-<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#e9ead9"><title>바람목장 · 양에게 건초를</title><link rel="stylesheet" href="style.css?v=haru-guide-1"></head><body>
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#e9ead9"><title>바람목장 · 양에게 건초를</title><link rel="stylesheet" href="style.css?v=visitor-look-1"></head><body>
 <canvas id="world" aria-label="양들이 풀을 뜯고 나무와 연못이 있는 목장. 풀밭을 누르면 이동합니다."></canvas>
-<header><a class="brand" href="./"><span class="logo">❋</span><span>바람목장<small>THE SLOW MEADOW</small></span></a><div class="top-actions"><button id="my-sheep">♡ 내 양</button><button id="help" aria-label="조작 안내">?<span class="help-text">조작 안내</span></button></div></header>
+<header><a class="brand" href="./"><span class="logo">❋</span><span>바람목장<small>THE SLOW MEADOW</small></span></a><div class="top-actions"><button id="avatar-open" aria-haspopup="dialog" aria-controls="avatar-panel">내 모습</button><button id="my-sheep">♡ 내 양</button><button id="help" aria-label="조작 안내">?<span class="help-text">조작 안내</span></button></div></header>
 <dialog id="welcome" aria-labelledby="welcome-title"><h1 id="welcome-title">바람목장에 오신 걸 환영해요.</h1>
 <p class="guide-copy">풀밭을 눌러 걷고, 다가오는 양에게 건초를 건네 보세요.<br>계절과 시간에 따라 목장 풍경도 조금씩 달라져요.<br>궁금한 게 생기면 ‘목동과 대화’를 눌러 하루에게 물어보세요.</p><label class="guide-choice"><input type="checkbox" id="skip-intro"> 다음부터 이 안내 보지 않기</label><button id="start">산책 시작하기</button></dialog>
 <div class="place"><span class="live-dot"></span> <span id="weather-label">바람 부는 언덕</span> <span class="divider">/</span> <span id="clock">지금</span></div>
@@ -27,5 +27,14 @@
 <button id="farm-room-leave" hidden>← 목장으로 나가기</button><div id="farm-room-status" hidden aria-live="polite"></div>
 <button id="shepherd-talk" aria-controls="shepherd-chat">♧ 목동과 대화</button>
 <section id="shepherd-chat" hidden aria-label="목동 하루와 대화"><div class="chat-heading"><div><strong>목동 하루</strong><small id="shepherd-mode">목장 안내 모드 · AI 연결 전</small></div><button id="shepherd-minimize" aria-label="목동 대화 접기">−</button></div><div id="shepherd-messages" role="log" aria-live="polite"></div><button id="haru-feedback" hidden>제가 궁금한 건 다른 거예요</button><div class="chat-prompts"><button data-shepherd-prompt="지금 어디 가면 볼 게 있어?">오늘의 볼거리</button><button data-shepherd-prompt="양과 닭 상태 알려줘">동물 상태</button><button data-shepherd-prompt="양과 닭을 모아줘">동물 모으기</button><button data-shepherd-prompt="축사로 가자">축사로 가자</button></div><form id="shepherd-form"><label for="shepherd-input" class="sr-only">목동에게 할 말</label><input id="shepherd-input" maxlength="500" placeholder="하루에게 말해보세요" autocomplete="off"><button id="shepherd-send" type="submit">보내기</button></form></section>
-<script type="module" src="mobile-ui.js?v=windmill-1"></script>
-<script type="module" src="app.js?v=lodge-hearth-1"></script></body></html>
+<output id="avatar-storage-note" role="status" hidden>이 모습은 이번 방문 동안 유지돼요.</output>
+<dialog id="avatar-panel" aria-labelledby="avatar-title">
+  <div class="avatar-heading"><h2 id="avatar-title">내 모습</h2><button id="avatar-close" aria-label="내 모습 닫기">×</button></div>
+  <fieldset><legend>목장 차림</legend><div id="avatar-presets"></div></fieldset>
+  <fieldset><legend>머리색</legend><div id="avatar-hair" class="avatar-colors"></div></fieldset>
+  <fieldset><legend>옷 색</legend><div id="avatar-outfit" class="avatar-colors"></div></fieldset>
+  <button id="avatar-apply">이 모습으로 걷기</button>
+</dialog>
+<script type="module" src="avatar-panel.js?v=visitor-look-1"></script>
+<script type="module" src="mobile-ui.js?v=visitor-look-1"></script>
+<script type="module" src="app.js?v=visitor-look-1"></script></body></html>

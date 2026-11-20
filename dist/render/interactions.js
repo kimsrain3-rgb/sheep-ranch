@@ -1,5 +1,6 @@
+import {currentAppearance} from '../game/visitor-appearance.js';
 import {petArmPose} from './pet-pose.js?v=soft-elbow-5';
-import {drawMilkBottle} from './milk-pose.js?v=night-barn';
+import {drawMilkBottle} from './milk-pose.js?v=visitor-look-1';
 export function drawInteraction(c,controller,player,project,time){
   const active=controller.active,pp=project(player.x,player.z);
   if(!pp)return;
@@ -32,7 +33,7 @@ export function drawInteraction(c,controller,player,project,time){
   c.lineJoin='round';
   if(active.kind==='pet'){
     const arm=petArmPose(pp,ap,a,time);
-    c.strokeStyle='#d9b569';c.lineWidth=pp.s*.12;
+    c.strokeStyle=currentAppearance().sleeve;c.lineWidth=pp.s*.12;
     c.beginPath();c.moveTo(arm.shoulder.x,arm.shoulder.y);c.lineTo(arm.elbow.x,arm.elbow.y);c.lineTo(arm.hand.x,arm.hand.y);c.stroke();
     c.fillStyle='#dfba95';c.beginPath();c.ellipse(arm.hand.x,arm.hand.y,pp.s*.09,pp.s*.065,arm.wristAngle,0,Math.PI*2);c.fill();
   }
@@ -43,7 +44,7 @@ export function drawInteraction(c,controller,player,project,time){
     // A small fold attached to the coat hem, never a long connecting stroke.
     const foldSide=active.tugSide??side,pull=.012+Math.sin(active.time*5)*.012;
     c.translate(pp.x,pp.y);c.scale(pp.s,pp.s);
-    c.fillStyle='#d5ae5e';c.beginPath();
+    c.fillStyle=currentAppearance().coat;c.beginPath();
     c.moveTo(foldSide*.20,-.72);c.lineTo(foldSide*(.34+pull),-.65);c.lineTo(foldSide*.22,-.57);c.closePath();c.fill();
   }
   c.restore();
