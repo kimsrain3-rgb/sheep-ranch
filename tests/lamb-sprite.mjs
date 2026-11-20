@@ -42,3 +42,5 @@ try{
   lamb.hiddenInBarn=true;trace.draws=[];drawSheep(c,lamb,options);assert.equal(trace.draws.length,0);
 }finally{delete globalThis.Image;}
 console.log('Layered lamb: six valid cropped assets, original baby art, animated parts, care eyes, hidden shelter and mother-size ratio passed.');
+
+await import('./head-posture.mjs');

@@ -26,7 +26,7 @@ export function drawLayeredLamb(c,p,animal,time){
   const stride=animal.walking?Math.sin(time*8+phase)*.15:0;
   for(let i=0;i<4;i++)draw(parts[2+i],stride*(i%2?1:-1));
   draw(parts[0]);
-  const nod=Math.sin(time*1.2+phase)*.045+(happy?Math.sin(time*2+phase)*.02:0);
+  const nod=(animal.headPosture?.angle??0)+Math.sin(time*1.2+phase)*.045+(happy?Math.sin(time*2+phase)*.02:0);
   draw(parts[1],nod,()=>{
     if(!resting&&!happy&&(time+phase*1.4)%5.1>=.17)return;
     for(const [x,y] of LAMB_SPRITE.eyes){

@@ -17,14 +17,14 @@ import {windmillStage,windmillStatus,windmillCountdown,windmillOpeningLabel} fro
 import {drawWeather,drawFriendBadge} from './render/weather.js?v=night-barn';
 import {setupMeadowPanel} from './meadow-panel.js?v=chosen-time-2';
 import { isCompactViewport } from './game/layout.js';
-import { Flock } from './game/flock.js?v=solid-buildings-2';
+import { Flock } from './game/flock.js?v=head-posture-1';
 import { Interactions } from './game/interactions.js?v=solid-buildings-2';
 import { Companions } from './game/companions.js?v=solid-buildings-2';
 import { MeadowAudio } from './game/audio.js?v=night-barn';
 import {dryRoute} from './game/navigation.js?v=windmill-1';
 import {drawBridgeDeck,drawBridgeRail,pickBridge} from './render/bridge.js?v=lake-bridge-1';
 import { CONFIG,pondPoint,keepDry,bridgePathClear,bridgeHeight,bridgePoint,BRIDGES } from './game/config.js?v=hammock-p10';
-import { drawSheep as renderSheep } from './render/sheep.js?v=lamb-8';
+import { drawSheep as renderSheep } from './render/sheep.js?v=head-posture-1';
 import { drawCompanion } from './render/companions.js?v=night-barn';
 import { drawOwl,owlPosition } from './render/owl.js?v=1';
 import { makeVegetation,drawVegetation,drawHayPile,drawRipples } from './render/details.js?v=solid-buildings-2';

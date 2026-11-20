@@ -1,4 +1,4 @@
-import {drawLayeredLamb} from './lamb.js?v=lamb-8';
+import {drawLayeredLamb} from './lamb.js?v=head-posture-1';
 const handSheep = typeof Image === 'undefined' ? null : new Image();
 if(handSheep) handSheep.src = new URL('./hand-sheep.png', import.meta.url).href;
 const handParts = typeof Image === 'undefined' ? [] : ['body','head','leg0','leg1','leg2','leg3'].map(name=>{
@@ -29,6 +29,7 @@ export function drawSheep(c,a,{
   a.screen=null;
   if(!p||p.x<-250||p.x>W+250||p.y>H+300)return;
   const s=p.s*a.size;
+  const headTilt=a.headPosture?.angle??0;
   a.screen={
     x:p.x,y:p.y-(a.hop||0)*s,w:s*2.5,h:s*1.9
   };
@@ -48,7 +49,7 @@ export function drawSheep(c,a,{
     const step=a.walking?Math.sin(t*8+phase)*.12:0;
     [130,202,350,420].forEach((px,i)=>draw(selectedSheepParts[2+i],px,335,step*(i%2?1:-1)));
     c.drawImage(selectedSheepParts[0],x,y,w,h);
-    const nod=Math.sin(t*1.1+phase)*.045;
+    const nod=headTilt+Math.sin(t*1.1+phase)*.045;
     const blinking=resting||happy||((t+phase*1.4)%5.1<.17);
     c.save();if(happy)c.translate(.08,.02);
     draw(selectedSheepParts[1],405,95,nod,()=>{
@@ -75,7 +76,7 @@ export function drawSheep(c,a,{
     const step=a.walking?Math.sin(t*8+phase)*.12:0;
     [53,93,203,237].forEach((px,i)=>draw(newSheepParts[3+i],px,175,step*(i%2?1:-1)));
     c.drawImage(newSheepParts[0],x,y,w,h);
-    const nod=Math.sin(t*1.15+phase)*.075+(a.walking?Math.sin(t*4+phase)*.025:0);
+    const nod=headTilt+Math.sin(t*1.15+phase)*.075+(a.walking?Math.sin(t*4+phase)*.025:0);
     const blinking=resting||happy||((t+phase*1.4)%5.1<.17);
     c.save();
     if(happy)c.translate(.11,.025);
@@ -139,7 +140,7 @@ export function drawSheep(c,a,{
       c.drawImage(handParts[0],-1.1,-1.62,2.2,1.58); c.restore();
       const phase=Number.isFinite(a.phase)?a.phase:0;
       const individuality=Math.sin(phase*2.31);
-      const headAngle=individuality*.025+Math.sin(t*(.65+.2*(individuality+1))+phase*2)*.018
+      const headAngle=headTilt+individuality*.025+Math.sin(t*(.65+.2*(individuality+1))+phase*2)*.018
         +(a.walking?Math.sin(t*4+phase)*.009:0)
         +(a.careContact?Math.sin(t*1.4+phase)*.025:0);
       const blinkCycle=(t+phase*1.7)%(4.2+(variant%3)*.7);
@@ -216,8 +217,8 @@ export function drawSheep(c,a,{
     c.fillRect(.25,-.33,.035,.12);
   }
   c.save();
-  c.translate(headX+(happy?Math.sin(t*2)*.04:0),headY+chew+(a.begging?Math.sin(t*2)*.035:0));
-  if(!toward)c.rotate(-headX/.83*.13);
+  c.translate(headX+(happy?Math.sin(t*2)*.04:0),headY+headTilt*.30+chew+(a.begging?Math.sin(t*2)*.035:0));
+  c.rotate((toward?0:-headX/.83*.13)+a.dir*headTilt);
   ellipse(-.3,-.12,.24,.09,'#b3aa91');
   ellipse(.3,-.12,.24,.09,'#b3aa91');
   ellipse(-.33,-.12,.14,.044,'#d8b6a0');
