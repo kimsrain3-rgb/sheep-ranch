@@ -51,8 +51,52 @@ export function followRoomVisitor(view,player,kind,floor,w,h,elevation=(floor-1)
   view.lastStairTime=travelTime;
 }
 
+// In the narrow stairwell the usual wall-constrained arm can collapse. Frame the
+// flight from inside the room, with a constant arm throughout the climb.
+export function frameLodgeStairs(view,visit,player,w,h,time){
+  const nearLanding=visit.landing&&Math.hypot(player.x-visit.landing.x,player.z-visit.landing.z)<1.7;
+  const travelling=!!visit.stair||((visit.trip==='up'||visit.trip==='down')&&nearLanding);
+  let shot=view.stairShot;
+  if(!travelling){
+    if(!shot)return false;
+    const moved=Math.hypot(player.x-shot.x,player.z-shot.z);
+    if(!shot.onFlight||moved>.75||view.yaw!==shot.yaw||view.pitch!==shot.pitch){
+      view.stairShot=null;view.roomFollow=null;
+      view.settleUntil=time+.6;view.lastStairTime=time-1/60;
+      return false;
+    }
+  }
+  if(!shot){
+    const dx=player.x-view.target.x,dz=player.z-view.target.z;
+    shot=view.stairShot={start:time,initialYaw:view.yaw,initialPitch:view.pitch,
+      armYaw:Math.atan2(dx,dz),arm:Math.hypot(dx,dz)};
+  }
+  if(travelling){shot.x=player.x;shot.z=player.z;}
+  if(visit.stair)shot.onFlight=true;
+  const elapsed=Math.min(1,(time-shot.start)/.55);
+  const blend=elapsed*elapsed*(3-2*elapsed);
+  const stairYaw=.72;
+  const turn=from=>from+Math.atan2(Math.sin(stairYaw-from),Math.cos(stairYaw-from))*blend;
+  const focal=view.basis(w,h).f;
+  const distance=shot.arm+(Math.min(7,Math.max(3.4,focal/Math.min(h*.106,w*.14)))-shot.arm)*blend;
+  const armYaw=turn(shot.armYaw);
+  view.yaw=shot.yaw=turn(shot.initialYaw);
+  view.pitch=shot.pitch=shot.initialPitch+(.17-shot.initialPitch)*blend;
+  view.target.x=player.x-Math.sin(armYaw)*distance;
+  view.target.z=player.z-Math.cos(armYaw)*distance;
+  const foot=view.project(player.x,player.z,0,w,h);
+  // Only the floor between the two storeys can pass between this eye and the
+  // walker. Pull its cut plane back to the lens once both are on the same level.
+  const floorGap=Math.min(visit.elevation,LODGE_ROOM.floorHeight-visit.elevation);
+  const cut=Math.min(1,Math.max(0,floorGap/.65));
+  shot.slabNear=Math.max(.12,((foot?.depth??0)-.85)*cut);
+  shot.grounded=blend===1;
+  return true;
+}
+
 export function roomVisitorProjection(view,player,w,h,lift=0){
   const foot=view.project(player.x,player.z,lift,w,h);
+  if(foot&&view.stairShot?.grounded)return foot;
   // When a wall shortens the camera arm, keep the visitor framed in the foreground.
   const maxScale=Math.min(h*.126,w*.18);
   const scale=foot?Math.min(foot.s,maxScale):maxScale;

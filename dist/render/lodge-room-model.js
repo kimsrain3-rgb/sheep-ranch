@@ -38,7 +38,13 @@ export function createLodgeRoomModel(floor=1){
   for(const x of [-3.6,3.6])windowFrame('x',D-.1,x,1.6,sill,top);
   for(const side of [-1,1])for(const z of [3.3,9.9])windowFrame('z',side*5.39,z,1.5,sill,top);
   // Floor and ceiling stay closed around the real stair opening at the rear.
-  const slab=(name,y,mat)=>{
+  function stairSlabMaterial(base){
+    const mat=material('interfloor '+base.name,'#ffffff');
+    mat.color.copy(base.color);mat.userData.stairSlab=true;
+    return mat;
+  }
+  const slab=(name,y,base)=>{
+    const mat=stairSlabMaterial(base);
     box(name,-1.275,y,D/2,8.45,.16,D,mat);
     box(name,4.225,y,FLIGHT.opening/2,2.55,.16,FLIGHT.opening,mat);
   };
@@ -48,11 +54,11 @@ export function createLodgeRoomModel(floor=1){
   else box('closed ceiling',0,H,D/2,11,.17,D,p.wood);
   for(let z=.25;z<D;z+=.65){
     const width=floor===2&&z>FLIGHT.opening?8.4:10.95,x=floor===2&&z>FLIGHT.opening?-1.275:0;
-    box('floor board seam',x,.047,z,width,.008,.015,p.wood);
+    box('floor board seam',x,.047,z,width,.008,.015,floor===2?stairSlabMaterial(p.wood):p.wood);
   }
   for(const z of [1.3,5.9,10.25]){
     const cut=floor===1&&z>FLIGHT.opening;
-    box('ceiling beam',cut?-1.275:0,LODGE_ROOM.height-.17,z,cut?8.45:11,.24,.2,p.wood);
+    box('ceiling beam',cut?-1.275:0,LODGE_ROOM.height-.17,z,cut?8.45:11,.24,.2,floor===1?stairSlabMaterial(p.wood):p.wood);
   }
   for(const side of [-1,1])box('wall skirting',side*5.38,.17,D/2,.09,.24,D,p.trim);
   box('back wall skirting',0,.17,D-.12,10.8,.24,.09,p.trim);

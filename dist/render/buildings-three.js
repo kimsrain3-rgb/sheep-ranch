@@ -1,6 +1,6 @@
 import {ROOM_DOORS} from '../game/doorway.js';
 import {FLIGHT,LODGE_ROOM} from '../game/lodge-layout.js?v=lodge-flight-1';
-import {createLodgeRoomModel} from './lodge-room-model.js?v=lodge-flight-1';
+import {createLodgeRoomModel} from './lodge-room-model.js?v=lodge-stair-scale-1';
 import * as THREE from '../vendor/three/three.module.js';
 import {createBarnModel,createBarnRoomModel,createLodgeModel,createCoopModel,createFarmRoomModel} from './building-models.js?v=barn-three-1';
 import {CONFIG} from '../game/config.js?v=windmill-1';
@@ -56,7 +56,7 @@ export function clipRoomDoorway(c,kind,view,W,H){
   return true;
 }
 
-function prepareBuilding(model,origin){
+function prepareBuilding(model,origin,cullBackFaces=false){
   model.position.set(origin.x,origin.y??0,-origin.z);model.updateWorldMatrix(true,true);
   const bounds=new THREE.Box3().setFromObject(model),corners=[];
   for(const x of [bounds.min.x,bounds.max.x])for(const y of [bounds.min.y,bounds.max.y])for(const z of [bounds.min.z,bounds.max.z])corners.push([x,-z,y]);
@@ -69,7 +69,7 @@ function prepareBuilding(model,origin){
         const v=new THREE.Vector3().fromBufferAttribute(position,i+j).applyMatrix4(mesh.matrixWorld);return [v.x,-v.z,v.y];
       });
       const n=new THREE.Vector3().fromBufferAttribute(normal,i).transformDirection(mesh.matrixWorld);
-      faces.push({points,material:mesh.material,snow:mesh.userData.snow,shade:.72+.28*Math.max(0,-.38*n.x+.8*n.y+.46*n.z)});
+      faces.push({points,normal:cullBackFaces?n:null,material:mesh.material,snow:mesh.userData.snow,shade:.72+.28*Math.max(0,-.38*n.x+.8*n.y+.46*n.z)});
     }
   });
   return {model,origin,bounds,corners,faces};
@@ -163,11 +163,16 @@ export class BuildingRenderer{
     const screen=clippedPolygon(points,basis).map(p=>project(...p));if(screen.length<3||screen.some(p=>!p))return;
     c.fillStyle='#29433225';c.beginPath();screen.forEach((p,i)=>i?c.lineTo(p.x,p.y):c.moveTo(p.x,p.y));c.closePath();c.fill();
   }
-  drawSoftware(c,building,project,basis,{night=false,snow=false,near=.8}){
+  drawSoftware(c,building,project,basis,{night=false,snow=false,near=.8,slabNear=near}){
     const visible=[];
     for(const face of building.faces){
       if(face.snow&&!snow)continue;
-      const points=clippedPolygon(face.points,basis,near+.005).map(p=>project(...p));if(points.length<3||points.some(p=>!p))continue;
+      if(face.normal){
+        const [x,z,y]=face.points[0],n=face.normal;
+        if(n.x*(basis.x-x)+n.y*(basis.height-y)-n.z*(basis.z-z)<=0)continue;
+      }
+      const clip=face.material.userData.stairSlab?slabNear:near;
+      const points=clippedPolygon(face.points,basis,clip+.005).map(p=>project(...p));if(points.length<3||points.some(p=>!p))continue;
       visible.push({face,points,depth:points.reduce((sum,p)=>sum+p.depth,0)/points.length});
     }
     visible.sort((a,b)=>b.depth-a.depth);
@@ -180,7 +185,7 @@ export class BuildingRenderer{
   drawWebGL(c,building,kind,basis,crop,W,H,options){
     const ratio=Math.min(globalThis.devicePixelRatio||1,1.5,Math.sqrt(1800000/(crop.w*crop.h)));
     const width=Math.max(1,Math.ceil(crop.w*ratio)),height=Math.max(1,Math.ceil(crop.h*ratio));
-    const key=[W,H,width,height,crop.x,crop.y,crop.w,crop.h,basis.x,basis.z,basis.height,basis.sy,basis.cy,basis.sp,basis.cp,basis.f,building.step,!!options.night,!!options.snow,options.near??.8].join('|');
+    const key=[W,H,width,height,crop.x,crop.y,crop.w,crop.h,basis.x,basis.z,basis.height,basis.sy,basis.cy,basis.sp,basis.cp,basis.f,building.step,!!options.night,!!options.snow,options.near??.8,options.slabNear??0].join('|');
     let cache=this.caches.get(kind);
     if(cache?.key!==key){
       const image=cache?.image||this.createCanvas(),context=image?.getContext?.('2d');
@@ -262,7 +267,7 @@ export class BuildingRenderer{
     if(!this.rooms.has(key)){
       const model=createLodgeRoomModel(1),upper=createLodgeRoomModel(2);
       upper.position.y=LODGE_ROOM.floorHeight;model.add(upper);
-      const room=prepareBuilding(model,{x:0,z:0});
+      const room=prepareBuilding(model,{x:0,z:0},true);
       model.visible=false;this.scene.add(model);this.rooms.set(key,room);
     }
     return this.rooms.get(key);
@@ -271,8 +276,8 @@ export class BuildingRenderer{
     const room=this.lodgeBuilding(),b=view.basis(W,H);
     const side=(x-b.cx)/b.f,vertical=(b.screenY-y)/b.f,forward=vertical*b.sp+b.cp;
     const direction=new THREE.Vector3(side*b.cy+forward*b.sy,vertical*b.cp-b.sp,side*b.sy-forward*b.cy).normalize();
-    const ray=new THREE.Raycaster(new THREE.Vector3(b.x,b.height+elevation,-b.z),direction,.12);
-    const hit=ray.intersectObject(room.model,true)[0];
+    const ray=new THREE.Raycaster(new THREE.Vector3(b.x,b.height+elevation,-b.z),direction,.12*Math.hypot(1,side,vertical));
+    const hit=ray.intersectObject(room.model,true).find(hit=>!hit.object.material.userData.stairSlab||hit.distance>=(view.stairShot?.slabNear??.12)*Math.hypot(1,side,vertical));
     if(!hit)return false;
     const point=hit.point,z=-point.z;
     return Math.abs(point.x-FLIGHT.x)<=FLIGHT.width/2+.12&&z>=FLIGHT.front-.03&&z<=LODGE_ROOM.depth&&
@@ -282,9 +287,20 @@ export class BuildingRenderer{
     const key='lodge-interior',building=this.lodgeBuilding();
     const elevation=options.elevation??(floor-1)*LODGE_ROOM.floorHeight;
     const eye=view.basis(W,H),basis={...eye,height:eye.height+elevation};
-    const settings={...options,near:.12,snow:false};
+    const settings={...options,near:.12,slabNear:view.stairShot?.slabNear??.12,snow:false};
     const project=(x,z,y=0)=>view.project(x,z,y-elevation,W,H);
-    this.initialise();this.appearance(building,settings);this.roomLight.intensity=options.night?.8:1.15;
+    this.initialise();
+    if(this.renderer&&settings.slabNear>.12){
+      this.renderer.localClippingEnabled=true;
+      const normal=new THREE.Vector3(basis.sy*basis.cp,-basis.sp,-basis.cy*basis.cp);
+      const eyePosition=new THREE.Vector3(basis.x,basis.height,-basis.z);
+      this.slabPlane??=new THREE.Plane();
+      this.slabPlane.set(normal,-normal.dot(eyePosition)-settings.slabNear);
+    }
+    building.model.traverse(mesh=>{
+      if(mesh.material?.userData.stairSlab)mesh.material.clippingPlanes=settings.slabNear>.12&&this.slabPlane?[this.slabPlane]:null;
+    });
+    this.appearance(building,settings);this.roomLight.intensity=options.night?.8:1.15;
     c.save();
     if(this.renderer&&!this.lost){
       try{this.drawWebGL(c,building,key,basis,{x:0,y:0,w:W,h:H},W,H,settings);}

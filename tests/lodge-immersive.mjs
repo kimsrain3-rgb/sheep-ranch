@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import * as THREE from '../dist/vendor/three/three.module.js';
 import {createLodgeRoomModel} from '../dist/render/lodge-room-model.js';
+import {frameLodgeStairs,roomVisitorProjection} from '../dist/game/room-follow.js';
+import {LodgeVisit} from '../dist/game/lodge.js';
 import {BuildingRenderer} from '../dist/render/buildings-three.js';
 import {LodgeInteriorView} from '../dist/game/lodge-camera.js';
 import {lodgeRoute,lodgeWalkable,moveLodgePlayer,LODGE_STAIRS,FLIGHT,LODGE_ROOM} from '../dist/game/lodge-layout.js';
@@ -40,6 +42,35 @@ for(const level of [1,2]){
  const z=level===1?FLIGHT.front+.04:12.85,y=level===1?LODGE_ROOM.floorHeight/FLIGHT.steps:height;
  const target=camera.project(FLIGHT.x,z,y-height,800,520);
  assert.ok(target&&renderer.pickLodgeStairs(target.x,target.y,camera,800,520,height),'visible tread or top landing can be tapped on floor '+level);
+}
+// Compare the character with the actual projection of a metre of stair, at
+// every tread and again after the floor transition has fully settled.
+for(const [w,h] of [[1912,948],[390,760],[900,390]]){
+ const camera=new LodgeInteriorView(),visit=new LodgeVisit(),player={...LODGE_STAIRS};
+ visit.inside=true;camera.target={x:player.x,z:player.z-.3};
+ let time=0;
+ for(const floor of [2,1]){
+   visit.requestFloor(floor,player);
+   frameLodgeStairs(camera,visit,player,w,h,time);
+   let scale=null;
+   for(let i=0;i<400;i++){
+     time+=1/60;visit.tick(player,1/60);
+     assert.ok(frameLodgeStairs(camera,visit,player,w,h,time));
+     if(camera.stairShot.grounded){
+       const actor=roomVisitorProjection(camera,player,w,h,visit.footLift);
+       const foot=camera.project(player.x,player.z,visit.footLift,w,h);
+       assert.deepEqual(actor,foot,'feet and stairs use the same camera');
+       const scaleNow=camera.project(player.x,player.z,0,w,h).s;
+       scale??=scaleNow;
+       assert.ok(Math.abs(scale-scaleNow)<1e-6,'constant character and stair scale');
+       assert.ok(actor.y<h*.9&&actor.y-2.15*actor.s>0,'feet and head fit the viewport');
+     }
+   }
+   assert.equal(visit.floor,floor);assert.equal(visit.stair,null);assert.ok(scale);
+   assert.equal(camera.stairShot.slabNear,.12,'both storeys are complete at the landing');
+ }
+ camera.pan(30,0);
+ assert.equal(frameLodgeStairs(camera,visit,player,w,h,time),false,'drag resumes free look');
 }
 renderer.dispose();
 view.pan(0,-2000);assert.ok(view.pitch<-.9,'the visitor can look up at the ceiling');

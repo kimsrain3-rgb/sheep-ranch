@@ -1,4 +1,4 @@
-import {followRoomVisitor,roomVisitorProjection} from './game/room-follow.js?v=lodge-flight-1';
+import {frameLodgeStairs,followRoomVisitor,roomVisitorProjection} from './game/room-follow.js?v=lodge-stair-scale-1';
 import {groundThroughDoor} from './game/doorway.js';
 import {BuildingOcclusion,spriteBounds} from './render/occlusion.js?v=visible-picking-1';
 import {LodgeInteriorView} from './game/lodge-camera.js?v=lodge-eyes-2';
@@ -14,7 +14,7 @@ import {MeadowTime} from './game/meadow-time.js?v=chosen-time-2';
 import {SheepBond} from './game/bond.js?v=night-barn';
 import {WeatherShelter} from './game/shelter.js?v=solid-buildings-2';
 import {LambPlay} from './game/lamb-play.js?v=solid-buildings-2';
-import {pickLodgeStairs,clipRoomDoorway,drawBuilding3D,drawBuildingLabel3D,drawBarnRoom3D,drawFarmRoom3D,drawLodgeRoom3D,getBuildingOcclusionMeshes} from './render/buildings-three.js?v=lodge-flight-1';
+import {pickLodgeStairs,clipRoomDoorway,drawBuilding3D,drawBuildingLabel3D,drawBarnRoom3D,drawFarmRoom3D,drawLodgeRoom3D,getBuildingOcclusionMeshes} from './render/buildings-three.js?v=lodge-stair-scale-1';
 import {windmillStage,windmillStatus,windmillCountdown,windmillOpeningLabel} from './game/windmill-construction.js?v=countdown-1';
 import {drawWeather,drawFriendBadge} from './render/weather.js?v=night-barn';
 import {setupMeadowPanel} from './meadow-panel.js?v=chosen-time-2';
@@ -96,10 +96,9 @@ function centerView(){
   }
   if(barnVisit.inside||farmVisit.inside||lodgeVisit.inside){
     const kind=barnVisit.inside?'barn':lodgeVisit.inside?'lodge':farmVisit.kind;
-    if(kind==='lodge'){
-      if(lodgeVisit.stair)lodgeView.settleUntil=t+.7;
-      followRoomVisitor(view,player,kind,lodgeVisit.floor,W,H,lodgeVisit.elevation,t<lodgeView.settleUntil?t:null);
-    }else followRoomVisitor(view,player,kind,1,W,H);
+    if(kind==='lodge'&&frameLodgeStairs(view,lodgeVisit,player,W,H,t))return;
+    if(kind==='lodge')followRoomVisitor(view,player,kind,lodgeVisit.floor,W,H,lodgeVisit.elevation,t<view.settleUntil?t:null);
+    else followRoomVisitor(view,player,kind,1,W,H);
     return;
   }
   const target=interaction.cameraTarget(player);
@@ -304,7 +303,7 @@ function update(dt){
   if(lodgeTransition){
     interaction.cancel(view);keys.clear();selected=null;marker=null;feeding=false;
     view=lodgeVisit.inside?lodgeView:outdoorView;
-    if(lodgeTransition==='entered'){lodgeView.yaw=0;lodgeView.pitch=.025;lodgeView.zoom=1.25;}
+    if(lodgeTransition==='entered'){lodgeView.stairShot=null;lodgeView.settleUntil=0;lodgeView.yaw=0;lodgeView.pitch=.025;lodgeView.zoom=1.25;}
     document.body.classList.toggle('in-lodge',lodgeVisit.inside);
     $('lodge-leave').hidden=!lodgeVisit.inside;
     $('lodge-stairs').hidden=!lodgeVisit.inside;
