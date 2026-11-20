@@ -2,9 +2,38 @@ import assert from 'node:assert/strict';
 import {CONFIG,keepDry,distance,seededRandom} from '../dist/game/config.js';
 import {actorRadius,buildingFootprints,buildingPathClear,keepOutsideBuildings} from '../dist/game/building-collision.js';
 import {dryRoute} from '../dist/game/navigation.js';
+import {BUILDING_SPECS} from '../dist/render/building-models.js';
+import {ROOM_DOORS} from '../dist/game/doorway.js';
+import {FARM_ROOMS} from '../dist/game/farm-room.js';
 import {Flock} from '../dist/game/flock.js';
 
-for(const b of buildingFootprints(CONFIG)){
+const footprints=buildingFootprints(CONFIG);
+const obstacles=new Set(footprints.map(b=>b.kind));
+const places=Object.entries(CONFIG).filter(([,place])=>place?.entrance||place?.walkableFloors!==undefined);
+const buildings=new Set([...places.map(([kind])=>kind),...Object.keys(BUILDING_SPECS),
+  ...Object.keys(FARM_ROOMS),...Object.keys(ROOM_DOORS),...obstacles]);
+for(const kind of buildings){
+  const place=CONFIG[kind];
+  assert.ok(Number.isFinite(place?.entrance?.x)&&Number.isFinite(place?.entrance?.z),kind+': missing map entrance');
+  assert.ok(obstacles.has(kind),kind+': missing exterior wall collision');
+  assert.ok(Number.isInteger(place.walkableFloors)&&place.walkableFloors>=0,kind+': declare the number of walkable floors');
+  assert.equal(!!ROOM_DOORS[kind],place.walkableFloors>0,kind+': room doorway and walkable floors must agree');
+  if(FARM_ROOMS[kind])assert.ok(place.walkableFloors>0,kind+': walkable utility room needs a door');
+}
+
+for(const b of footprints){
+  for(const actor of [{type:'visitor'},{type:'dog'},{type:'chicken'},{id:'sheep-adult',size:1.18},{id:'lamb-test',isLamb:true,size:.33}]){
+    const radius=actorRadius(actor);
+    const middleX=(b.left+b.right)/2,middleZ=(b.front+b.back)/2;
+    for(const [x,z,dx,dz] of [[b.left-radius-.1,middleZ,1,0],[b.right+radius+.1,middleZ,-1,0],
+      [middleX,b.front-radius-.1,0,1],[middleX,b.back+radius+.1,0,-1]]){
+      const from={...actor,x,z},next={...actor,x:x+dx*.22,z:z+dz*.22};
+      assert.equal(buildingPathClear(from,next,CONFIG),false,b.kind+': approaching a wall must block roaming');
+      keepOutsideBuildings(next,CONFIG);
+      assert.ok(next.x<=b.left-radius||next.x>=b.right+radius||next.z<=b.front-radius||next.z>=b.back+radius,
+        b.kind+': the whole body must stay outside');
+    }
+  }
   for(const size of [.3,.8,1.18]){
     const a={id:'sheep-test',size,x:(b.left+b.right)/2,z:b.front-4,state:'roam'},radius=actorRadius(a);
     const goal={x:a.x,z:b.back+4};
@@ -66,4 +95,4 @@ for(let i=0;i<2400&&distance(a,goal)>.31;i++){
 }
 assert.ok(distance(a,goal)<.31,'a sheep actually walks around the coop and reaches the other side');
 assert.ok(maxStep<=.080001,'the detour preserves normal movement speed');
-console.log('Building collisions: four footprints, adult/lamb body sizes, side/back walls, continuous detours, safe spawns, door-only access and real flock movement passed.');
+console.log('Building collisions: registered footprints, visitor and animal body sizes, side/back walls, continuous detours, safe spawns, door-only access and real flock movement passed.');

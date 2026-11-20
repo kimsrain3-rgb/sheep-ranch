@@ -28,12 +28,12 @@ export const CONFIG = Object.freeze({
   playerBounds:{minX:-110,maxX:110,minZ:-110,maxZ:290},
   pond,
   drinkingSpots: [.06,.9,2.7].map(angle=>pondPoint(angle,1.08)),
-  windmill: {x:-57.3,z:-41,entrance:{x:-57.3,z:-45},deckHeight:15.8,ridge:24.6},
-  barn: {x:-25,z:37,entrance:{x:-25,z:28},halfWidth:10,depth:18,capacity:80},
-  coop: {x:-8.5,z:37,entrance:{x:-8.5,z:31},halfWidth:4,depth:10,capacity:10},
-  lodge: {x:-47,z:52,entrance:{x:-47,z:43},halfWidth:6,depth:14},
+  windmill: {walkableFloors:0,x:-57.3,z:-41,entrance:{x:-57.3,z:-45},deckHeight:15.8,ridge:24.6},
+  barn: {walkableFloors:1,x:-25,z:37,entrance:{x:-25,z:28},halfWidth:10,depth:18,capacity:80},
+  coop: {walkableFloors:1,x:-8.5,z:37,entrance:{x:-8.5,z:31},halfWidth:4,depth:10,capacity:10},
+  lodge: {walkableFloors:2,x:-47,z:52,entrance:{x:-47,z:43},halfWidth:6,depth:14},
   hammock: {x:-46.7,z:-46.9},
-  shed: {
+  shed: {walkableFloors:1,
     x:24,z:48,entrance:{
       x:24,z:48
     }

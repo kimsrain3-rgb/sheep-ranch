@@ -23,7 +23,7 @@ Object.assign(globalThis,{
 const file=new URL('../dist/app.js',import.meta.url);
 const source=(await readFile(file,'utf8')).replace(/from '([.][^']+)'/g,(_,path)=>"from '"+new URL(path,file).href+"'");
 const hooks=`
-  export {update,player,centerView,resize,outdoorView};
+  export {update,player,centerView,resize,outdoorView,takeLodgeStairs};
   export function enter(kind,floor=1){
     started=true;paused=false;doorwayWalk=null;outdoorWalk=null;
     barnVisit.inside=farmVisit.inside=lodgeVisit.inside=false;
@@ -41,6 +41,7 @@ const hooks=`
   export function screen(x,z){return view.project(x,z,0,W,H);}
 `;
 const game=await import('data:text/javascript;base64,'+Buffer.from(source+hooks).toString('base64'));
+const rooms=Object.entries(CONFIG).filter(([,place])=>place?.walkableFloors>0);
 function tap(x,z){
   const p=game.screen(x,z);
   assert.ok(p&&p.x>=0&&p.x<innerWidth&&p.y>=0&&p.y<innerHeight,'target is on screen');
@@ -48,7 +49,7 @@ function tap(x,z){
 }
 for(const [w,h] of [[1000,700],[390,760]]){
   globalThis.innerWidth=w;globalThis.innerHeight=h;game.resize();
-  for(const kind of ['barn','coop','shed','lodge']){
+  for(const [kind] of rooms){
     const visit=game.enter(kind),door=CONFIG[kind].entrance;
     const x=kind==='barn'?2.1:.65;
     tap(x,-11);
@@ -80,7 +81,7 @@ console.log('Touch walking through four open doors, indoor retargeting, walls an
 
 for(const [w,h] of [[390,760],[900,390],[1000,700]]){
   globalThis.innerWidth=w;globalThis.innerHeight=h;game.resize();
-  for(const [kind,floor] of [['barn',1],['coop',1],['shed',1],['lodge',1],['lodge',2]]){
+  for(const [kind,place] of rooms)for(let floor=1;floor<=place.walkableFloors;floor++){
     game.enter(kind,floor);
     for(const z of [.55,1,4]){
       game.player.z=z;
@@ -94,3 +95,27 @@ for(const [w,h] of [[390,760],[900,390],[1000,700]]){
   }
 }
 console.log('Indoor visitor framing at the threshold and along the aisle passed.');
+
+// Each multi-storey building needs an actual way to start stair travel in the
+// same game simulation used by the pointer tests above.
+const startStairs={lodge:game.takeLodgeStairs};
+for(const [kind,place] of rooms){
+  if(place.walkableFloors<2)continue;
+  assert.equal(typeof startStairs[kind],'function',kind+': connect the stair control to the round-trip test');
+  const visit=game.enter(kind);
+  for(const direction of [1,-1]){
+    for(let leg=1;leg<place.walkableFloors;leg++){
+      const from=visit.floor,to=from+direction;
+      startStairs[kind](to);
+      let previous=visit.elevation,sawIntermediate=false;
+      for(let frame=0;frame<1800&&visit.floor!==to;frame++){
+        game.update(1/60);
+        const change=visit.elevation-previous;
+        if(change*direction>0)sawIntermediate=true;
+        assert.ok(Math.abs(change)<.15,kind+': stair travel must be continuous');
+        previous=visit.elevation;
+      }
+      assert.ok(sawIntermediate&&visit.floor===to,kind+': each stair flight must reach the next landing');
+    }
+  }
+}

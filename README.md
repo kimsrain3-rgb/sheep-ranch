@@ -1,5 +1,7 @@
 # 바람목장
 
+플레이 중 발견한 버그를 수정하거나 새 기능을 추가할 때는 [버그 기록과 재발 검사](docs/REGRESSIONS.md)를 참고하세요.
+
 양들과 함께 걷고 돌보는 웹 게임입니다. 휴대폰과 PC에서 다음 주소로 플레이할 수 있습니다.
 
 **https://kimsrain3-rgb.github.io/sheep-ranch/**

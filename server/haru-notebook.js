@@ -1,5 +1,20 @@
 import {guideFacts,liveIntent} from '../dist/game/ranch-guide.js';
-import {shepherdStateReply} from './shepherd-api.js';
+export function formatShepherdState(state,question=''){
+ const adults=Math.max(0,state.total-state.lambs),outside=Math.max(0,state.total-state.inside);
+ const weather=state.weatherSource==='live'?`${state.location||'연결된 지역'}의 날씨는 ‘${state.weather}’이에요`:state.weatherSource==='preview'?`지금 보고 계신 건 ‘${state.weather}’ 날씨 미리보기예요`:`여기 목장 날씨는 ‘${state.weather}’이에요. 실제 지역 날씨는 연결되지 않았어요`;
+ const reason=state.shelterReason==='night'?'밤이라 개들이 양은 축사로, 닭은 닭장으로 안내하고 있어요.':state.shelterReason==='weather'?'비나 눈을 피해 개들이 양과 닭을 각각 안으로 안내하고 있어요.':state.shelterReason==='request'?'목장주님의 요청으로 개들이 양과 닭을 모으고 있어요.':'';
+ if(question){
+   const weatherLine=weather+'.';
+   if(/날씨|비가|눈이/.test(question)&&!/마릿수|몇\s*마리|상태/.test(question))return weatherLine+(reason?' '+reason:'');
+   if(/닭/.test(question)&&!/양/.test(question))return `닭은 ${state.chickens}마리예요. 그중 ${state.chickensInside}마리가 옆 닭장에 있어요.`;
+   if(/양/.test(question)&&!/닭/.test(question))return `양은 모두 ${state.total}마리예요. 어른 ${adults}마리, 새끼 ${state.lambs}마리인데 지금은 축사 안에 ${state.inside}마리, 밖에 ${outside}마리가 있어요.`;
+   if(/숙소|개들|강아지|보리개/.test(question))return `지금 숙소에는 개가 ${state.dogsInLodge}마리 있어요. ${state.shepherdInLodge?'저도 여기서 쉬고 있어요.':'저는 밖에서 양들을 돌보고 있고요.'}`;
+   if(/뛰놀|놀고/.test(question)&&state.playingLambs)return `새끼 양 ${state.playingLambs}마리가 뛰놀고 있어요. 녀석들 노는 건 한참 봐도 좋지요.`;
+   if(/자세히|전부|모두 알려/.test(question))return formatShepherdState(state);
+   return `양은 ${state.total}마리 중 ${state.inside}마리가 축사에 있어요. 닭은 ${state.chickens}마리 중 ${state.chickensInside}마리가 닭장에서 쉬고 있고요.`+(reason?' '+reason:'');
+ }
+ return `지금은 ${state.time||'시간 확인 중'}이고 ${weather}. 양은 모두 ${state.total}마리(어른 ${adults}마리, 새끼 ${state.lambs}마리)예요. 축사 안에 ${state.inside}마리, 밖에 ${outside}마리가 있어요. 닭은 ${state.chickens}마리 중 ${state.chickensInside}마리가 축사 옆 닭장에 있어요. 축사 뒤편 2층 숙소에는 ${state.dogsInLodge}마리의 개가 쉬고 있고 ${state.shepherdInLodge?'저도 안에 있어요.':'저는 목장을 돌보고 있어요.'} 2층 발코니에서 목장을 내려다볼 수 있어요.${reason?' '+reason:''}${state.inBarn?' 목장주님은 지금 축사 안에 계세요.':''}${state.inLodge?` 목장주님은 지금 숙소 ${state.lodgeFloor}층에 계세요.`:''}${state.playingLambs?` 새끼 양 ${state.playingLambs}마리가 뛰놀고 있어요.`:''}`;
+}
 const json=(data,status=200)=>Response.json(data,{status,headers:{'cache-control':'no-store'}});
 const listTopics='SELECT t.id,t.summary,t.answer,t.kind,(SELECT COUNT(*) FROM haru_mentions m WHERE m.topic=t.id) AS count FROM haru_topics t ORDER BY t.id DESC';
 async function topics(db){return (await db.prepare(listTopics).all()).results;}
@@ -140,7 +155,7 @@ export async function guideResponse(body,context,env,fetcher){
   const wrongSource=placeMismatch || unsupportedTime || (specificEvent && !row?.answer);
   if(!unanswered && !feedback && !wrongSource){
     if(Object.hasOwn(facts,source))return json({reply:facts[source],mode:'state'});
-    if(source==='status')return json({reply:shepherdStateReply(context,question),mode:'state'});
+    if(source==='status')return json({reply:formatShepherdState(context,question),mode:'state'});
     if(source==='greeting' && reply)return json({reply,mode:'ai'});
     if(Object.hasOwn(guideManual,source))return json({reply:guideManual[source],mode:'guide'});
   }
