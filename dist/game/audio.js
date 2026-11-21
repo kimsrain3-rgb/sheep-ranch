@@ -42,7 +42,7 @@ export class MeadowAudio {
     if(!this.music){
       this.music=new Audio(new URL('../assets/sounds/pastoral-loop.mp3',import.meta.url).href);
       this.music.loop=true;
-      this.music.volume=.45;
+      this.music.volume=.5;
       this.music.preload='none';
       this.music.id='background-music';
       this.music.hidden=true;
