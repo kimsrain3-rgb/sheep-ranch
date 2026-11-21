@@ -1,4 +1,4 @@
-import {inBirches,birches,firs,trailX,generator,wildlifeAt} from '../game/fir-grove.js?v=forest-fox-1';
+import {birchCenter,inBirches,birches,firs,trailX,generator,wildlifeAt} from '../game/fir-grove.js?v=forest-fox-1';
 import {clipPondPolygon} from './pond.js?v=water-join-1';
 
 const TAU=Math.PI*2;
@@ -262,7 +262,52 @@ function paintBirch(id){
   }
   return canvas;
 }
+// Overlapping low patches give the grove a continuous ground layer.
+const grassArt=[];
+const grassRows=[];
+const grassRandom=generator(52931);
+for(let z=91;z<197;z+=1.8){
+  const patches=[];
+  for(let offset=-26.5;offset<=26.5;offset+=2.35){
+    const pz=z+(grassRandom()-.5)*.75;
+    patches.push({x:birchCenter(pz)+offset+(grassRandom()-.5)*.85,z:pz,
+      width:3.8+grassRandom()*.9,variant:Math.floor(grassRandom()*8)});
+  }
+  grassRows.push(patches);
+}
+function paintGrassPatch(variant){
+  const art=document.createElement('canvas');
+  art.width=160;art.height=64;
+  const c=art.getContext('2d'),random=generator(8371+variant*797);
+  const tones=['#526d40','#648047','#75904f','#859a58','#9ba969'];
+  for(let i=0;i<210;i++){
+    const angle=random()*TAU,r=Math.sqrt(random());
+    const x=80+Math.cos(angle)*r*70,y=39+Math.sin(angle)*r*21;
+    const height=(6+random()*17)*(1-.45*r);
+    oval(c,x,y,7,2.4,0,'#67814877');
+    for(let blade=0;blade<3;blade++){
+      const bend=(random()-.5)*14;
+      polygon(c,[[x-1.5,y],[x+bend*.3,y-height*.52],[x+bend,y-height],[x+1.3,y]],tones[Math.floor(random()*tones.length)]);
+    }
+  }
+  return art;
+}
+function addGrassCarpet(layers,c,project,w,h){
+  for(const row of grassRows){
+    for(const patch of row){
+      const p=project(patch.x,patch.z,0);
+      if(!p)continue;
+      const width=patch.width*p.s,height=width*.28;
+      if(p.x+width/2<0||p.x-width/2>w||p.y+height*.35<0||p.y-height*.65>h)continue;
+      layers.push({x:patch.x,z:patch.z,projected:p,cover:{halfWidth:patch.width/2,above:.55,below:.4},draw:()=>{
+        const art=grassArt[patch.variant]??=paintGrassPatch(patch.variant);
+        c.drawImage(art,p.x-width/2,p.y-height*.65,width,height);
+      }});
+    }
+  }
+}
 export function addBirchLayers(layers,c,project,w,h){
+  addGrassCarpet(layers,c,project,w,h);
   addUnderstory(layers,c,project,w,h,birchPlants);
   for(const tree of birches){
     const p=project(tree.x,tree.z,0);
