@@ -48,10 +48,11 @@ for(const yaw of [0,Math.PI/2,Math.PI,Math.PI*1.5])for(const at of [{x:0,z:0},{x
 }
 console.log('Expanded meadow and natural lake: doubled boundaries, curved-shore collision, clear bird habitat, dry routes, drinking places, all-angle rendering and clipping passed.');
 
-const {gardenPath}=await import('../dist/render/pond-garden.js');
-const {bridgePoint, LAKE_BRIDGE, nearestRiver}=await import('../dist/game/waterways.js');
-const landing=bridgePoint(LAKE_BRIDGE.halfLength,0,LAKE_BRIDGE);
-assert.ok(Math.hypot(landing.x-gardenPath[0].x,landing.z-gardenPath[0].z)<.01);
-for(const row of gardenPath)for(const p of [row.left,row,row.right]){
-  assert.ok(pondLevel(p)>1.06 && nearestRiver(p).clearance>.25,'the garden path and both edges stay on dry ground');
+const {addGardenLayers}=await import('../dist/render/pond-garden.js');
+const garden=[];
+addGardenLayers(null,()=>({x:50,y:50,s:10}),garden,100,100);
+assert.ok(['flowers','stone','reeds'].every(kind=>garden.some(item=>item.kind===kind)));
+for(const tuft of garden.filter(item=>item.kind==='flowers')){
+  assert.ok(pondLevel(tuft)>1.01 && pondLevel(tuft)<1.35,'wildflowers stay on the grassy bank');
+  assert.ok(CONFIG.drinkingSpots.every(s=>Math.hypot(s.x-tuft.x,s.z-tuft.z)>=1.7),'watering spots stay open');
 }

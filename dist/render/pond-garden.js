@@ -1,47 +1,26 @@
-import {CONFIG, pondPoint, pondLevel, LAKE_BRIDGE, bridgePoint, onBridge, nearestRiver} from '../game/config.js?v=solid-buildings-2';
+import {CONFIG, pondPoint, pondLevel, onBridge, nearestRiver} from '../game/config.js?v=solid-buildings-2';
 import {generator} from '../game/fir-grove.js';
-import {clipPondPolygon} from './pond.js?v=water-join-1';
-
-const random = generator(83521);
-const landing = bridgePoint(LAKE_BRIDGE.halfLength, 0, LAKE_BRIDGE);
 const tau = Math.PI * 2;
-const steps = 42;
-export const gardenPath = [];
 const ornaments = [];
-const speckles = [];
 
 function shoreClear(p, margin) {
   return pondLevel(p) > 1.01 && nearestRiver(p).clearance > margin && !onBridge(p, margin);
 }
 
-// The first tangent follows the bridge deck. The far end fades into the pasture.
-for (let i = 0; i <= steps; i++) {
-  const t = i / steps, u = 1 - t;
-  const x = u**3 * landing.x + 3*u*u*t*(-22) + 3*u*t*t*(-12) + t**3*1;
-  const z = u**3 * landing.z + 3*u*u*t*21 + 3*u*t*t*6 - t**3;
-  const dx = u*u*(-22-landing.x) + 2*u*t*10 + t*t*13;
-  const dz = u*u*(21-landing.z) - 2*u*t*15 - t*t*7;
-  const length = Math.hypot(dx,dz), nx = -dz/length, nz = dx/length;
-  const width = (1.16 + .16*Math.sin(t*13) + random()*.11) * Math.min(1, (1-t)*12);
-  const offset = (side) => ({x:x+nx*side, z:z+nz*side});
-  gardenPath.push({x,z,left:offset(-width),right:offset(width)});
-  for (let k=0; k<4; k++) {
-    const pt=offset((random()*2-1)*width);
-    speckles.push({...pt,r:.025+random()*.115});
-  }
-  if (i<3 || i>steps-2) continue;
-  for (const side of [-1,1]) {
-    // Loose islands and pockets of grass keep the borders from looking like hedges.
-    if (Math.sin(i*.48+side*2.3)<-.55) continue;
-    for (let row=0; row<2; row++) {
-      const size=.68+random()*.61;
-      const pt=offset(side*(width+.7+random()*.5+row*1.05));
-      if (shoreClear(pt,1) && CONFIG.drinkingSpots.every(s=>Math.hypot(s.x-pt.x,s.z-pt.z)>1.5))
-        ornaments.push({...pt,size,kind:'flowers',variant:(Math.floor(i/5)+row+(side+1)*2)%9});
-    }
+// Each patch spreads over a small oval on the bank, leaving grass between patches.
+const bloomRandom = generator(32451);
+for (const [angle, scale, count] of [[.58,1.12,7], [1.11,1.15,12], [1.44,1.13,9], [1.67,1.16,5]]) {
+  const center = pondPoint(angle,scale);
+  for (let i=0; i<count; i++) {
+    const theta=bloomRandom()*tau, radius=Math.sqrt(bloomRandom());
+    const pt={x:center.x+2.5*radius*Math.cos(theta),z:center.z+1.2*radius*Math.sin(theta)};
+    if (!shoreClear(pt,1) || CONFIG.drinkingSpots.some(s=>Math.hypot(s.x-pt.x,s.z-pt.z)<1.7)) continue;
+    ornaments.push({...pt,size:.7+bloomRandom()*.4,kind:'flowers',variant:Math.floor(bloomRandom()*9)});
   }
 }
 
+// Keep the existing stone and cattail arrangement independent of flower placement.
+const random = generator(1485463037);
 for (let i=0; i<51; i++) {
   const a=.46+i*.024+random()*.013;
   if (Math.sin(a*19)<-.47) continue;
@@ -49,24 +28,6 @@ for (let i=0; i<51; i++) {
   if (!shoreClear(pt,.8) || CONFIG.drinkingSpots.some(s=>Math.hypot(s.x-pt.x,s.z-pt.z)<1.55)) continue;
   ornaments.push({...pt,kind:'stone',size:.47+random()*.92,variant:i%5});
   if(i%5===0) ornaments.push({...pondPoint(a+.014,1.002),kind:'reeds',size:.87+random()*.36,variant:i%4});
-}
-
-export function drawGardenPath(c,project,camera) {
-  const ground = (p) => [p.x,p.z,.025];
-  for (let i=1; i<gardenPath.length; i++) {
-    const a=gardenPath[i-1], b=gardenPath[i];
-    const quad=clipPondPolygon([a.left,b.left,b.right,a.right].map(ground),camera);
-    if (quad.length<3) continue;
-    c.beginPath();
-    quad.forEach(([x,z,y],j)=>{const p=project(x,z,y);if(p){if(j)c.lineTo(p.x,p.y);else c.moveTo(p.x,p.y);}});
-    c.closePath();c.fillStyle='#d6c295';c.fill();
-  }
-  for (const [i,pt] of speckles.entries()) {
-    const p=project(pt.x,pt.z,.035);
-    if (!p || p.s*pt.r<.55 || p.x<0 || p.x>c.canvas.width || p.y<0 || p.y>c.canvas.height) continue;
-    c.fillStyle=i%3?'#e9d5ae':'#b5a17c';
-    c.beginPath(); c.ellipse(p.x,p.y,p.s*pt.r,p.s*pt.r*.30,0,0,tau);c.fill();
-  }
 }
 
 const sprites = new Map();

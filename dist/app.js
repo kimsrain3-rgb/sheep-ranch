@@ -1,4 +1,4 @@
-import {addGardenLayers,drawGardenPath,gardenPath} from './render/pond-garden.js';
+import {addGardenLayers} from './render/pond-garden.js?v=shore-meadow-1';
 import {setupRanchMap} from './ranch-map.js';
 import {trailX,inGrove,clearTrunks,groveRoute} from './game/fir-grove.js';
 import {drawForestFloor,addForestLayers,groveVisible} from './render/fir-grove.js';
@@ -214,7 +214,6 @@ function addBridgeRails(layers){
 function background(showGrove){
   drawPasture(c,W,H,t,sunset,view,project,ellipse,path,atmosphere);
   if(showGrove)drawForestFloor(c,project,view.basis(W,H),W,H,atmosphere);
-  drawGardenPath(c,project,view.basis(W,H));
   drawBridgeDeck(c,project);
   drawVegetation(c,grass,project,t,W,H);
   for(const pile of interaction.hayPiles)drawHayPile(c,project(pile.x,pile.z),pile);
@@ -556,7 +555,7 @@ function start(){
     view.zoom=.85;view.pitch=.10;
   }
   if(spawn==='garden'){
-    const at=gardenPath[30];
+    const at={x:-9.415,z:6.267};
     Object.assign(player,{x:at.x,z:at.z,tx:at.x,tz:at.z});
     view.yaw=-1.36;view.pitch=.28;view.zoom=2.05;
   }
