@@ -22,7 +22,7 @@ import { isCompactViewport } from './game/layout.js';
 import { Flock } from './game/flock.js?v=head-posture-1';
 import { Interactions } from './game/interactions.js?v=solid-buildings-2';
 import { Companions } from './game/companions.js?v=solid-buildings-2';
-import { MeadowAudio } from './game/audio.js?v=welcome-volume-50';
+import { MeadowAudio } from './game/audio.js?v=popup-sound-2';
 import {dryRoute} from './game/navigation.js?v=windmill-1';
 import {drawBridgeDeck,drawBridgeRail,pickBridge} from './render/bridge.js?v=lake-bridge-1';
 import { CONFIG,pondPoint,keepDry,bridgePathClear,bridgeHeight,bridgePoint,BRIDGES } from './game/config.js?v=hammock-p10';
@@ -75,7 +75,7 @@ flock.adults.forEach((animal,i)=>{
   else if(i%3===1)animal.thirdSheepAppearance=true;
   else animal.fifthSheepAppearance=true;
 });
-const interaction=new Interactions(flock),companions=new Companions(),audioSystem=new MeadowAudio();
+const interaction=new Interactions(flock),companions=new Companions(),audioSystem=new MeadowAudio({onCallsReady:()=>{flock.nextBaa=0;}});
 const weather=new MeadowWeather(),bond=new SheepBond(),shelter=new WeatherShelter(),lambPlay=new LambPlay(rnd);
 const meadowTime=new MeadowTime();
 let atmosphere=meadowTime.apply(weather.snapshot()),environmentTimer=0;
@@ -880,9 +880,6 @@ async function startMeadowSound(gesture=false){
     if(!await playback||soundStarted)return;
     soundStarted=true;
     $('welcome-sound').hidden=true;
-    await audioSystem.prepareCalls();
-    // Let the normal flock choose a nearby, visible caller on the next frame.
-    flock.nextBaa=0;
   }catch{
     if(!soundStarted)$('welcome-sound').hidden=false;
   }
@@ -890,6 +887,7 @@ async function startMeadowSound(gesture=false){
 function unlockMeadowSound(event){
   if(event.isTrusted&&!event.repeat&&!soundStarted)void startMeadowSound(true);
 }
+addEventListener('pointerup',unlockMeadowSound,{capture:true});
 addEventListener('click',unlockMeadowSound,{capture:true});
 addEventListener('keydown',unlockMeadowSound,{capture:true});
 $('milk').onclick=()=>{

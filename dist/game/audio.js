@@ -2,9 +2,12 @@
 export const SHEEP_CALLS=[{file:'sheep-voice1.mp3',gain:.72},{file:'sheep-voice2.mp3',gain:.5},{file:'sheep-voice3.mp3',gain:1}];
 // Stream background music, decode short calls once, never synthesize replacement calls.
 export class MeadowAudio {
-  constructor({random=Math.random,fetcher=globalThis.fetch?.bind(globalThis)}={}){
+  constructor({random=Math.random,onCallsReady=()=>{},fetcher=globalThis.fetch?.bind(globalThis)}={}){
     this.context=null;
     this.enabled=false;
+    this.musicPlaying=false;
+    this.onCallsReady=onCallsReady;
+    this.callsAnnounced=false;
     this.lastBaa=-10;
     this.music=null;
     this.pending=null;
@@ -26,6 +29,7 @@ export class MeadowAudio {
     if(this.pending)return this.pending;
     if(!this.enabled)return this.start();
     this.music.pause();
+    this.musicPlaying=false;
     this.stopCall();
     this.pending=this.context.suspend().then(()=>{
       this.enabled=false;
@@ -34,11 +38,20 @@ export class MeadowAudio {
     return this.pending;
   }
   async play(attempt){
-    if(!this.context){
-      const AC=globalThis.AudioContext||globalThis.webkitAudioContext;
-      if(!AC)throw Error('Audio unavailable');
-      this.context=new AC();
+    try{
+      await Promise.all([this.startMusic(),this.startVoices()]);
+      if(attempt!==this.attempt)return false;
+      this.enabled=true;
+      return true;
+    }catch(error){
+      if(attempt!==this.attempt)return false;
+      // A restriction on one audio API must not silence the other.
+      this.enabled=false;
+      throw error;
     }
+  }
+  async startMusic(){
+    if(this.musicPlaying&&this.music?.paused!==true)return;
     if(!this.music){
       this.music=new Audio(new URL('../assets/sounds/pastoral-loop.mp3',import.meta.url).href);
       this.music.loop=true;
@@ -48,20 +61,24 @@ export class MeadowAudio {
       this.music.hidden=true;
       globalThis.document?.body?.append?.(this.music);
     }
-    try{
-      // Invoke both while the user's tap is active (needed on mobile browsers).
-      await Promise.all([this.context.resume(),this.music.play()]);
-      if(attempt!==this.attempt)return false;
-      this.enabled=true;
-      void this.prepareCalls();
-      return true;
-    }catch(error){
-      if(attempt!==this.attempt)return false;
-      this.music.pause();
-      this.enabled=false;
-      if(this.context.state==='running')await this.context.suspend();
-      throw error;
+    await this.music.play();
+    this.musicPlaying=true;
+  }
+  async startVoices(){
+    if(!this.context){
+      const AC=globalThis.AudioContext||globalThis.webkitAudioContext;
+      if(!AC)throw Error('Sheep audio unavailable');
+      this.context=new AC();
     }
+    // Fetch the calls while the browser decides whether it can resume audio.
+    const clips=this.prepareCalls();
+    if(this.context.state!=='running')await this.context.resume();
+    void clips.then(ready=>{
+      if(ready.length&&!this.callsAnnounced&&this.context.state==='running'){
+        this.callsAnnounced=true;
+        this.onCallsReady();
+      }
+    });
   }
   prepareCalls(){
     if(this.callsLoading)return this.callsLoading;
@@ -86,7 +103,7 @@ export class MeadowAudio {
     if(call){try{call.source.stop();}catch{}call.cleanup();}
   }
   baa(animal,player,yaw=0){
-    if(!this.enabled||!this.context||this.context.state!=='running'||!this.calls.length||this.activeCall)return false;
+    if(!this.context||this.context.state!=='running'||!this.calls.length||this.activeCall)return false;
     const c=this.context,now=c.currentTime;
     if(now-this.lastBaa<2.5)return false;
     const dx=(animal?.x??player.x)-player.x,dz=(animal?.z??player.z)-player.z,d=Math.hypot(dx,dz);

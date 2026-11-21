@@ -7,9 +7,9 @@ const audio=new MeadowAudio();
 assert.equal(await audio.toggle(),true);assert.equal(audio.music.loop,true);assert.equal(audio.music.volume,.5);assert.ok(audio.music.src.endsWith('/assets/sounds/pastoral-loop.mp3'));
 audio.music.currentTime=40;assert.equal(await audio.toggle(),false);assert.equal(audio.music.currentTime,40);assert.equal(audio.context.state,'suspended');assert.ok(pauses>0);
 assert.equal(await audio.toggle(),true);assert.equal(count,1);await audio.toggle();
-fail=true;await assert.rejects(audio.toggle());assert.equal(audio.enabled,false);assert.equal(audio.context.state,'suspended');
+fail=true;await assert.rejects(audio.toggle());assert.equal(audio.enabled,false);assert.equal(audio.context.state,'running','music denial leaves available sheep audio running');
 fail=false;release=()=>{};const a=audio.toggle(),b=audio.toggle();release();await Promise.all([a,b]);assert.equal(count,1);assert.equal(audio.enabled,true);assert.equal(plays,4);
-console.log('Audio: one streamed looping MP3, quiet volume, pause/resume position, no duplicate playback and playback-failure rollback passed.');
+console.log('Audio: one streamed looping MP3, quiet volume, pause/resume position, no duplicate playback and independent playback when music is blocked passed.');
 
 const before=plays;assert.equal(await audio.start(),true);assert.equal(await audio.start(),true);assert.equal(plays,before,"automatic start never toggles off or starts another track");
 
@@ -73,3 +73,20 @@ const starts=plays;
 await intro.start();
 assert.equal(plays,starts,'entering the meadow keeps playing the same track');
 console.log('Welcome audio: immediate attempt, gesture during pending autoplay and late rejection passed.');
+
+const workingContext=recorded.context.constructor;
+globalThis.AudioContext=class{resume(){return Promise.reject(Error('blocked'));}};
+const musicOnly=new MeadowAudio();
+await assert.rejects(musicOnly.start());
+assert.ok(musicOnly.musicPlaying,'welcome music keeps playing even when sheep audio is blocked');
+globalThis.AudioContext=workingContext;
+let readyCount=0;
+const voicesOnly=new MeadowAudio({fetcher,onCallsReady:()=>readyCount++});
+fail=true;
+await assert.rejects(voicesOnly.start());
+await voicesOnly.prepareCalls();
+assert.equal(readyCount,1);
+assert.ok(voicesOnly.baa({x:0,z:0},{x:0,z:0}),'welcome sheep can call while music is blocked');
+fail=false;
+await voicesOnly.start({gesture:true});
+assert.equal(readyCount,1,'first tap does not replay the opening call');
