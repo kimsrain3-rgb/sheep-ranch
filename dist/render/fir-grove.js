@@ -1,6 +1,8 @@
+import {denSites} from '../game/forest-hills.js';
 import {birchCenter,inBirches,birches,firs,trailX,generator,wildlifeAt} from '../game/fir-grove.js?v=forest-fox-1';
 import {clipPondPolygon} from './pond.js?v=water-join-1';
 
+const atDen=(x,z,padding)=>denSites.some(p=>Math.abs(x-p.x)<padding&&Math.abs(z-p.z)<padding);
 const TAU=Math.PI*2;
 function oval(c,x,y,rx,ry,angle,color){
   c.fillStyle=color;c.beginPath();c.ellipse(x,y,rx,ry,angle,0,TAU);c.fill();
@@ -222,8 +224,10 @@ function paintUnderstory(id){
   }
   return canvas;
 }
+for(const plant of [...ferns,...birchPlants])plant.atDen=atDen(plant.x,plant.z,1.15);
 function addUnderstory(layers,c,project,w,h,plants){
   for(const fern of plants){
+    if(fern.atDen)continue;
     const p=project(fern.x,fern.z,0);
     if(!p||p.s<3||p.x<-p.s*2||p.x>w+p.s*2||p.y<0||p.y>h+p.s*2)continue;
     const width=p.s*fern.width*1.5;
@@ -275,7 +279,7 @@ for(let z=91;z<197;z+=1.8){
     patches.push({x:birchCenter(pz)+offset+(grassRandom()-.5)*.85,z:pz,
       width:3.8+grassRandom()*.9,variant:Math.floor(grassRandom()*8)});
   }
-  grassRows.push(patches);
+  grassRows.push(patches.filter(p=>!atDen(p.x,p.z,1.45)));
 }
 function paintGrassPatch(variant){
   const art=document.createElement('canvas');
