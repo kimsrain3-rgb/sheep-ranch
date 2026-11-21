@@ -243,9 +243,11 @@ function paintBirch(id){
     const y=30+random()*361,r=1+5*y/395,side=i%2?1:-1;
     stroke(c,axis(y)-side*r,y,axis(y)+side*r*(random()-.35),y-1,1+random()*2,'#57594f');
   }
+  let lowestBranch=0;
   for(let i=0;i<39;i++){
     const u=random(),y=20+u*180,side=i%2?1:-1;
     const x=axis(y)+side*(7+Math.sin(Math.PI*u)*62)*(.5+.5*random()),tip=y-12-random()*28;
+    lowestBranch=Math.max(lowestBranch,Math.ceil(y+26+2));
     stroke(c,axis(y),y+26,x,tip,1+u,'#777a60');
     for(let j=0;j<26;j++){
       const angle=random()*TAU,r=Math.sqrt(random());
@@ -260,7 +262,7 @@ function paintBirch(id){
     stroke(c,x,y,x+random()*6-3,y-3-random()*6,1.5,'#78944d');
     if(id%3&&i%4===0)oval(c,x,y-7,2,2.6,0,id%3===1?'#ab82c8':'#ebca60');
   }
-  return canvas;
+  return {canvas,lowestBranch};
 }
 // Overlapping low patches give the grove a continuous ground layer.
 const grassArt=[];
@@ -312,11 +314,20 @@ export function addBirchLayers(layers,c,project,w,h){
   for(const tree of birches){
     const p=project(tree.x,tree.z,0);
     if(!p)continue;
-    const width=tree.width*p.s,height=tree.height*p.s;
-    if(p.x+width/2<0||p.x-width/2>w||p.y<0||p.y-height>h)continue;
-    layers.push({...tree,projected:p,cover:{halfWidth:tree.width/2,above:tree.height,below:.2},draw:()=>{
-      const art=birchArt[tree.variant]??=paintBirch(tree.variant);
-      c.drawImage(art,p.x-width/2,p.y-height,width,height);
+    const width=tree.width*p.s,scale=tree.height*p.s/400;
+    if(p.x+width/2<0||p.x-width/2>w||p.y<0||p.y-600*scale>h)continue;
+    const {canvas,lowestBranch}=birchArt[tree.variant]??=paintBirch(tree.variant);
+    const root=394,extra=(root-lowestBranch)*.5;
+    const height=(canvas.height+extra)*scale;
+    if(p.y-height>h)continue;
+    layers.push({...tree,projected:p,cover:{halfWidth:tree.width/2,above:height/p.s,below:.2},draw:()=>{
+      const x=p.x-width/2,top=p.y-height;
+      // Keep leaves and root vegetation at their painted scale.
+      c.drawImage(canvas,0,0,canvas.width,lowestBranch,x,top,width,lowestBranch*scale);
+      c.drawImage(canvas,0,lowestBranch,canvas.width,root-lowestBranch,
+        x,top+lowestBranch*scale,width,(root-lowestBranch)*1.5*scale);
+      c.drawImage(canvas,0,root,canvas.width,canvas.height-root,
+        x,p.y-(canvas.height-root)*scale,width,(canvas.height-root)*scale);
     }});
   }
 }
