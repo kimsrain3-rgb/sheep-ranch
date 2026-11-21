@@ -48,3 +48,28 @@ recorded.context.currentTime=15;recorded.baa({x:0,z:0},{x:0,z:0});sources.at(-1)
 assert.equal(recorded.baa({x:0,z:0},{x:0,z:0}),false,'cooldown remains in effect even after a short clip ends');
 const partial=new MeadowAudio({fetcher:async url=>{if(url.includes('voice2'))throw Error('missing');return fetcher(url);}});await partial.start();await partial.prepareCalls();assert.equal(partial.calls.length,2);
 console.log('Recorded sheep: all three MP3s selectable, no immediate repeats/overlap, distance and yaw, cooldown, cleanup, decoded-buffer reuse and partial download failure passed.');
+
+// A blocked automatic resume can stay pending even after the visitor taps.
+let rejectAutomatic, pendingResume=true;
+globalThis.AudioContext=class{
+  constructor(){this.state='suspended';}
+  resume(){
+    if(pendingResume)return new Promise((_,reject)=>{rejectAutomatic=reject;});
+    this.state='running';return Promise.resolve();
+  }
+  suspend(){this.state='suspended';return Promise.resolve();}
+};
+const intro=new MeadowAudio();
+const automatic=intro.start();
+const oneTrack=intro.music;
+pendingResume=false;
+assert.equal(await intro.start({gesture:true}),true);
+rejectAutomatic(Error('late automatic rejection'));
+assert.equal(await automatic,false);
+assert.equal(intro.music,oneTrack);
+assert.ok(intro.enabled);
+assert.equal(intro.context.state,'running','late rejection cannot stop the unlocked sound');
+const starts=plays;
+await intro.start();
+assert.equal(plays,starts,'entering the meadow keeps playing the same track');
+console.log('Welcome audio: immediate attempt, gesture during pending autoplay and late rejection passed.');

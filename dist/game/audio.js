@@ -8,19 +8,32 @@ export class MeadowAudio {
     this.lastBaa=-10;
     this.music=null;
     this.pending=null;
+    this.attempt=0;
     this.random=random;this.fetcher=fetcher;this.calls=[];this.callsLoading=null;this.lastCallIndex=-1;this.activeCall=null;this.callCount=0;
   }
-  async start(){
-    if(this.enabled)return true;
-    return this.toggle();
+  start({gesture=false}={}){
+    if(this.enabled)return Promise.resolve(true);
+    // Some browsers leave automatic resume pending until a real gesture.
+    if(this.pending&&!gesture)return this.pending;
+    const attempt=++this.attempt;
+    const pending=this.play(attempt).finally(()=>{
+      if(this.pending===pending)this.pending=null;
+    });
+    this.pending=pending;
+    return pending;
   }
-  async toggle(){
-    // Repeated taps share the in-flight action instead of starting duplicate music.
+  toggle(){
     if(this.pending)return this.pending;
-    this.pending=this.togglePlayback();
-    try{return await this.pending;}finally{this.pending=null;}
+    if(!this.enabled)return this.start();
+    this.music.pause();
+    this.stopCall();
+    this.pending=this.context.suspend().then(()=>{
+      this.enabled=false;
+      return false;
+    }).finally(()=>{this.pending=null;});
+    return this.pending;
   }
-  async togglePlayback(){
+  async play(attempt){
     if(!this.context){
       const AC=globalThis.AudioContext||globalThis.webkitAudioContext;
       if(!AC)throw Error('Audio unavailable');
@@ -35,23 +48,18 @@ export class MeadowAudio {
       this.music.hidden=true;
       globalThis.document?.body?.append?.(this.music);
     }
-    if(this.enabled){
-      this.music.pause();
-      this.stopCall();
-      await this.context.suspend();
-      this.enabled=false;
-      return false;
-    }
     try{
       // Invoke both while the user's tap is active (needed on mobile browsers).
       await Promise.all([this.context.resume(),this.music.play()]);
+      if(attempt!==this.attempt)return false;
       this.enabled=true;
       void this.prepareCalls();
       return true;
     }catch(error){
+      if(attempt!==this.attempt)return false;
       this.music.pause();
       this.enabled=false;
-      await this.context.suspend();
+      if(this.context.state==='running')await this.context.suspend();
       throw error;
     }
   }

@@ -149,3 +149,5 @@ dialog#welcome #start {width:100%;margin:.5rem 0 0;text-align:center;font-size:1
 #avatar-apply { width:100%; margin-top:21px; padding:13px; border-radius:8px; color:#fff9e9; background:#385b42 }
 #avatar-storage-note { position:fixed; z-index:90; inset:auto 10% 18%; text-align:center; padding:10px; color:white; background:#344e3e; border-radius:8px }
 #mobile-menu-help #help, #mobile-menu-help #avatar-open { flex:1; width:auto; white-space:nowrap }
+
+#welcome #welcome-sound { display:block; margin:4px auto 8px; min-height:38px; padding:5px 14px; border-radius:18px; background:#e4e9da; color:#355440; font-size:13px }

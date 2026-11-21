@@ -22,7 +22,7 @@ import { isCompactViewport } from './game/layout.js';
 import { Flock } from './game/flock.js?v=head-posture-1';
 import { Interactions } from './game/interactions.js?v=solid-buildings-2';
 import { Companions } from './game/companions.js?v=solid-buildings-2';
-import { MeadowAudio } from './game/audio.js?v=music-45';
+import { MeadowAudio } from './game/audio.js?v=welcome-audio-1';
 import {dryRoute} from './game/navigation.js?v=windmill-1';
 import {drawBridgeDeck,drawBridgeRail,pickBridge} from './render/bridge.js?v=lake-bridge-1';
 import { CONFIG,pondPoint,keepDry,bridgePathClear,bridgeHeight,bridgePoint,BRIDGES } from './game/config.js?v=hammock-p10';
@@ -522,7 +522,6 @@ requestAnimationFrame(frame);
 function start(){
   if(started)return;
   started=true;
-  if(globalThis.navigator?.userActivation?.isActive!==false)ensureSound();
   document.body.classList.add('walking');
   $('welcome').close?.();
   $('welcome').hidden=true;
@@ -872,14 +871,27 @@ $('help-panel').onclick=e=>{
 addEventListener('keydown',e=>{
   if(e.key==='Escape'&&paused)help(false);
 });
-let soundRetryNotified=false;
-function ensureSound(){
-  audioSystem.start().catch(()=>{
-    if(!soundRetryNotified){notify('화면을 한 번 더 누르면 음악이 시작됩니다.');soundRetryNotified=true;}
-  });
+let soundStarted=false;
+async function startMeadowSound(gesture=false){
+  if(soundStarted)return;
+  try{
+    const playback=audioSystem.start({gesture});
+    if(!gesture&&audioSystem.context?.state==='suspended')$('welcome-sound').hidden=false;
+    if(!await playback||soundStarted)return;
+    soundStarted=true;
+    $('welcome-sound').hidden=true;
+    await audioSystem.prepareCalls();
+    // Let the normal flock choose a nearby, visible caller on the next frame.
+    flock.nextBaa=0;
+  }catch{
+    if(!soundStarted)$('welcome-sound').hidden=false;
+  }
 }
-// Entry starts sound. If a browser blocks it, the next normal tap retries it.
-addEventListener('pointerdown',()=>{if(started&&!audioSystem.enabled)ensureSound();},{capture:true});
+function unlockMeadowSound(event){
+  if(event.isTrusted&&!event.repeat&&!soundStarted)void startMeadowSound(true);
+}
+addEventListener('click',unlockMeadowSound,{capture:true});
+addEventListener('keydown',unlockMeadowSound,{capture:true});
 $('milk').onclick=()=>{
   if(farmVisit.inside){notify('건물 밖으로 나온 뒤 할 수 있어요.');return;}
   if(barnVisit.inside){notify('축사 밖에서 할 수 있어요.');return;}
@@ -1164,3 +1176,4 @@ let skipIntro=false;
 try{skipIntro=localStorage.getItem(introKey)==='1';}catch{}
 if(skipIntro)start();
 else $('welcome').showModal?.();
+void startMeadowSound();
