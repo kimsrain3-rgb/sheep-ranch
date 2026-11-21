@@ -22,7 +22,7 @@ for(let row=0;row<3;row++)for(const side of [-1,1]){
   for(let z=-82+random()*3;z<22;z+=4.5+random()*3.3){
     const offset=3.3+row*4.0+random()*1.9;
     const height=13+random()*6;
-    firs.push({x:trailX(z)+side*offset,z,height,width:height*(.35+random()*.12),
+    firs.push({x:trailX(z)+side*offset,z,height:height*1.5,width:height*(.35+random()*.12),
       radius:.3+random()*.18,variant:Math.floor(random()*7)});
   }
 }
