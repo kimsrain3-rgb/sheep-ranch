@@ -1,5 +1,5 @@
 import {presets,hairColors,outfitColors,resolveAppearance,currentAppearance,applyAppearance} from './game/visitor-appearance.js';
-import {drawVisitor} from './visitor.js?v=visitor-look-1';
+import {drawVisitor} from './visitor.js?v=limb-light-1';
 
 const byId=id=>document.getElementById(id);
 const panel=byId('avatar-panel'), opener=byId('avatar-open');

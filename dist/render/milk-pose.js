@@ -1,3 +1,4 @@
+import {drawLimb,drawHand,trouserColor} from './visitor-limbs.js';
 import {currentAppearance} from '../game/visitor-appearance.js';
 import {drawVisitorHead,drawVisitorClothes} from './visitor-look.js';
 // Shared, fixed-length kneeling pose. The arm never stretches toward a target.
@@ -9,20 +10,20 @@ export function drawKneelingVisitor(c,p,{pose='right',lambSize=.33,petting=false
   if(!p)return;const side=pose==='left'?-1:1,g=milkPose(lambSize);
   c.save();c.translate(p.x,p.y);c.scale(p.s*side,p.s);
   const ell=(x,y,rx,ry,color)=>{c.fillStyle=color;c.beginPath();c.ellipse(x,y,rx,ry,0,0,Math.PI*2);c.fill();};
-  const line=(points,color,width)=>{c.strokeStyle=color;c.lineWidth=width;c.lineCap='round';c.lineJoin='round';c.beginPath();points.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.stroke();};
   ell(0,.02,.55,.12,'#2e482d30');
   // Folded rear leg and raised knee, with both feet resting on the ground.
-  line([[-.13,-.27],[-.34,-.12],[-.10,-.04]],'#4b624e',.18);
-  line([[.08,-.29],[.32,-.25],[.34,-.05]],'#627d5c',.18);
+  drawLimb(c,[[-.13,-.27],[-.34,-.12],[-.10,-.04]],.18,trouserColor);
+  drawLimb(c,[[.08,-.29],[.32,-.25],[.34,-.05]],.18,trouserColor);
   ell(-.12,-.025,.17,.06,'#594f3d');ell(.37,-.025,.18,.06,'#594f3d');
   c.fillStyle='#69816a';c.beginPath();c.roundRect(-.34,-.8,.26,.48,.08);c.fill();
   c.fillStyle=appearance.coat;c.beginPath();c.roundRect(-.21,-.85,.46,.62,.10);c.fill();
-  line([[-.16,-.72],[-.14,-.38],[.17,-.29]],appearance.shade,.11);
+  drawLimb(c,[[-.16,-.72],[-.14,-.38],[.17,-.29]],.11,appearance.coat);
+  drawHand(c,.17,-.29,.08,.065);
   drawVisitorClothes(c,0,-.60,.78,'right',appearance);
   drawVisitorHead(c,.05,-1.02,.9,'right',appearance);
   if(!petting){
-  line([[g.shoulder.x,g.shoulder.y],[g.elbow.x,g.elbow.y],[g.hand.x,g.hand.y]],appearance.sleeve,.115);
-  ell(g.hand.x,g.hand.y,.085,.065,'#dfba95');
+  drawLimb(c,[[g.shoulder.x,g.shoulder.y],[g.elbow.x,g.elbow.y],[g.hand.x,g.hand.y]],.115,appearance.coat);
+  drawHand(c,g.hand.x,g.hand.y,.085,.065);
   }
   c.restore();
 }
