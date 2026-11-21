@@ -4,7 +4,7 @@ export class BarnInteriorView {
   get x(){return 0;} get y(){return 0;}
   center(){} constrain(){}
   toWorld(x,y){return {x,y};} toScreen(x,y){return {x,y};}
-  zoomAt(next){this.zoom=Math.max(.65,Math.min(3.4,next));}
+  zoomAt(next){this.zoom=Math.max(.65,Math.min(4.08,next));}
   pan(dx,dy){this.yaw=(this.yaw-dx*.006)%(Math.PI*2);this.pitch=Math.max(-.4,Math.min(.55,this.pitch+dy*.002));}
   basis(w,h){
     const key=[w,h,this.zoom,this.yaw,this.pitch,this.target.x,this.target.z,this.eyeHeight,this.orbitPitch,this.orbitFocal];
