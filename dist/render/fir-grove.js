@@ -1,4 +1,4 @@
-import {birches,firs,trailX,generator,wildlifeAt} from '../game/fir-grove.js?v=forest-fox-1';
+import {inBirches,birches,firs,trailX,generator,wildlifeAt} from '../game/fir-grove.js?v=forest-fox-1';
 import {clipPondPolygon} from './pond.js?v=water-join-1';
 
 const TAU=Math.PI*2;
@@ -98,7 +98,7 @@ for(let z=-88;z<=27;z+=1.5){
 // The same conservative box covers ground, animals, and the tallest crowns.
 export function groveVisible(project,w,h){
   const corners=[];
-  for(const x of [30,90])for(const z of [-90,30])for(const y of [0,21])corners.push(project(x,z,y));
+  for(const x of [30,90])for(const z of [-90,30])for(const y of [0,30])corners.push(project(x,z,y));
   const front=corners.filter(Boolean);
   if(!front.length)return false;
   if(front.length!==corners.length)return true;
@@ -177,18 +177,59 @@ export function addForestLayers(layers,c,project,w,h,time,yaw){
       c.drawImage(art,p.x-tree.width*p.s/2,p.y-tree.height*p.s,tree.width*p.s,tree.height*p.s);
     }});
   }
-  for(const fern of ferns){
-    const p=project(fern.x,fern.z,0);
-    if(!p||p.s<3||p.x<-p.s||p.x>w+p.s||p.y<0||p.y>h+p.s)continue;
-    const width=p.s*fern.width*1.5;
-    layers.push({...fern,projected:p,cover:{halfWidth:fern.width*.75,above:fern.width*.80,below:.08},draw:()=>c.drawImage(fernArt[fern.id]??=paintFern(fern.id),p.x-width/2,p.y-width*.52,width,width*.52)});
-  }
+  addUnderstory(layers,c,project,w,h,ferns);
   for(const a of wildlifeAt(time)){
     const p=project(a.x,a.z,0);if(!p||p.x<-p.s||p.x>w+p.s||p.y<0||p.y>h+p.s*2)continue;
     layers.push({...a,projected:p,cover:{halfWidth:1.2,above:2,below:.2},draw:()=>drawAnimal(c,p,a,yaw)});
   }
 }
 
+// Repeat small plant communities across the grove with open spaces between them.
+const birchPlants=[];
+const plantRandom=generator(93213);
+for(const tree of birches){
+  const kind=plantRandom();
+  for(let i=0;i<4;i++){
+    const x=tree.x+(plantRandom()-.5)*7,z=tree.z+(plantRandom()-.5)*7;
+    if(!inBirches(x,z)||Math.hypot(x-tree.x,z-tree.z)<.65)continue;
+    const variant=Math.floor(plantRandom()*3);
+    const id=kind<.5?variant:kind<.76?5+variant:8+variant;
+    birchPlants.push({x,z,id,width:(id>=8?.72:1.15)+plantRandom()*.8});
+  }
+}
+function paintUnderstory(id){
+  if(id<5)return paintFern(id);
+  const canvas=document.createElement('canvas');
+  canvas.width=140;canvas.height=76;
+  const c=canvas.getContext('2d'),rand=generator(12017+id*187);
+  const bush=id<8;
+  for(let i=0;i<(bush?34:20);i++){
+    const x=14+112*rand(),y=10+rand()*28+Math.abs(x-70)*.28;
+    const root=bush?70:x+rand()*12-6;
+    stroke(c,root,74,x,y,bush?2:1.4,bush?'#716547':'#59864e');
+    for(let j=1;j<=5;j++){
+      const u=j/5;
+      oval(c,root+(x-root)*u,74+(y-74)*u,bush?6:3,bush?3:1.7,j%2?.6:-.7,['#496944','#688850','#829956'][j%3]);
+    }
+    if(!bush){
+      const color=['#af87c7','#e4c35d','#dccce5'][id-8];
+      for(let petal=0;petal<5;petal++){
+        const angle=petal*TAU/5;
+        oval(c,x+2.4*Math.cos(angle),y+2.4*Math.sin(angle),2.4,1.6,angle,color);
+      }
+      oval(c,x,y,1.4,1.4,0,'#d9ae50');
+    }
+  }
+  return canvas;
+}
+function addUnderstory(layers,c,project,w,h,plants){
+  for(const fern of plants){
+    const p=project(fern.x,fern.z,0);
+    if(!p||p.s<3||p.x<-p.s*2||p.x>w+p.s*2||p.y<0||p.y>h+p.s*2)continue;
+    const width=p.s*fern.width*1.5;
+    layers.push({...fern,projected:p,cover:{halfWidth:fern.width*.75,above:fern.width*.80,below:.08},draw:()=>c.drawImage(fernArt[fern.id]??=paintUnderstory(fern.id),p.x-width/2,p.y-width*.52,width,width*.52)});
+  }
+}
 const birchArt=[];
 function paintBirch(id){
   const canvas=document.createElement('canvas');
@@ -222,6 +263,7 @@ function paintBirch(id){
   return canvas;
 }
 export function addBirchLayers(layers,c,project,w,h){
+  addUnderstory(layers,c,project,w,h,birchPlants);
   for(const tree of birches){
     const p=project(tree.x,tree.z,0);
     if(!p)continue;
