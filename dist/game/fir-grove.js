@@ -62,11 +62,23 @@ export function groveRoute(from,points){
 }
 // Animals cross the path, pause in cover, and return along the same clearing.
 export function wildlifeAt(t){
-  return [-64,-32,4].map((z,i)=>{
+  const animals = [-64,-32,4].map((z,i)=>{
     const phase=(t/(i===1?9:12)+i*.36)%(2*Math.PI),offset=2.45*Math.sin(phase);
     const speed=Math.abs(Math.cos(phase)),rabbit=i!==1;
     const beat=t*(rabbit?5.8:3.9)+i;
     return {x:trailX(z)+offset,z:z+.85*Math.sin(phase+.4),rabbit,
       direction:Math.cos(phase)>0?1:-1,hop:Math.max(0,Math.sin(beat))*speed*(rabbit?.24:.11),stride:Math.cos(beat)*speed};
   });
+  // A short oval along the clear trail, just ahead of the forest entrance.
+  const angle = t * .35;
+  const z = -22 + 1.35 * Math.cos(angle);
+  animals.push({
+    fox: true,
+    x: trailX(z) + 2.1 * Math.sin(angle),
+    z,
+    velocityX: .735 * Math.cos(angle),
+    velocityZ: -.4725 * Math.sin(angle),
+    frame: Math.floor(t * 10) % 36
+  });
+  return animals;
 }

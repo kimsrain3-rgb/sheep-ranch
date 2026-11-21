@@ -1,4 +1,4 @@
-import {firs,trailX,generator,wildlifeAt} from '../game/fir-grove.js';
+import {firs,trailX,generator,wildlifeAt} from '../game/fir-grove.js?v=forest-fox-1';
 import {clipPondPolygon} from './pond.js?v=water-join-1';
 
 const TAU=Math.PI*2;
@@ -128,7 +128,26 @@ export function drawForestFloor(c,project,camera,w,h,weather){
     if(bit.trail && p.s>10)stroke(c,p.x,p.y,p.x+p.s*.074,p.y-p.s*.019,.55+p.s*.012,'#685e4770');
   }
 }
+let foxSheet;
+function drawFox(c,p,a,yaw){
+  if(!foxSheet){
+    foxSheet = new Image();
+    foxSheet.src = new URL('../assets/forest-fox.webp', import.meta.url).href;
+  }
+  if(!foxSheet.complete || !foxSheet.naturalWidth)return;
+  const frameWidth = foxSheet.naturalWidth / 6;
+  const frameHeight = foxSheet.naturalHeight / 6;
+  const width = 1.5 * p.s, height = width * frameHeight / frameWidth;
+  const screenVelocity = Math.cos(yaw)*a.velocityX - Math.sin(yaw)*a.velocityZ;
+  c.save();
+  c.translate(p.x,p.y);
+  c.scale(screenVelocity>0 ? -1 : 1,1);
+  c.drawImage(foxSheet,(a.frame%6)*frameWidth,Math.floor(a.frame/6)*frameHeight,
+    frameWidth,frameHeight,-width/2,-height*.94,width,height);
+  c.restore();
+}
 function drawAnimal(c,p,a,yaw){
+  if(a.fox){drawFox(c,p,a,yaw);return;}
   const side=Math.cos(yaw)*a.direction;
   c.save();c.translate(p.x,p.y-a.hop*p.s);c.scale(p.s*(side<0?-1:1)*(.68+.32*Math.abs(side)),p.s);
   if(a.rabbit){

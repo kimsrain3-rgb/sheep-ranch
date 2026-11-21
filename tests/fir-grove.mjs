@@ -29,3 +29,14 @@ for(let i=0;i<180;i++)for(const animal of wildlifeAt(i*.5)){
   assert.ok(!firs.some(t=>Math.hypot(t.x-animal.x,t.z-animal.z)<t.radius+.22));
 }
 console.log('Four forest landmarks, dry connected access, solid trunks and wildlife clearings passed.');
+
+const foxFrames = new Set();
+for(let step=0;step<200;step++){
+  const animals = wildlifeAt(step*.1);
+  const foxes = animals.filter(a=>a.fox);
+  assert.equal(foxes.length,1);
+  const fox = foxes[0];
+  assert.ok(Math.abs(fox.x-trailX(fox.z))<=2.11 && Math.abs(fox.z+22)<=1.351);
+  foxFrames.add(fox.frame);
+}
+assert.equal(foxFrames.size,36);
