@@ -1,3 +1,5 @@
+import {forestHeight,hillPick,denSites,nearbyDen} from './game/forest-hills.js';
+import {drawHills,addDenLayers} from './render/forest-hills.js';
 import {addGardenLayers} from './render/pond-garden.js?v=stream-banks-1';
 import {setupRanchMap,streamLookout} from './ranch-map.js?v=stream-banks-1';
 import {trailX,inGrove,clearTrunks,groveRoute} from './game/fir-grove.js?v=forest-fox-1';
@@ -69,6 +71,23 @@ function waitingForDoor(point){
 const outdoorView=new MeadowView(),indoorView=new BarnInteriorView();
 const lodgeView=new LodgeInteriorView(),lookoutView=new BarnInteriorView(),farmView=new BarnInteriorView();
 lodgeView.zoom=1.25;lodgeView.pitch=.025;
+outdoorView.terrainHeight=forestHeight;
+const denKey='ranch-forest-dens-v1';
+function readDens(){
+  try{return new Set(JSON.parse(localStorage.getItem(denKey)||'[]').filter(i=>Number.isInteger(i)&&denSites[i]));}catch{return new Set();}
+}
+let dugDens=readDens();
+function availableDen(){
+  if(!started||view!==outdoorView)return -1;
+  const id=nearbyDen(player.x,player.z);
+  return dugDens.has(id)?-1:id;
+}
+$('dig-den').onclick=()=>{
+  const id=availableDen();if(id<0)return;
+  dugDens.add(id);
+  try{for(const other of readDens())dugDens.add(other);localStorage.setItem(denKey,JSON.stringify([...dugDens]));}catch{}
+  $('dig-den').hidden=true;notify('비탈에 여우굴을 팠어요.');
+};
 let view=outdoorView;
 const millView=new LodgeInteriorView();
 let millMode=null,millLabel=null;
@@ -140,7 +159,7 @@ function changeZoom(factor){
 }
 function project(x,z,y){
   const outdoor=view!==indoorView&&view!==lodgeView&&view!==farmView;
-  return view.project(x,z,y??(outdoor?bridgeHeight({x,z}):0),W,H);
+  return view.project(x,z,(y??(outdoor?bridgeHeight({x,z}):0))+(outdoor?forestHeight(x,z):0),W,H);
 }
 function ellipse(x,y,rx,ry,color){
   c.fillStyle=color;
@@ -213,6 +232,7 @@ function addBridgeRails(layers){
 }
 function background(showGrove){
   drawPasture(c,W,H,t,sunset,view,project,ellipse,path,atmosphere);
+  drawHills(c,view,W,H,atmosphere);
   if(showGrove)drawForestFloor(c,project,view.basis(W,H),W,H,atmosphere);
   drawBridgeDeck(c,project);
   drawVegetation(c,grass,project,t,W,H);
@@ -454,6 +474,7 @@ function drawOutdoorScenery(interiorKind){
       time:t,walking:player.walking,seated,feeding,petting:interaction.active?.kind==='pet'&&interaction.active.phase==='playing',milking:interaction.active?.kind==='milk'&&interaction.active.phase==='playing',lambSize:interaction.active?.animal.size,pose:interaction.active?.phase==='playing'?visitorPose(interaction.active.animal.x-player.x,interaction.active.animal.z-player.z,view.yaw):visitorPose(player.headingX??0,player.headingZ??1,view.yaw)
     })
   });
+  addDenLayers(layers,c,project,dugDens);
   addBirchLayers(layers,c,project,W,H);
   if(showGrove)addForestLayers(layers,c,project,W,H,t,view.yaw);
   for(const a of meadowTrees)layers.push({
@@ -489,6 +510,7 @@ function drawOutdoorScenery(interiorKind){
   paintWorldLayers(interiorKind?layers.filter(layer=>layer.building!==interiorKind):layers);
 }
 function render(){
+  $('dig-den').hidden=availableDen()<0;
   if(farmVisit.inside){renderInsideFarmRoom();return;}
   if(lodgeVisit.inside){renderInsideLodge();return;}
   if(barnVisit.inside){renderInsideBarn();return;}
@@ -785,7 +807,7 @@ function tapWorld(screenX,screenY){
     notify('일어나기 버튼을 누르면 다시 걸을 수 있어요.');
     return;
   }
-  const ground=pickBridge(x,y,project)||view.ground(x,y,W,H);
+  const ground=pickBridge(x,y,project)||hillPick(view,x,y,W,H);
   if(!ground)return;
   walkToOutdoor(ground);
   following=true;
