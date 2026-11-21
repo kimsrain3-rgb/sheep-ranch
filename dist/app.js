@@ -1,5 +1,5 @@
 import {forestHeight,hillPick,denSites,nearbyDen} from './game/forest-hills.js';
-import {drawHills,addDenLayers} from './render/forest-hills.js';
+import {drawHills,addDenLayers} from './render/forest-hills.js?v=hill-draw-2';
 import {addGardenLayers} from './render/pond-garden.js?v=stream-banks-1';
 import {setupRanchMap,streamLookout} from './ranch-map.js?v=stream-banks-1';
 import {trailX,inGrove,clearTrunks,groveRoute} from './game/fir-grove.js?v=forest-fox-1';

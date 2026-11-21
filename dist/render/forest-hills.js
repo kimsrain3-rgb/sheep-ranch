@@ -26,7 +26,7 @@ export function drawHills(c,view,w,h,weather){
     const corners=mesh.bounds.map(([x,z,y])=>view.project(x,z,y,w,h));
     if(corners.every(p=>!p))continue;
     if(corners.every(Boolean)&&(corners.every(p=>p.x<0)||corners.every(p=>p.x>w)||corners.every(p=>p.y<0)||corners.every(p=>p.y>h)))continue;
-    for(const face of faces){
+    for(const face of mesh.faces){
       const ring=clipPondPolygon(face.points,camera);
       if(ring.length<3)continue;
       const points=ring.map(([x,z,y])=>view.project(x,z,y,w,h));
