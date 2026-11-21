@@ -1,4 +1,4 @@
-import {frameLodgeStairs,followRoomVisitor,roomVisitorProjection} from './game/room-follow.js?v=lodge-hearth-1';
+import {frameLodgeStairs,followRoomVisitor,roomVisitorProjection} from './game/room-follow.js?v=coop-orbit-1';
 import {groundThroughDoor} from './game/doorway.js';
 import {BuildingOcclusion,spriteBounds} from './render/occlusion.js?v=visible-picking-1';
 import {LodgeInteriorView} from './game/lodge-camera.js?v=lodge-eyes-2';

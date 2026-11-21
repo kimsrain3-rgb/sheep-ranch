@@ -1,3 +1,4 @@
+import {followRoomVisitor,roomVisitorProjection} from "../dist/game/room-follow.js";
 import assert from 'node:assert/strict';
 import * as THREE from '../dist/vendor/three/three.module.js';
 import {createBarnModel,createBarnRoomModel,createLodgeModel,createCoopModel,createFarmRoomModel} from '../dist/render/building-models.js';
@@ -116,3 +117,19 @@ for(const kind of ['coop','shed']){
  visit.request(kind,player);visit.cancel(player);assert.equal(visit.trip,null);assert.equal(player.tx,player.x);
 }
 console.log('Three.js buildings: actual batched meshes, camera alignment, four-side picking, WebGL fallback/cache/pixel budget, closed rooms and continuous coop/warehouse entry-walk-exit passed.');
+
+// A horizontal turn must keep the standing visitor framed at the same height.
+for(const [w,h] of [[390,760],[1000,700]]){
+  for(const [x,z] of [[0,1],[1.25,1.3],[0,4],[0,8.4]]){
+    const camera=new BarnInteriorView(),player={x,z};
+    let first;
+    for(let degree=0;degree<=360;degree++){
+      camera.yaw=degree*Math.PI/180;
+      followRoomVisitor(camera,player,'coop',1,w,h);
+      const foot=roomVisitorProjection(camera,player,w,h);
+      first??=foot;
+      assert.ok(Math.abs(foot.y-first.y)<1e-6);
+      assert.ok(Math.abs(foot.s-first.s)<1e-6);
+    }
+  }
+}

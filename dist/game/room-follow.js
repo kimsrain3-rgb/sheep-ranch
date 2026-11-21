@@ -29,6 +29,18 @@ export function followRoomVisitor(view,player,kind,floor,w,h,elevation=(floor-1)
   const sy=Math.sin(view.yaw),cy=Math.cos(view.yaw);
   // A slight shoulder offset leaves the path straight ahead visible.
   const dx=-sy+.15*cy,dz=-cy-.15*sy;
+  if(kind==='coop'){
+    // Reserve the same circle in every direction so turning cannot change framing.
+    // The front bay opens into a narrower aisle between the nests and perches.
+    const side=Math.abs(player.x);
+    const aisleStart=1.3,aisleHalfWidth=1.45;
+    const aisleClearance=Math.hypot(Math.max(0,aisleHalfWidth-side),Math.max(0,aisleStart-player.z));
+    const clearance=Math.max(0,Math.min(player.z-.35,FARM_ROOMS.coop.depth-player.z,FARM_ROOMS.coop.halfWidth-side,aisleClearance));
+    const arm=Math.min(reach,clearance/Math.hypot(dx,dz));
+    view.target.x=player.x+dx*arm;
+    view.target.z=player.z+dz*arm;
+    return;
+  }
   let distance=0;
   for(let step=.15;step<reach+.15;step+=.15){
     const next=Math.min(step,reach);
