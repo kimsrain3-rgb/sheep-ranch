@@ -1,5 +1,6 @@
+import {isWater} from '../game/config.js';
 import {denSites} from '../game/forest-hills.js';
-import {birchCenter,inBirches,birches,firs,trailX,generator,wildlifeAt} from '../game/fir-grove.js?v=forest-fox-1';
+import {birchCenter,birchDepth,birches,firs,trailX,generator,wildlifeAt} from '../game/fir-grove.js?v=birch-edge-1';
 import {clipPondPolygon} from './pond.js?v=water-join-1';
 
 const atDen=(x,z,padding)=>denSites.some(p=>Math.abs(x-p.x)<padding&&Math.abs(z-p.z)<padding);
@@ -193,10 +194,21 @@ for(const tree of birches){
   const kind=plantRandom();
   for(let i=0;i<4;i++){
     const x=tree.x+(plantRandom()-.5)*7,z=tree.z+(plantRandom()-.5)*7;
-    if(!inBirches(x,z)||Math.hypot(x-tree.x,z-tree.z)<.65)continue;
+    if(isWater({x,z},1)||Math.hypot(x-tree.x,z-tree.z)<.65)continue;
     const variant=Math.floor(plantRandom()*3);
     const id=kind<.5?variant:kind<.76?5+variant:8+variant;
     birchPlants.push({x,z,id,width:(id>=8?.72:1.15)+plantRandom()*.8});
+  }
+}
+// Small independent islands of ferns and flowers spill into the meadow.
+for(let i=0;i<160;i++){
+  const z=81+plantRandom()*126,x=birchCenter(z)+(plantRandom()-.5)*82;
+  const depth=birchDepth(x,z);
+  if(depth>5||depth< -9)continue;
+  const id=i%3===0?8+i%2:i%5;
+  for(let j=0;j<3;j++){
+    const plant={x:x+(plantRandom()-.5)*3,z:z+(plantRandom()-.5)*3,id,width:.7+plantRandom()*.65};
+    if(!isWater(plant,1))birchPlants.push(plant);
   }
 }
 function paintUnderstory(id){
@@ -272,12 +284,16 @@ function paintBirch(id){
 const grassArt=[];
 const grassRows=[];
 const grassRandom=generator(52931);
-for(let z=91;z<197;z+=1.8){
+for(let z=77;z<211;z+=1.8){
   const patches=[];
-  for(let offset=-26.5;offset<=26.5;offset+=2.35){
+  for(let offset=-46;offset<=46;offset+=2.35){
     const pz=z+(grassRandom()-.5)*.75;
-    patches.push({x:birchCenter(pz)+offset+(grassRandom()-.5)*.85,z:pz,
-      width:3.8+grassRandom()*.9,variant:Math.floor(grassRandom()*8)});
+    const x=birchCenter(pz)+offset+(grassRandom()-.5)*.85;
+    const depth=birchDepth(x,pz)+4*Math.sin(pz*.20+x*.32);
+    const density=Math.min(1,Math.max(0,(depth+7)/17));
+    if(grassRandom()>=density||isWater({x,z:pz},2))continue;
+    patches.push({x,z:pz,
+      width:(3.8+grassRandom()*.9)*(.42+.58*density),variant:Math.floor(grassRandom()*8)});
   }
   grassRows.push(patches.filter(p=>!atDen(p.x,p.z,1.45)));
 }
