@@ -1,3 +1,5 @@
+import {isWater} from './config.js';
+import {denSites} from './forest-hills.js';
 // The plan’s four pin centres, read against P09 and the player boundary.
 export const forestPins=[
   {id:'P14',x:51,z:-82},{id:'P12',x:68,z:-56},
@@ -30,20 +32,50 @@ for(let row=0;row<3;row++)for(const side of [-1,1]){
 const birchRandom=generator(48131);
 export const birches=[];
 export const birchCenter=z=>-19+6*Math.sin((z-90)/107*Math.PI);
-export const inBirches=(x,z)=>z>=90&&z<=197&&Math.abs(x-birchCenter(z))<=28;
+// Distance inside a scalloped woodland outline, with different shapes on all four sides.
+export function birchDepth(x,z){
+  const offset=x-birchCenter(z);
+  const west=29+5*Math.sin(z*.11)+3*Math.cos(z*.19);
+  const east=27+7*Math.sin(z*.105+1)+4*Math.cos(z*.21);
+  const south=90+6*Math.sin(offset*.14)+4*Math.cos(offset*.25);
+  const north=197+5*Math.sin(offset*.18)-3*Math.cos(offset*.23);
+  return Math.min(west+offset,east-offset,z-south,north-z);
+}
+const edgeRandom=generator(97631);
 for(let cell=0;cell<21;cell++){
   const z0=90+cell*107/21;
   for(let column=0;column<11;column++){
     const z=z0+(.12+.76*birchRandom())*107/21;
     const x=birchCenter(z)-28+(column+.12+.76*birchRandom())*56/11;
     const height=11+birchRandom()*6;
-    birches.push({x,z,height,width:height*.44,radius:.22+birchRandom()*.12,variant:Math.floor(birchRandom()*9)});
+    const tree={x,z,height,width:height*.44,radius:.22+birchRandom()*.12,variant:Math.floor(birchRandom()*9)};
+    const depth=birchDepth(x,z);
+    if(depth<9){
+      if(edgeRandom()>Math.max(0,(depth+1)/10))continue;
+      const scale=.55+.45*Math.min(1,Math.max(0,depth/9));
+      tree.height*=scale;tree.width*=scale;tree.radius*=scale;
+    }
+    birches.push(tree);
   }
 }
+// A few families of younger trees break away from the mature stand.
+for(const [cx,cz] of [[-39,89],[1,85],[17,115],[19,157],[10,190],[-22,202],[-48,157]]){
+  for(let i=0;i<3;i++){
+    const x=cx+(edgeRandom()-.5)*7,z=cz+(edgeRandom()-.5)*7;
+    if(isWater({x,z},2)||birches.some(t=>Math.hypot(t.x-x,t.z-z)<2)||
+      denSites.some(p=>Math.hypot(p.x-x,p.z-z)<2))continue;
+    const height=4+edgeRandom()*4;
+    birches.push({x,z,height,width:height*.45,radius:.12+height*.012,variant:Math.floor(edgeRandom()*9)});
+  }
+}
+const birchBounds={
+  left:Math.min(...birches.map(p=>p.x))-1,right:Math.max(...birches.map(p=>p.x))+1,
+  near:Math.min(...birches.map(p=>p.z))-1,far:Math.max(...birches.map(p=>p.z))+1
+};
 const allTrunks=[...firs,...birches];
 // Snap a destination out of the solid wood; grazing the trunk slides along it.
 export function clearTrunks(p){
-  if(!inGrove(p.x,p.z,3)&&!inBirches(p.x,p.z))return;
+  if(!inGrove(p.x,p.z,3)&&(p.x<birchBounds.left||p.x>birchBounds.right||p.z<birchBounds.near||p.z>birchBounds.far))return;
   for(const tree of allTrunks){
     const dx=p.x-tree.x,dz=p.z-tree.z,r=tree.radius+.24;
     if(Math.abs(dx)>=r || Math.abs(dz)>=r)continue;
