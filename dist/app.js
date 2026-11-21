@@ -1,9 +1,9 @@
-import {frameLodgeStairs,followRoomVisitor,roomVisitorProjection} from './game/room-follow.js?v=coop-orbit-1';
+import {frameLodgeStairs,followRoomVisitor,roomVisitorProjection} from './game/room-follow.js?v=coop-orbit-2';
 import {groundThroughDoor} from './game/doorway.js';
 import {BuildingOcclusion,spriteBounds} from './render/occlusion.js?v=visible-picking-1';
 import {LodgeInteriorView} from './game/lodge-camera.js?v=lodge-eyes-2';
 import {BarnVisit} from './game/barn.js?v=doorway-walk-1';
-import {BarnInteriorView} from './game/barn-camera.js?v=immersive-barn-v2';
+import {BarnInteriorView} from './game/barn-camera.js?v=coop-orbit-2';
 import {FarmRoomVisit,FARM_ROOMS} from './game/farm-room.js?v=solid-buildings-2';
 import {LodgeVisit} from './game/lodge.js?v=lodge-hearth-1';
 import {setupShepherdChat} from './shepherd-chat.js?v=haru-voice-1';
@@ -63,7 +63,7 @@ function waitingForDoor(point){
   return Math.hypot(point.x-door.x,point.z-door.z)<1.65;
 }
 const outdoorView=new MeadowView(),indoorView=new BarnInteriorView();
-const lodgeView=new LodgeInteriorView(),lookoutView=new LodgeInteriorView(),farmView=new BarnInteriorView();
+const lodgeView=new LodgeInteriorView(),lookoutView=new BarnInteriorView(),farmView=new BarnInteriorView();
 lodgeView.zoom=1.25;lodgeView.pitch=.025;
 let view=outdoorView;
 const millView=new LodgeInteriorView();
@@ -1071,6 +1071,7 @@ function renderRoomOutlook(kind,elevation=0){
       if(!clipRoomDoorway(c,kind,roomView,W,H))return;
     }
     const door=CONFIG[kind].entrance;
+    lookoutView.orbitPitch=roomView.orbitPitch;lookoutView.orbitFocal=roomView.orbitFocal;
     lookoutView.yaw=roomView.yaw;lookoutView.pitch=roomView.pitch;lookoutView.zoom=roomView.zoom;
     lookoutView.eyeHeight=roomView.eyeHeight+elevation;
     lookoutView.target.x=door.x+roomView.target.x;

@@ -1,6 +1,9 @@
 import {lodgeWalkable,FLIGHT,LODGE_ROOM} from './lodge-layout.js?v=lodge-hearth-1';
 import {FARM_ROOMS} from './farm-room.js?v=solid-buildings-2';
 
+// Top of the farm room floor slab (center .03, thickness .12).
+const coopFloorHeight=.09;
+
 function cameraFits(kind,floor,x,z,elevation){
   if(kind==='lodge'){
     const inShaft=x>3.05&&x<5.12&&z>FLIGHT.opening&&z<13.12;
@@ -21,26 +24,37 @@ function cameraFits(kind,floor,x,z,elevation){
 export function followRoomVisitor(view,player,kind,floor,w,h,elevation=(floor-1)*LODGE_ROOM.floorHeight,travelTime=null){
   const previous=view.roomFollow;
   if(travelTime===null&&previous&&previous.elevation===elevation&&previous.kind===kind&&previous.floor===floor&&previous.x===player.x&&
-     previous.z===player.z&&previous.yaw===view.yaw&&previous.zoom===view.zoom&&
+     previous.z===player.z&&previous.yaw===view.yaw&&previous.pitch===view.pitch&&previous.zoom===view.zoom&&
      previous.w===w&&previous.h===h)return;
-  view.roomFollow={kind,floor,elevation,x:player.x,z:player.z,yaw:view.yaw,zoom:view.zoom,w,h};
-  const f=view.basis(w,h).f;
-  const reach=Math.min(7,Math.max(2.5,f/(h*.12)));
+  view.roomFollow={kind,floor,elevation,x:player.x,z:player.z,yaw:view.yaw,pitch:view.pitch,zoom:view.zoom,w,h};
   const sy=Math.sin(view.yaw),cy=Math.cos(view.yaw);
-  // A slight shoulder offset leaves the path straight ahead visible.
-  const dx=-sy+.15*cy,dz=-cy-.15*sy;
   if(kind==='coop'){
-    // Reserve the same circle in every direction so turning cannot change framing.
-    // The front bay opens into a narrower aisle between the nests and perches.
+    // Orbit the visitor's torso. Keep the sprite's feet on the same floor
+    // projection as the room geometry, even when standing beside the door.
     const side=Math.abs(player.x);
-    const aisleStart=1.3,aisleHalfWidth=1.45;
-    const aisleClearance=Math.hypot(Math.max(0,aisleHalfWidth-side),Math.max(0,aisleStart-player.z));
-    const clearance=Math.max(0,Math.min(player.z-.35,FARM_ROOMS.coop.depth-player.z,FARM_ROOMS.coop.halfWidth-side,aisleClearance));
-    const arm=Math.min(reach,clearance/Math.hypot(dx,dz));
-    view.target.x=player.x+dx*arm;
-    view.target.z=player.z+dz*arm;
+    const furniture=Math.hypot(Math.max(0,1.45-side),Math.max(0,1.3-player.z));
+    const arm=Math.max(.15,Math.min(4,player.z-.35,8.85-player.z,3.55-side,furniture));
+    view.target.x=player.x-sy*arm;
+    view.target.z=player.z-cy*arm;
+    // Aim down toward the torso as the walls shorten the orbit. Zoom the
+    // lens with the distance so the rendered feet stay on their floor plank.
+    view.eyeHeight=1.65;
+    view.orbitPitch=Math.min(1.48,Math.atan2(.6,arm)+view.pitch);
+    const cp=Math.cos(view.orbitPitch),sp=Math.sin(view.orbitPitch);
+    const height=view.eyeHeight-coopFloorHeight;
+    const depth=arm*cp+height*sp;
+    const vertical=height*cp-arm*sp;
+    // Limit the lens at extreme zoom so the hat and shadow still fit together.
+    const scale=Math.min(Math.min(w*.17,h*.12)*view.zoom/1.4,
+      h*.49/Math.max(.01,2.4-vertical),h*.45/Math.max(.01,vertical+.16));
+    view.orbitFocal=scale*depth;
     return;
   }
+  view.orbitPitch=undefined;view.orbitFocal=undefined;
+  const f=view.basis(w,h).f;
+  const reach=Math.min(7,Math.max(2.5,f/(h*.12)));
+  // A slight shoulder offset leaves the path straight ahead visible.
+  const dx=-sy+.15*cy,dz=-cy-.15*sy;
   let distance=0;
   for(let step=.15;step<reach+.15;step+=.15){
     const next=Math.min(step,reach);
@@ -107,6 +121,7 @@ export function frameLodgeStairs(view,visit,player,w,h,time){
 }
 
 export function roomVisitorProjection(view,player,w,h,lift=0){
+  if(view.roomFollow?.kind==='coop')return view.project(player.x,player.z,coopFloorHeight,w,h);
   const foot=view.project(player.x,player.z,lift,w,h);
   if(foot&&view.stairShot?.grounded)return foot;
   // When a wall shortens the camera arm, keep the visitor framed in the foreground.

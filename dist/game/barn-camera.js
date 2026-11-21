@@ -7,10 +7,11 @@ export class BarnInteriorView {
   zoomAt(next){this.zoom=Math.max(.65,Math.min(3.4,next));}
   pan(dx,dy){this.yaw=(this.yaw-dx*.006)%(Math.PI*2);this.pitch=Math.max(-.4,Math.min(.55,this.pitch+dy*.002));}
   basis(w,h){
-    const key=[w,h,this.zoom,this.yaw,this.pitch,this.target.x,this.target.z];
+    const key=[w,h,this.zoom,this.yaw,this.pitch,this.target.x,this.target.z,this.eyeHeight,this.orbitPitch,this.orbitFocal];
     if(this._key&&key.every((value,i)=>value===this._key[i]))return this._basis;
     this._key=key;
-    return this._basis={x:this.target.x,z:this.target.z,height:this.eyeHeight,sy:Math.sin(this.yaw),cy:Math.cos(this.yaw),cp:Math.cos(this.pitch),sp:Math.sin(this.pitch),f:Math.min(w*.7,850)*this.zoom/1.4,cx:w/2,screenY:h*.52};
+    const pitch=this.orbitPitch??this.pitch;
+    return this._basis={x:this.target.x,z:this.target.z,height:this.eyeHeight,sy:Math.sin(this.yaw),cy:Math.cos(this.yaw),cp:Math.cos(pitch),sp:Math.sin(pitch),f:this.orbitFocal??Math.min(w*.7,850)*this.zoom/1.4,cx:w/2,screenY:h*.52};
   }
   project(x,z,y,w,h){
     const b=this.basis(w,h),dx=x-b.x,dz=z-b.z,forward=dx*b.sy+dz*b.cy,side=dx*b.cy-dz*b.sy,up=y-b.height;

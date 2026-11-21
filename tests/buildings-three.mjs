@@ -118,18 +118,27 @@ for(const kind of ['coop','shed']){
 }
 console.log('Three.js buildings: actual batched meshes, camera alignment, four-side picking, WebGL fallback/cache/pixel budget, closed rooms and continuous coop/warehouse entry-walk-exit passed.');
 
-// A horizontal turn must keep the standing visitor framed at the same height.
-for(const [w,h] of [[390,760],[1000,700]]){
-  for(const [x,z] of [[0,1],[1.25,1.3],[0,4],[0,8.4]]){
+// Rotating at the open doorway must keep the feet on the same floor plank.
+for(const [w,h] of [[390,760],[900,390],[1000,700]]){
+  for(const [x,z] of [[0,.55],[0,1],[1.25,1.3],[0,4],[0,8.4]]){
     const camera=new BarnInteriorView(),player={x,z};
-    let first;
-    for(let degree=0;degree<=360;degree++){
-      camera.yaw=degree*Math.PI/180;
-      followRoomVisitor(camera,player,'coop',1,w,h);
-      const foot=roomVisitorProjection(camera,player,w,h);
-      first??=foot;
-      assert.ok(Math.abs(foot.y-first.y)<1e-6);
-      assert.ok(Math.abs(foot.s-first.s)<1e-6);
+    for(const zoom of [.65,1.4,3.4])for(const pitch of [-.4,-.03,.55]){
+      camera.zoom=zoom;camera.pitch=pitch;
+      let first;
+      for(let degree=-360;degree<=360;degree+=5){
+        camera.yaw=degree*Math.PI/180;
+        followRoomVisitor(camera,player,'coop',1,w,h);
+        const foot=roomVisitorProjection(camera,player,w,h);
+        const floorHeight=.09;
+        assert.deepEqual(foot,camera.project(x,z,floorHeight,w,h),'feet coincide with the physical floor');
+        const eye=camera.basis(w,h),ground=camera.ground(foot.x,foot.y,w,h);
+        const fraction=(eye.height-floorHeight)/eye.height;
+        assert.ok(Math.hypot(eye.x+(ground.x-eye.x)*fraction-x,
+          eye.z+(ground.z-eye.z)*fraction-z)<1e-8,'ray from the drawn feet hits the original plank');
+        assert.ok(foot.y-2.32*foot.s>=0 && foot.y+.16*foot.s<h,'hat and shadow fit inside the viewport');
+        first??=foot;
+        assert.ok(Math.abs(foot.y-first.y)<1e-6 && Math.abs(foot.s-first.s)<1e-6);
+      }
     }
   }
 }
