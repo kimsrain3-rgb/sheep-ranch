@@ -1,3 +1,5 @@
+import {trailX,inGrove,clearTrunks,groveRoute} from './game/fir-grove.js';
+import {drawForestFloor,addForestLayers,groveVisible} from './render/fir-grove.js';
 import {frameLodgeStairs,followRoomVisitor,roomVisitorProjection} from './game/room-follow.js?v=coop-circle-1';
 import {groundThroughDoor} from './game/doorway.js';
 import {BuildingOcclusion,spriteBounds} from './render/occlusion.js?v=visible-picking-1';
@@ -83,7 +85,8 @@ bond.apply(flock);
 const shepherd=new ShepherdBoy(),barnVisit=new BarnVisit(),lodgeVisit=new LodgeVisit(),farmVisit=new FarmRoomVisit();
 let chat=null,pendingShepherdTalk=false;
 let coopScreen=null,lodgeScreen=null,shedScreen=null;
-const grass=makeVegetation();
+const grass=makeVegetation().filter(p=>!inGrove(p.x,p.z));
+const meadowTrees=trees.filter(p=>!inGrove(p.x,p.z));
 const particles=[];
 const buildingOcclusion=new BuildingOcclusion();
 const shedOccluder={kind:'shed',billboard:true,x:CONFIG.shed.x,z:CONFIG.shed.z,scale:1/8,polygons:[
@@ -153,7 +156,8 @@ function path(points,color){
 function walkToOutdoor(point){
   const goal={x:clamp(point.x,CONFIG.playerBounds.minX,CONFIG.playerBounds.maxX),z:clamp(point.z,CONFIG.playerBounds.minZ,CONFIG.playerBounds.maxZ)};
   keepDry(goal);
-  const route=dryRoute(player,goal),target=route.shift();
+  clearTrunks(goal);
+  const route=groveRoute(player,dryRoute(player,goal)),target=route.shift();
   outdoorWalk={goal,route,target};
   player.tx=target.x;player.tz=target.z;marker=goal;
 }
@@ -198,8 +202,9 @@ function addBridgeRails(layers){
     layers.push({...at,cover:{halfWidth:18,above:5,below:5},draw:()=>drawBridgeRail(c,project,side,bridge)});
   }
 }
-function background(){
+function background(showGrove){
   drawPasture(c,W,H,t,sunset,view,project,ellipse,path,atmosphere);
+  if(showGrove)drawForestFloor(c,project,view.basis(W,H),W,H,atmosphere);
   drawBridgeDeck(c,project);
   drawVegetation(c,grass,project,t,W,H);
   for(const pile of interaction.hayPiles)drawHayPile(c,project(pile.x,pile.z),pile);
@@ -295,7 +300,7 @@ function update(dt){
       else if(lodgeVisit.inside)lodgeVisit.move(player,next,!!(dx||dz));
       else if(barnVisit.inside||farmVisit.inside||bridgePathClear(player,next)){
         player.x=next.x;player.z=next.z;
-        if(!barnVisit.inside&&!lodgeVisit.inside&&!farmVisit.inside)keepDry(player);
+        if(!barnVisit.inside&&!lodgeVisit.inside&&!farmVisit.inside){keepDry(player);clearTrunks(player);}
       }
     }
     else marker=null;
@@ -395,7 +400,7 @@ function updateCareUI(){
   $('hay').textContent=interaction.carrying?'건초를 들고 있어요':'창고에서 건초 가져오기';
 }
 function drawWorldLayer(layer){
-  const p=project(layer.x??0,layer.z,layer.height);if(!p)return;
+  const p=layer.projected??project(layer.x??0,layer.z,layer.height);if(!p)return;
   buildingOcclusion.draw(c,p.depth,spriteBounds(p,layer.cover),()=>layer.draw());
 }
 function paintWorldLayers(layers){
@@ -404,7 +409,7 @@ function paintWorldLayers(layers){
   const sailsInView=hub&&hub.x>-8*hub.s&&hub.x<W+8*hub.s&&hub.y>-8*hub.s&&hub.y<H+8*hub.s;
   const meshes=[...getBuildingOcclusionMeshes({snow:atmosphere.kind==='snow',millTime:sailsInView?t:undefined,lodgeDoor:entranceDoors.lodge}).filter(mesh=>visibleBuildings.has(mesh.kind)),...(visibleBuildings.has('shed')?[shedOccluder]:[])];
   buildingOcclusion.prepare(view.basis(W,H),W,H,meshes,view===lookoutView?.12:.8);
-  layers.forEach(layer=>layer.depth=project(layer.x??0,layer.z,layer.height)?.depth??-1);
+  layers.forEach(layer=>layer.depth=layer.projected?.depth??project(layer.x??0,layer.z,layer.height)?.depth??-1);
   layers.sort((a,b)=>b.depth-a.depth);
   // Paint solid buildings first. Every subsequent world sprite uses their
   // actual nearest surface depth, rather than the building entrance's depth.
@@ -419,7 +424,8 @@ function paintWorldLayers(layers){
   for(const layer of layers)if(!layer.building&&layer.focused&&layer.depth>0)drawWorldLayer(layer);
 }
 function drawOutdoorScenery(interiorKind){
-  background();
+  const showGrove=groveVisible(project,W,H);
+  background(showGrove);
   if(!interiorKind)drawMarker();
   const petFocus=!interiorKind&&interaction.active?.kind==='pet'&&interaction.active.phase==='playing'?interaction.active.animal:null;
   const layers=sheep.map(a=>({
@@ -439,7 +445,8 @@ function drawOutdoorScenery(interiorKind){
       time:t,walking:player.walking,seated,feeding,petting:interaction.active?.kind==='pet'&&interaction.active.phase==='playing',milking:interaction.active?.kind==='milk'&&interaction.active.phase==='playing',lambSize:interaction.active?.animal.size,pose:interaction.active?.phase==='playing'?visitorPose(interaction.active.animal.x-player.x,interaction.active.animal.z-player.z,view.yaw):visitorPose(player.headingX??0,player.headingZ??1,view.yaw)
     })
   });
-  for(const a of trees)layers.push({
+  if(showGrove)addForestLayers(layers,c,project,W,H,t,view.yaw);
+  for(const a of meadowTrees)layers.push({
     x:a.x,z:a.z,cover:{halfWidth:a.size*1.3,above:a.size*1.8,below:.4},draw:()=>{
       const p=project(a.x,a.z);if(p&&p.x>-300&&p.x<W+300)tree(p.x,p.y,p.s*a.size/45);
     }
@@ -527,6 +534,11 @@ function start(){
   $('welcome').hidden=true;
   view.zoom=1.65;
   const spawn=new URLSearchParams(location.search).get('start');
+  if(spawn==='forest'){
+    const z=-27,x=trailX(z);
+    Object.assign(player,{x,z,tx:x,tz:z,headingX:0,headingZ:1});
+    view.yaw=.03;view.pitch=.08;view.zoom=1.9;
+  }
   if(spawn==='windmill'){
     const {x,z}=CONFIG.windmill.entrance;
     Object.assign(player,{x,z:z-8,tx:x,tz:z-8});
