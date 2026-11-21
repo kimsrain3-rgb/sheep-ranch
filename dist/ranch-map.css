@@ -1,0 +1,23 @@
+body:not(.walking) #map-open{display:none}
+#map-mobile{display:none}
+@media(max-width:700px),(max-height:540px){
+  .walking #map-mobile{display:block;position:fixed;z-index:25;top:max(14px,env(safe-area-inset-top));right:104px}
+  #map-mobile button{height:44px;border-radius:24px;padding:0 16px;background:#f8f6e8ed;color:#294735;border:1px solid #fff9;font:inherit;font-size:13px}
+}
+#ranch-map{box-sizing:border-box;width:min(580px,94vw);max-height:94dvh;overflow:auto;margin:auto;padding:20px;background:#f8f5e9;color:#283f32;border:1px solid #c9cdb6;border-radius:18px;box-shadow:0 16px 65px #15281d55}
+#ranch-map::backdrop{background:#20342877}
+.map-heading,.map-key{display:flex;align-items:center;gap:12px}
+.map-heading{justify-content:space-between}
+.map-heading h2{margin:0;font-family:serif;font-size:24px}
+#ranch-map-close{border:0;background:transparent;font-size:24px;width:42px;height:42px;color:inherit}
+#ranch-map-status{margin:0 0 12px;font-size:13px}
+.map-content{display:grid;grid-template-columns:1fr 132px;align-items:start;gap:14px}
+.map-sheet{position:relative;overflow:hidden;border-radius:10px;background:#f0eedf;border:1px solid #c7d0b8}
+#ranch-map-drawing{display:block;width:100%;height:min(59dvh,455px);cursor:crosshair;touch-action:manipulation}
+.map-north{position:absolute;top:8px;right:10px;color:#43594a;font-size:11px;pointer-events:none}
+#ranch-map-places{display:grid;gap:5px}
+#ranch-map-places button{min-height:39px;text-align:left;padding:7px 13px;color:#34503d;border:1px solid #d1d6c1;background:#f5f5e9;border-radius:9px;font-size:13px}
+#ranch-map-places button:is(:hover,:focus-visible){background:#dae5cb}
+.map-key{margin-top:10px;font-size:12px}.map-key span::before{content:'';display:inline-block;margin-right:5px;width:9px;height:9px;background:#226858;border-radius:50%}.map-key span+span::before{background:#b2603e}
+@media(max-width:500px){#ranch-map{padding:14px}.map-content{gap:7px;grid-template-columns:minmax(0,1fr) 86px}#ranch-map-places button{padding:5px 7px;min-height:40px}#ranch-map-drawing{height:min(61dvh,460px)}}
+@media(max-height:540px){#ranch-map{padding:8px 14px}.map-content{grid-template-columns:1fr 44%}#ranch-map-places{grid-template-columns:1fr 1fr}#ranch-map-drawing{height:55dvh}.map-key{margin-top:4px}}

@@ -1,3 +1,4 @@
+import {setupRanchMap} from './ranch-map.js';
 import {trailX,inGrove,clearTrunks,groveRoute} from './game/fir-grove.js';
 import {drawForestFloor,addForestLayers,groveVisible} from './render/fir-grove.js';
 import {frameLodgeStairs,followRoomVisitor,roomVisitorProjection} from './game/room-follow.js?v=coop-circle-1';
@@ -153,11 +154,15 @@ function path(points,color){
   c.closePath();
   c.fill();
 }
-function walkToOutdoor(point){
+function planOutdoorWalk(from,point){
   const goal={x:clamp(point.x,CONFIG.playerBounds.minX,CONFIG.playerBounds.maxX),z:clamp(point.z,CONFIG.playerBounds.minZ,CONFIG.playerBounds.maxZ)};
   keepDry(goal);
   clearTrunks(goal);
-  const route=groveRoute(player,dryRoute(player,goal)),target=route.shift();
+  const route=groveRoute(from,dryRoute(from,goal));
+  return {goal,route};
+}
+function walkToOutdoor(point,plan=planOutdoorWalk(player,point)){
+  const {goal,route}=plan,target=route.shift();
   outdoorWalk={goal,route,target};
   player.tx=target.x;player.tz=target.z;marker=goal;
 }
@@ -176,7 +181,10 @@ function tapBeyondDoor(kind,visit,ground,x,y){
 function continueThroughDoor(){
   if(!doorwayWalk)return;
   const {visit,route,goal}=doorwayWalk;
-  if(visit.route!==route){doorwayWalk=null;return;}
+  if(visit.route!==route){
+    if(doorwayWalk.fromMap && visit===lodgeVisit && (visit.exitAfterStairs||visit.trip==='exit'))doorwayWalk.route=visit.route;
+    else{doorwayWalk=null;return;}
+  }
   if(visit.inside)return;
   doorwayWalk=null;
   // All front doors face -z. Keep the outdoor orbit camera on the field side.
@@ -843,7 +851,7 @@ addEventListener('blur',()=>{
   pointers.clear();gesture=null;
 });
 addEventListener('keydown',e=>{
-  if(millMode||lodgeVisit.stair)return;
+  if(millMode||lodgeVisit.stair||$('ranch-map').open)return;
   if(!started||paused||['INPUT','TEXTAREA','SELECT'].includes(e.target?.tagName))return;const k=e.key.toLowerCase();if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright','f'].includes(k)){
     e.preventDefault();if(!started)start();if(k!=='f'){
       cancelHammockWalk();cancelBarnTrip();
@@ -971,6 +979,42 @@ if(typeof document.querySelectorAll==='function')setupMeadowPanel({
 });
 addEventListener('pagehide',()=>bond.save());
 
+function currentMapVisit(){
+  return barnVisit.inside?barnVisit:lodgeVisit.inside?lodgeVisit:farmVisit.inside?farmVisit:null;
+}
+function readMapPosition(){
+  const visit=currentMapVisit(),position=visit?.outside??player;
+  const points=doorwayWalk?[doorwayWalk.goal]:outdoorWalk?[outdoorWalk.target,...outdoorWalk.route]:[];
+  return {position,points};
+}
+function followMapPin(point){
+  const visit=currentMapVisit();
+  if(lodgeVisit.stair)return '계단을 다 걸은 뒤 목적지를 선택해 주세요.';
+  const plan=planOutdoorWalk(visit?.outside??{x:player.x,z:player.z},point);
+  const last=plan.route.at(-1);
+  if(!last||Math.hypot(last.x-plan.goal.x,last.z-plan.goal.z)>.12)return '이 지점까지 걷는 길을 찾지 못했어요. 가까운 풀밭을 짚어 주세요.';
+  cancelHammockWalk();cancelBarnTrip();cancelLodgeTrip();
+  if(hammocking)$('hammock').onclick();
+  if(seated)$('sit').onclick();
+  if(feeding)feed();
+  interaction.cancel(view);interaction.supplyTrip=false;interaction.mode='pet';
+  selected=null;keys.clear();following=true;
+  if(visit){
+    visit.requestExit(player);
+    doorwayWalk={visit,route:visit.route,goal:plan.goal,fromMap:true};
+  }else{
+    walkToOutdoor(point,plan);
+  }
+  notify(point.name+'까지 걸어가요.');
+  return '';
+}
+let openRanchMap;
+$('map-open').onclick=()=>{
+  if(!started||millMode)return;
+  keys.clear();
+  openRanchMap??=setupRanchMap(readMapPosition,followMapPin);
+  openRanchMap();
+};
 function cancelFarmTrip(){if(!farmVisit.inside&&farmVisit.trip)farmVisit.cancel(player);}
 function cancelBarnTrip(){cancelFarmTrip();cancelOutdoorWalk();cancelShepherdTalk();if(!barnVisit.inside&&barnVisit.trip==='enter')barnVisit.cancel(player);}
 function cancelLodgeTrip(){if(!lodgeVisit.inside&&lodgeVisit.trip==='enter')lodgeVisit.cancel(player);}

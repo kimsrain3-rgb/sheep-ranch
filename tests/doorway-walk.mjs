@@ -43,7 +43,7 @@ const hooks=`
     if(kind==='lodge'){goLodge();return lodgeVisit;}
     goFarmRoom(kind);return farmVisit;
   }
-  export {entranceDoors};
+  export {entranceDoors,followMapPin,readMapPosition};
   export function visitorFrame(yaw){
     view.yaw=yaw;centerView();
     return {sprite:roomVisitorProjection(view,player,W,H),eye:view.basis(W,H)};
@@ -155,3 +155,18 @@ for(const kind of Object.keys(game.entranceDoors)){
     assert.equal(game.entranceDoors[kind],0,kind+' closes after the visitor walks away');
   }
 }
+
+for(const [kind,floor] of [['barn',1],['coop',1],['shed',1],['lodge',2]]){
+  const visit=game.enter(kind,floor);
+  const door=CONFIG[kind].entrance;
+  const goal={x:door.x,z:door.z-5,name:'입구 앞 풀밭'};
+  assert.deepEqual(game.readMapPosition().position,visit.outside);
+  assert.equal(game.followMapPin(goal),'');
+  assert.ok(visit.inside,'selecting a map point must not teleport the visitor');
+  for(let step=0;step<600;step++){
+    game.update(.05);
+    if(!visit.inside && distance(game.player,goal)<.1)break;
+  }
+  assert.ok(!visit.inside && distance(game.player,goal)<.1,kind+' follows the map pin via stairs and door');
+}
+console.log('Map pins from all walkable buildings reach their outdoor destination on foot.');
