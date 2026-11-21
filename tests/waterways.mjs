@@ -10,6 +10,21 @@ import {trees} from '../dist/pasture.js';
 import {makeVegetation} from '../dist/render/details.js';
 
 assert.equal(WATERWAYS.length,2);
+const upstream=WATERWAYS[0].points;
+const nearestZ=z=>upstream.reduce((a,b)=>Math.abs(a.z-z)<Math.abs(b.z-z)?a:b);
+for(const [pool,narrows] of [[87,74],[139,119],[188,169]]){
+ assert.ok(nearestZ(pool).width>nearestZ(narrows).width*2,'successive pools and narrows have distinct widths');
+}
+// A visitor can follow the same side of the stream past several successive pools.
+let bankWalk={x:-45,z:87};
+for(const z of [101,120,138,160,185,207,225]){
+ const p=nearestZ(z),goal={x:p.x+p.width+3,z:p.z};
+ for(const step of dryRoute(bankWalk,goal)){
+   assert.ok(riverPathClear(bankWalk,step));
+   bankWalk=step;
+ }
+ assert.ok(Math.hypot(bankWalk.x-goal.x,bankWalk.z-goal.z)<.01);
+}
 assert.equal(BRIDGES.length,2,'both water crossings are available');
 assert.ok(WATERWAYS[0].points[0].z>=240,'water begins near the distant mountains');
 assert.ok(pondLevel(WATERWAYS[0].points.at(-1))<1,'inlet reaches the lake');

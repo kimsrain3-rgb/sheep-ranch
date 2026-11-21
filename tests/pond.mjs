@@ -52,7 +52,17 @@ const {addGardenLayers}=await import('../dist/render/pond-garden.js');
 const garden=[];
 addGardenLayers(null,()=>({x:50,y:50,s:10}),garden,100,100);
 assert.ok(['flowers','stone','reeds'].every(kind=>garden.some(item=>item.kind===kind)));
-for(const tuft of garden.filter(item=>item.kind==='flowers')){
+const pondGarden=garden.filter(item=>item.bank!=='inlet');
+for(const tuft of pondGarden.filter(item=>item.kind==='flowers')){
   assert.ok(pondLevel(tuft)>1.01 && pondLevel(tuft)<1.35,'wildflowers stay on the grassy bank');
   assert.ok(CONFIG.drinkingSpots.every(s=>Math.hypot(s.x-tuft.x,s.z-tuft.z)>=1.7),'watering spots stay open');
+}
+
+for(let sector=0;sector<4;sector++){
+ const quarter=pondGarden.filter(pt=>(Math.floor(Math.atan2((pt.z-CONFIG.pond.z)/CONFIG.pond.rz,(pt.x-CONFIG.pond.x)/CONFIG.pond.rx)*2/Math.PI)+4)%4===sector);
+ for(const kind of ['stone','flowers','reeds'])assert.ok(quarter.some(pt=>pt.kind===kind),'every quarter of the pond has '+kind);
+}
+for(const z of [20,90,170]){
+ const stretch=garden.filter(item=>item.bank==='inlet' && item.z>=z&&item.z<z+75);
+ for(const kind of ['stone','flowers','reeds'])assert.ok(stretch.some(pt=>pt.kind===kind),'upper stream scenery includes '+kind);
 }

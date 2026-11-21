@@ -1,5 +1,5 @@
-import {addGardenLayers} from './render/pond-garden.js?v=shore-meadow-1';
-import {setupRanchMap} from './ranch-map.js';
+import {addGardenLayers} from './render/pond-garden.js?v=stream-banks-1';
+import {setupRanchMap,streamLookout} from './ranch-map.js?v=stream-banks-1';
 import {trailX,inGrove,clearTrunks,groveRoute} from './game/fir-grove.js';
 import {drawForestFloor,addForestLayers,groveVisible} from './render/fir-grove.js';
 import {frameLodgeStairs,followRoomVisitor,roomVisitorProjection} from './game/room-follow.js?v=coop-circle-1';
@@ -553,6 +553,11 @@ function start(){
     const {x,z}=CONFIG.windmill.entrance;
     Object.assign(player,{x,z:z-8,tx:x,tz:z-8});
     view.zoom=.85;view.pitch=.10;
+  }
+  if(spawn==='upstream'){
+    const {x,z}=streamLookout;
+    Object.assign(player,{x,z,tx:x,tz:z});
+    view.yaw=-.50;view.pitch=.24;view.zoom=1.65;
   }
   if(spawn==='garden'){
     const at={x:-9.415,z:6.267};

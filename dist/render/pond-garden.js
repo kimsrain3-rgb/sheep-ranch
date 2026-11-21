@@ -1,4 +1,4 @@
-import {CONFIG, pondPoint, pondLevel, onBridge, nearestRiver} from '../game/config.js?v=solid-buildings-2';
+import {CONFIG, pondPoint, pondLevel, onBridge, nearestRiver, WATERWAYS} from '../game/config.js?v=solid-buildings-2';
 import {generator} from '../game/fir-grove.js';
 const tau = Math.PI * 2;
 const ornaments = [];
@@ -28,6 +28,49 @@ for (let i=0; i<51; i++) {
   if (!shoreClear(pt,.8) || CONFIG.drinkingSpots.some(s=>Math.hypot(s.x-pt.x,s.z-pt.z)<1.55)) continue;
   ornaments.push({...pt,kind:'stone',size:.47+random()*.92,variant:i%5});
   if(i%5===0) ornaments.push({...pondPoint(a+.014,1.002),kind:'reeds',size:.87+random()*.36,variant:i%4});
+}
+
+// Round the remaining shoreline in loose groups, leaving both river mouths open.
+const bankRandom=generator(903771);
+const nest=pondPoint(4.82,1.09);
+function addBankItem(pt,kind,size,bank='pond'){
+  if(onBridge(pt,2) || Math.hypot(pt.x-nest.x,pt.z-nest.z)<2.4 ||
+     CONFIG.drinkingSpots.some(s=>Math.hypot(pt.x-s.x,pt.z-s.z)<2.1)) return;
+  const variants={flowers:9,stone:5,reeds:4};
+  ornaments.push({...pt,bank,kind,size,variant:Math.floor(bankRandom()*variants[kind])});
+}
+for(let a=1.78;a<tau+.41;a+=.14+bankRandom()*.12){
+  for(let j=0;j<3;j++){
+    const angle=a+(bankRandom()-.5)*.10;
+    const pt=pondPoint(angle,1.017+bankRandom()*.028);
+    if(shoreClear(pt,.75))addBankItem(pt,'stone',.55+bankRandom()*1.05);
+  }
+  const reeds=pondPoint(a+.038,1.004);
+  if(nearestRiver(reeds).clearance>.8)addBankItem(reeds,'reeds',.70+bankRandom()*.63);
+  for(let j=0;j<4;j++){
+    const pt=pondPoint(a+(bankRandom()-.5)*.15,1.09+bankRandom()*.085);
+    if(shoreClear(pt,1))addBankItem(pt,'flowers',.66+bankRandom()*.62);
+  }
+}
+
+// Scatter small groups with open stretches between them, on alternating banks.
+const inlet=WATERWAYS[0].points;
+let sinceGroup=0,spacing=4,side=-1;
+for(let i=1;i<inlet.length-1;i++){
+  const a=inlet[i-1],p=inlet[i],b=inlet[i+1];
+  sinceGroup+=Math.hypot(p.x-a.x,p.z-a.z);
+  if(sinceGroup<spacing || p.z<19)continue;
+  sinceGroup=0;spacing=8+bankRandom()*10;side=-side;
+  const dx=b.x-a.x,dz=b.z-a.z,length=Math.hypot(dx,dz);
+  const tx=dx/length,tz=dz/length;
+  for(const [kind,offset,mass] of [['stone',.35,3],['reeds',.08,2],['flowers',1.5,3]]){
+    for(let j=0;j<mass;j++){
+      const along=(bankRandom()-.5)*4,across=side*(p.width+offset+bankRandom()*.6);
+      const pt={x:p.x+tx*along-tz*across,z:p.z+tz*along+tx*across};
+      if(pondLevel(pt)<1.04 || (kind==='flowers' && nearestRiver(pt).clearance<.8))continue;
+      addBankItem(pt,kind,.56+bankRandom()*(kind==='stone'?1.0:.58),'inlet');
+    }
+  }
 }
 
 const sprites = new Map();

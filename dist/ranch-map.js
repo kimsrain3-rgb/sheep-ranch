@@ -4,8 +4,10 @@ import {forestPins,trailX,clearTrunks} from './game/fir-grove.js';
 const bounds=CONFIG.playerBounds;
 const buildings=buildingFootprints(CONFIG);
 const names={barn:'양 축사',coop:'닭장',lodge:'목동 숙소',shed:'건초 창고',windmill:'풍차 전망대'};
+export const streamLookout={name:'상류 물가',x:-45,z:87,kind:'stream'};
 export const places=[
   {name:'전나무 숲',x:trailX(-27),z:-27,kind:'forest'},
+  streamLookout,
   {name:'연못가',...pondPoint(4.82,1.29),kind:'water'},
   ...buildings.map(b=>({name:names[b.kind],x:b.doorX,z:b.front-1.4,kind:b.kind})),
   {name:'해먹',...CONFIG.hammock,kind:'hammock'}

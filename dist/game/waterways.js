@@ -3,14 +3,25 @@ const specs=[
   {name:'outlet',points:[[-10,-5,2.3],[-3,-12,2],[7,-24,1.8],[10,-39,1.9],[24,-58,2.1],[15,-85,2],[29,-116,2.2],[21,-154,2.1]]}
 ];
 const cat=(a,b,c,d,t)=>.5*((2*b)+(-a+c)*t+(2*a-5*b+4*c-d)*t*t+(-a+3*b-3*c+d)*t*t*t);
+// Surveyed half-widths along the upstream valley, from the lake towards the source.
+const inletWidths=[[21,2.7],[34,1.55],[47,2.1],[62,3.8],[74,1.35],[87,4.1],[104,2.7],[119,1.25],[139,3.9],[157,2.3],[169,1.05],[188,3.3],[207,1.6],[225,2.65],[241,1.15],[250,1]];
+function inletWidth(z,original){
+  if(z<=21)return original;
+  const i=inletWidths.findIndex(([at])=>at>=z);
+  if(i<0)return inletWidths.at(-1)[1];
+  const [start,a]=inletWidths[i-1],[end,b]=inletWidths[i];
+  const t=(z-start)/(end-start);
+  return a+(b-a)*t*t*(3-2*t);
+}
 export const WATERWAYS=specs.map(spec=>{
   const points=[];
   for(let i=0;i<spec.points.length-1;i++)for(let j=0;j<12;j++){
     const a=spec.points[Math.max(0,i-1)],b=spec.points[i],c=spec.points[i+1],d=spec.points[Math.min(spec.points.length-1,i+2)],t=j/12;
-    points.push({x:cat(a[0],b[0],c[0],d[0],t),z:cat(a[1],b[1],c[1],d[1],t),width:b[2]+(c[2]-b[2])*t});
+    const z=cat(a[1],b[1],c[1],d[1],t),width=b[2]+(c[2]-b[2])*t;
+    points.push({x:cat(a[0],b[0],c[0],d[0],t),z,width:spec.name==='inlet'?inletWidth(z,width):width});
   }
   const last=spec.points.at(-1);points.push({x:last[0],z:last[1],width:last[2]});
-  return {...spec,controls:spec.points.map(([x,z,width])=>({x,z,width})),points};
+  return {...spec,controls:points.filter((_,i)=>i%12===0),points};
 });
 export const BRIDGE=Object.freeze({x:7,z:-24,halfLength:5.2,halfWidth:1.35,rise:.95,ux:27/Math.hypot(27,13),uz:13/Math.hypot(27,13)});
 export const LAKE_BRIDGE=Object.freeze({x:-34,z:10,halfLength:6.4,halfWidth:2,rise:.85,ux:12/Math.hypot(12,11),uz:11/Math.hypot(12,11),style:'logs'});
