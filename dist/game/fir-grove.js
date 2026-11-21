@@ -26,10 +26,25 @@ for(let row=0;row<3;row++)for(const side of [-1,1]){
       radius:.3+random()*.18,variant:Math.floor(random()*7)});
   }
 }
+// Sweep a strip twice the fir footprint (107 × 28), curving along the inlet.
+const birchRandom=generator(48131);
+export const birches=[];
+export const birchCenter=z=>-19+6*Math.sin((z-90)/107*Math.PI);
+export const inBirches=(x,z)=>z>=90&&z<=197&&Math.abs(x-birchCenter(z))<=28;
+for(let cell=0;cell<21;cell++){
+  const z0=90+cell*107/21;
+  for(let column=0;column<11;column++){
+    const z=z0+(.12+.76*birchRandom())*107/21;
+    const x=birchCenter(z)-28+(column+.12+.76*birchRandom())*56/11;
+    const height=11+birchRandom()*6;
+    birches.push({x,z,height,width:height*.44,radius:.22+birchRandom()*.12,variant:Math.floor(birchRandom()*9)});
+  }
+}
+const allTrunks=[...firs,...birches];
 // Snap a destination out of the solid wood; grazing the trunk slides along it.
 export function clearTrunks(p){
-  if(!inGrove(p.x,p.z,3))return;
-  for(const tree of firs){
+  if(!inGrove(p.x,p.z,3)&&!inBirches(p.x,p.z))return;
+  for(const tree of allTrunks){
     const dx=p.x-tree.x,dz=p.z-tree.z,r=tree.radius+.24;
     if(Math.abs(dx)>=r || Math.abs(dz)>=r)continue;
     const d=Math.hypot(dx,dz);
@@ -44,7 +59,7 @@ export function groveRoute(from,points){
     const dx=b.x-a.x,dz=b.z-a.z,length=Math.hypot(dx,dz);
     if(length>.001){
       const ux=dx/length,uz=dz/length,hits=[];
-      for(const tree of firs){
+      for(const tree of allTrunks){
         const tx=tree.x-a.x,tz=tree.z-a.z,along=tx*ux+tz*uz,side=tz*ux-tx*uz;
         if(along<=0 || along>=length || Math.abs(side)>=tree.radius+.27)continue;
         const away=(side>=0?-1:1)*(tree.radius+.55);

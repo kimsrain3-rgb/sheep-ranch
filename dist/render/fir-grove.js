@@ -1,4 +1,4 @@
-import {firs,trailX,generator,wildlifeAt} from '../game/fir-grove.js?v=forest-fox-1';
+import {birches,firs,trailX,generator,wildlifeAt} from '../game/fir-grove.js?v=forest-fox-1';
 import {clipPondPolygon} from './pond.js?v=water-join-1';
 
 const TAU=Math.PI*2;
@@ -186,5 +186,50 @@ export function addForestLayers(layers,c,project,w,h,time,yaw){
   for(const a of wildlifeAt(time)){
     const p=project(a.x,a.z,0);if(!p||p.x<-p.s||p.x>w+p.s||p.y<0||p.y>h+p.s*2)continue;
     layers.push({...a,projected:p,cover:{halfWidth:1.2,above:2,below:.2},draw:()=>drawAnimal(c,p,a,yaw)});
+  }
+}
+
+const birchArt=[];
+function paintBirch(id){
+  const canvas=document.createElement('canvas');
+  canvas.width=180;canvas.height=400;
+  const c=canvas.getContext('2d'),random=generator(71380+id*181);
+  const lean=(random()-.5)*30;
+  const axis=y=>90+lean*(1-y/395);
+  // A tapered ivory trunk and broken charcoal bands under an airy canopy.
+  polygon(c,[[84,394],[axis(24)-1,24],[axis(24)+1,24],[96,394]],'#eeeadd');
+  for(let i=0;i<46;i++){
+    const y=30+random()*361,r=1+5*y/395,side=i%2?1:-1;
+    stroke(c,axis(y)-side*r,y,axis(y)+side*r*(random()-.35),y-1,1+random()*2,'#57594f');
+  }
+  for(let i=0;i<39;i++){
+    const u=random(),y=20+u*180,side=i%2?1:-1;
+    const x=axis(y)+side*(7+Math.sin(Math.PI*u)*62)*(.5+.5*random()),tip=y-12-random()*28;
+    stroke(c,axis(y),y+26,x,tip,1+u,'#777a60');
+    for(let j=0;j<26;j++){
+      const angle=random()*TAU,r=Math.sqrt(random());
+      oval(c,x+Math.cos(angle)*r*14,tip+Math.sin(angle)*r*15,2+random()*4,2+random()*3,angle,
+        ['#66824c','#83a45b','#a7bf70','#bad183'][j%4]);
+    }
+  }
+  // Soft moss, grass blades and occasional flower clusters at the roots.
+  oval(c,90,395,26,4,0,'#80935880');
+  for(let i=0;i<28;i++){
+    const x=66+random()*49,y=394+random()*4;
+    stroke(c,x,y,x+random()*6-3,y-3-random()*6,1.5,'#78944d');
+    if(id%3&&i%4===0)oval(c,x,y-7,2,2.6,0,id%3===1?'#ab82c8':'#ebca60');
+  }
+  return canvas;
+}
+export function addBirchLayers(layers,c,project,w,h){
+  for(const tree of birches){
+    const p=project(tree.x,tree.z,0);
+    if(!p)continue;
+    const width=tree.width*p.s,height=tree.height*p.s;
+    if(p.x+width/2<0||p.x-width/2>w||p.y<0||p.y-height>h)continue;
+    layers.push({...tree,projected:p,cover:{halfWidth:tree.width/2,above:tree.height,below:.2},draw:()=>{
+      const art=birchArt[tree.variant]??=paintBirch(tree.variant);
+      c.drawImage(art,p.x-width/2,p.y-height,width,height);
+    }});
   }
 }

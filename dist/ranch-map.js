@@ -7,6 +7,7 @@ const names={barn:'양 축사',coop:'닭장',lodge:'목동 숙소',shed:'건초 
 export const streamLookout={name:'상류 물가',x:-45,z:87,kind:'stream'};
 export const places=[
   {name:'전나무 숲',x:trailX(-27),z:-27,kind:'forest'},
+  {name:'자작나무숲',x:-23,z:108,kind:'birch'},
   streamLookout,
   {name:'연못가',...pondPoint(4.82,1.29),kind:'water'},
   ...buildings.map(b=>({name:names[b.kind],x:b.doorX,z:b.front-1.4,kind:b.kind})),

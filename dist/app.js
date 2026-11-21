@@ -1,7 +1,7 @@
 import {addGardenLayers} from './render/pond-garden.js?v=stream-banks-1';
 import {setupRanchMap,streamLookout} from './ranch-map.js?v=stream-banks-1';
 import {trailX,inGrove,clearTrunks,groveRoute} from './game/fir-grove.js?v=forest-fox-1';
-import {drawForestFloor,addForestLayers,groveVisible} from './render/fir-grove.js?v=forest-fox-1';
+import {addBirchLayers,drawForestFloor,addForestLayers,groveVisible} from './render/fir-grove.js?v=forest-fox-1';
 import {frameLodgeStairs,followRoomVisitor,roomVisitorProjection} from './game/room-follow.js?v=coop-circle-1';
 import {groundThroughDoor} from './game/doorway.js';
 import {BuildingOcclusion,spriteBounds} from './render/occlusion.js?v=visible-picking-1';
@@ -454,6 +454,7 @@ function drawOutdoorScenery(interiorKind){
       time:t,walking:player.walking,seated,feeding,petting:interaction.active?.kind==='pet'&&interaction.active.phase==='playing',milking:interaction.active?.kind==='milk'&&interaction.active.phase==='playing',lambSize:interaction.active?.animal.size,pose:interaction.active?.phase==='playing'?visitorPose(interaction.active.animal.x-player.x,interaction.active.animal.z-player.z,view.yaw):visitorPose(player.headingX??0,player.headingZ??1,view.yaw)
     })
   });
+  addBirchLayers(layers,c,project,W,H);
   if(showGrove)addForestLayers(layers,c,project,W,H,t,view.yaw);
   for(const a of meadowTrees)layers.push({
     x:a.x,z:a.z,cover:{halfWidth:a.size*1.3,above:a.size*1.8,below:.4},draw:()=>{
@@ -544,6 +545,11 @@ function start(){
   $('welcome').hidden=true;
   view.zoom=1.65;
   const spawn=new URLSearchParams(location.search).get('start');
+  if(spawn==='birch'){
+    const x=-23,z=108;
+    Object.assign(player,{x,z,tx:x,tz:z});
+    view.pitch=.08;view.zoom=1.9;
+  }
   if(spawn==='forest'){
     const z=-27,x=trailX(z);
     Object.assign(player,{x,z,tx:x,tz:z,headingX:0,headingZ:1});
