@@ -31,21 +31,19 @@ export function followRoomVisitor(view,player,kind,floor,w,h,elevation=(floor-1)
   if(kind==='coop'){
     // A fixed, moderate field of view keeps walls and fittings in proportion.
     const zoom=view.zoom/1.4;
-    const focal=Math.max(w,h)*.82*Math.max(.92,Math.pow(zoom,.22));
+    const focal=Math.max(w,h)*.82*Math.pow(zoom,zoom<1?.12:.22);
     const scale=Math.min(h*.15,w*.20)*Math.sqrt(zoom);
     const footSlope=h*.26/focal;
     const pitch=Math.max(.03-Math.atan(footSlope),.05+view.pitch*.45);
     const cp=Math.cos(pitch),sp=Math.sin(pitch);
     const rise=(sp+footSlope*cp)/(cp-footSlope*sp);
-    // Fit the orbit smoothly inside the aisle. The near wall can shorten
-    // the arm, but never opens the lens or moves the feet off their plank.
-    const desired=focal/scale*(cp-footSlope*sp);
+    // Fit a whole circle at the standing position. Testing only the current
+    // heading turns the orbit into a dolly each time the player faces a wall.
     const room=FARM_ROOMS.coop;
-    const side=sy>=0?1:-1;
-    const lateral=Math.max(.2,1.45+side*player.x);
-    const wall=room.halfWidth+.25+side*player.x;
-    const longitudinal=cy>=0?player.z-.35:room.depth+.45-player.z;
-    const arm=1/Math.hypot(1/desired,sy/Math.min(lateral,wall),cy/longitudinal,rise/2.2);
+    const side=Math.abs(player.x);
+    const aisleClearance=Math.hypot(Math.max(0,1.45-side),Math.max(0,1.3-player.z));
+    const arm=Math.min(player.z-.35,room.depth+.45-player.z,
+      room.halfWidth+.25-side,Math.max(.2,aisleClearance));
     view.roomFollow.spriteScale=scale;
     view.target.x=player.x-sy*arm;
     view.target.z=player.z-cy*arm;

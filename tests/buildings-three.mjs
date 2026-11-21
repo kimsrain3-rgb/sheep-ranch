@@ -120,11 +120,11 @@ console.log('Three.js buildings: actual batched meshes, camera alignment, four-s
 
 // Rotating at the open doorway must keep the feet on the same floor plank.
 for(const [w,h] of [[390,760],[900,390],[1000,700]]){
-  for(const [x,z] of [[0,.55],[0,1],[1.25,1.3],[0,4],[0,8.4]]){
+  for(const [x,z] of [[0,.55],[0,1],[1.25,1.3],[-3.3,1],[0,4],[1.25,6],[0,8.4]]){
     const camera=new BarnInteriorView(),player={x,z};
     for(const zoom of [.65,1.4,3.4])for(const pitch of [-.4,-.03,.55]){
       camera.zoom=zoom;camera.pitch=pitch;
-      let first;
+      let first,firstOrbit;
       for(let degree=-360;degree<=360;degree+=5){
         camera.yaw=degree*Math.PI/180;
         followRoomVisitor(camera,player,'coop',1,w,h);
@@ -133,6 +133,12 @@ for(const [w,h] of [[390,760],[900,390],[1000,700]]){
         const physical=camera.project(x,z,floorHeight,w,h);
         assert.equal(foot.x,physical.x);assert.equal(foot.y,physical.y);assert.equal(foot.depth,physical.depth);
         const eye=camera.basis(w,h),ground=camera.ground(foot.x,foot.y,w,h);
+        const radius=Math.hypot(eye.x-x,eye.z-z);
+        const reference=camera.project(x+eye.sy*2,z+eye.cy*2,1,w,h);
+        firstOrbit??={radius,height:eye.height,focal:eye.f,scale:reference.s};
+        assert.ok(Math.abs(radius-firstOrbit.radius)<1e-9,'dragging must not dolly the camera');
+        assert.equal(eye.f,firstOrbit.focal);assert.equal(eye.height,firstOrbit.height);
+        assert.ok(Math.abs(reference.s-firstOrbit.scale)<1e-9,'equal-distance scenery keeps its scale');
         const fieldOfView=2*Math.atan(Math.max(w,h)/(2*eye.f))*180/Math.PI;
         assert.ok(fieldOfView>45 && fieldOfView<70,'the longer screen axis stays within a normal lens range');
         const upright=[.1,2.6].map(y=>camera.project(eye.x+eye.sy*4,eye.z+eye.cy*4,y,w,h));
@@ -147,4 +153,15 @@ for(const [w,h] of [[390,760],[900,390],[1000,700]]){
       }
     }
   }
+}
+
+// Manual zoom still changes the lens at each step, even in the narrow doorway.
+const zoomCamera=new BarnInteriorView();
+let previousFocal=0;
+for(const zoom of [.65,.75,.9,1.1,1.4,1.8,2.4,3.4]){
+  zoomCamera.zoomAt(zoom);
+  followRoomVisitor(zoomCamera,{x:0,z:1},'coop',1,390,760);
+  const focal=zoomCamera.basis(390,760).f;
+  assert.ok(focal>previousFocal);
+  previousFocal=focal;
 }
