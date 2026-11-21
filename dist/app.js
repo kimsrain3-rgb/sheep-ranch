@@ -1,4 +1,4 @@
-import {frameLodgeStairs,followRoomVisitor,roomVisitorProjection} from './game/room-follow.js?v=coop-orbit-2';
+import {frameLodgeStairs,followRoomVisitor,roomVisitorProjection} from './game/room-follow.js?v=coop-lens-1';
 import {groundThroughDoor} from './game/doorway.js';
 import {BuildingOcclusion,spriteBounds} from './render/occlusion.js?v=visible-picking-1';
 import {LodgeInteriorView} from './game/lodge-camera.js?v=lodge-eyes-2';
@@ -307,7 +307,7 @@ function update(dt){
     else{
       interaction.cancel(view);keys.clear();selected=null;marker=null;feeding=false;
       view=farmVisit.inside?farmView:outdoorView;
-      if(farmVisit.inside){farmView.yaw=0;farmView.pitch=-.03;farmView.eyeHeight=1.65;}
+      if(farmVisit.inside){farmView.roomFollow=null;farmView.yaw=0;farmView.pitch=-.03;farmView.eyeHeight=1.65;}
       document.body.classList.toggle('in-utility',farmVisit.inside);
       $('farm-room-leave').hidden=!farmVisit.inside;$('farm-room-status').hidden=!farmVisit.inside;
       notify(farmVisit.inside?`${FARM_ROOMS[farmVisit.kind].title} 안에 들어왔어요. 바닥을 눌러 걸으며 둘러보세요.`:'문을 지나 목장으로 나왔어요.');
@@ -1072,7 +1072,7 @@ function renderRoomOutlook(kind,elevation=0){
     }
     const door=CONFIG[kind].entrance;
     lookoutView.orbitPitch=roomView.orbitPitch;lookoutView.orbitFocal=roomView.orbitFocal;
-    lookoutView.yaw=roomView.yaw;lookoutView.pitch=roomView.pitch;lookoutView.zoom=roomView.zoom;
+    lookoutView.yaw=roomView.yaw;lookoutView.pitch=roomView.orbitPitch??roomView.pitch;lookoutView.zoom=roomView.zoom;
     lookoutView.eyeHeight=roomView.eyeHeight+elevation;
     lookoutView.target.x=door.x+roomView.target.x;
     lookoutView.target.z=door.z+roomView.target.z;

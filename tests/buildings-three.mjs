@@ -130,8 +130,14 @@ for(const [w,h] of [[390,760],[900,390],[1000,700]]){
         followRoomVisitor(camera,player,'coop',1,w,h);
         const foot=roomVisitorProjection(camera,player,w,h);
         const floorHeight=.09;
-        assert.deepEqual(foot,camera.project(x,z,floorHeight,w,h),'feet coincide with the physical floor');
+        const physical=camera.project(x,z,floorHeight,w,h);
+        assert.equal(foot.x,physical.x);assert.equal(foot.y,physical.y);assert.equal(foot.depth,physical.depth);
         const eye=camera.basis(w,h),ground=camera.ground(foot.x,foot.y,w,h);
+        const fieldOfView=2*Math.atan(Math.max(w,h)/(2*eye.f))*180/Math.PI;
+        assert.ok(fieldOfView>45 && fieldOfView<70,'the longer screen axis stays within a normal lens range');
+        const upright=[.1,2.6].map(y=>camera.project(eye.x+eye.sy*4,eye.z+eye.cy*4,y,w,h));
+        assert.ok(upright[0]&&upright[1]&&upright[0].s/upright[1].s>.80,'door frame perspective stays moderate');
+        assert.ok(eye.height>floorHeight&&eye.height<3.6 && eye.z>=.34,'lens is inside the room');
         const fraction=(eye.height-floorHeight)/eye.height;
         assert.ok(Math.hypot(eye.x+(ground.x-eye.x)*fraction-x,
           eye.z+(ground.z-eye.z)*fraction-z)<1e-8,'ray from the drawn feet hits the original plank');

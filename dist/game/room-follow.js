@@ -29,27 +29,32 @@ export function followRoomVisitor(view,player,kind,floor,w,h,elevation=(floor-1)
   view.roomFollow={kind,floor,elevation,x:player.x,z:player.z,yaw:view.yaw,pitch:view.pitch,zoom:view.zoom,w,h};
   const sy=Math.sin(view.yaw),cy=Math.cos(view.yaw);
   if(kind==='coop'){
-    // Orbit the visitor's torso. Keep the sprite's feet on the same floor
-    // projection as the room geometry, even when standing beside the door.
-    const side=Math.abs(player.x);
-    const furniture=Math.hypot(Math.max(0,1.45-side),Math.max(0,1.3-player.z));
-    const arm=Math.max(.15,Math.min(4,player.z-.35,8.85-player.z,3.55-side,furniture));
+    // A fixed, moderate field of view keeps walls and fittings in proportion.
+    const zoom=view.zoom/1.4;
+    const focal=Math.max(w,h)*.82*Math.max(.92,Math.pow(zoom,.22));
+    const scale=Math.min(h*.15,w*.20)*Math.sqrt(zoom);
+    const footSlope=h*.26/focal;
+    const pitch=Math.max(.03-Math.atan(footSlope),.05+view.pitch*.45);
+    const cp=Math.cos(pitch),sp=Math.sin(pitch);
+    const rise=(sp+footSlope*cp)/(cp-footSlope*sp);
+    // Fit the orbit smoothly inside the aisle. The near wall can shorten
+    // the arm, but never opens the lens or moves the feet off their plank.
+    const desired=focal/scale*(cp-footSlope*sp);
+    const room=FARM_ROOMS.coop;
+    const side=sy>=0?1:-1;
+    const lateral=Math.max(.2,1.45+side*player.x);
+    const wall=room.halfWidth+.25+side*player.x;
+    const longitudinal=cy>=0?player.z-.35:room.depth+.45-player.z;
+    const arm=1/Math.hypot(1/desired,sy/Math.min(lateral,wall),cy/longitudinal,rise/2.2);
+    view.roomFollow.spriteScale=scale;
     view.target.x=player.x-sy*arm;
     view.target.z=player.z-cy*arm;
-    // Aim down toward the torso as the walls shorten the orbit. Zoom the
-    // lens with the distance so the rendered feet stay on their floor plank.
-    view.eyeHeight=1.65;
-    view.orbitPitch=Math.min(1.48,Math.atan2(.6,arm)+view.pitch);
-    const cp=Math.cos(view.orbitPitch),sp=Math.sin(view.orbitPitch);
-    const height=view.eyeHeight-coopFloorHeight;
-    const depth=arm*cp+height*sp;
-    const vertical=height*cp-arm*sp;
-    // Limit the lens at extreme zoom so the hat and shadow still fit together.
-    const scale=Math.min(Math.min(w*.17,h*.12)*view.zoom/1.4,
-      h*.49/Math.max(.01,2.4-vertical),h*.45/Math.max(.01,vertical+.16));
-    view.orbitFocal=scale*depth;
+    view.eyeHeight=coopFloorHeight+arm*rise;
+    view.orbitPitch=pitch;
+    view.orbitFocal=focal;
     return;
   }
+  if(view.orbitFocal!==undefined)view.eyeHeight=1.65;
   view.orbitPitch=undefined;view.orbitFocal=undefined;
   const f=view.basis(w,h).f;
   const reach=Math.min(7,Math.max(2.5,f/(h*.12)));
@@ -121,7 +126,10 @@ export function frameLodgeStairs(view,visit,player,w,h,time){
 }
 
 export function roomVisitorProjection(view,player,w,h,lift=0){
-  if(view.roomFollow?.kind==='coop')return view.project(player.x,player.z,coopFloorHeight,w,h);
+  if(view.roomFollow?.kind==='coop'){
+    const foot=view.project(player.x,player.z,coopFloorHeight,w,h);
+    return {...foot,s:view.roomFollow.spriteScale};
+  }
   const foot=view.project(player.x,player.z,lift,w,h);
   if(foot&&view.stairShot?.grounded)return foot;
   // When a wall shortens the camera arm, keep the visitor framed in the foreground.
