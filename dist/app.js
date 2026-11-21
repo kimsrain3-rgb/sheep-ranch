@@ -3,7 +3,7 @@ import {drawHills,addDenLayers} from './render/forest-hills.js?v=hill-draw-2';
 import {addGardenLayers} from './render/pond-garden.js?v=stream-banks-1';
 import {setupRanchMap,streamLookout} from './ranch-map.js?v=stream-banks-1';
 import {trailX,inGrove,clearTrunks,groveRoute} from './game/fir-grove.js?v=birch-edge-1';
-import {addBirchLayers,drawForestFloor,addForestLayers,groveVisible} from './render/fir-grove.js?v=birch-edge-1';
+import {addBirchLayers,drawForestFloor,addForestLayers,groveVisible} from './render/fir-grove.js?v=low-pet-2';
 import {frameLodgeStairs,followRoomVisitor,roomVisitorProjection} from './game/room-follow.js?v=coop-circle-1';
 import {groundThroughDoor} from './game/doorway.js';
 import {BuildingOcclusion,spriteBounds} from './render/occlusion.js?v=visible-picking-1';
@@ -213,6 +213,7 @@ function continueThroughDoor(){
   walkToOutdoor(goal);
 }
 function cancelOutdoorWalk(){
+  forestPet=null;
   if(!outdoorWalk)return;
   outdoorWalk=null;player.tx=player.x;player.tz=player.z;marker=null;
 }
@@ -222,7 +223,13 @@ function advanceOutdoorWalk(){
   if(barnVisit.inside||lodgeVisit.inside||farmVisit.inside||Math.hypot(player.tx-walk.target.x,player.tz-walk.target.z)>.001){outdoorWalk=null;return;}
   if(Math.hypot(player.x-player.tx,player.z-player.tz)>.08)return;
   if(walk.route.length){walk.target=walk.route.shift();player.tx=walk.target.x;player.tz=walk.target.z;}
-  else{outdoorWalk=null;marker=null;}
+  else{
+    outdoorWalk=null;marker=null;
+    if(forestPet?.walk===walk){
+      if(Math.hypot(player.x-forestPet.x,player.z-forestPet.z)<1.3)forestPet.start=t;
+      else forestPet=null;
+    }
+  }
 }
 function addBridgeRails(layers){
   for(const bridge of BRIDGES)for(const side of [-1,1]){
@@ -432,6 +439,11 @@ function drawWorldLayer(layer){
   const p=layer.projected??project(layer.x??0,layer.z,layer.height);if(!p)return;
   buildingOcclusion.draw(c,p.depth,spriteBounds(p,layer.cover),()=>layer.draw());
 }
+let forestPet=null;
+function kneelingForestPet(){
+  return forestPet?.small && t>=forestPet.start && t<forestPet.start+1.5 ? forestPet : null;
+}
+let visibleWildlife=[];
 function paintWorldLayers(layers){
   const visibleBuildings=new Set(layers.filter(layer=>layer.building).map(layer=>layer.building));
   const hub=project(CONFIG.windmill.x,CONFIG.windmill.entrance.z,17.8);
@@ -440,6 +452,7 @@ function paintWorldLayers(layers){
   buildingOcclusion.prepare(view.basis(W,H),W,H,meshes,view===lookoutView?.12:.8);
   layers.forEach(layer=>layer.depth=layer.projected?.depth??project(layer.x??0,layer.z,layer.height)?.depth??-1);
   layers.sort((a,b)=>b.depth-a.depth);
+  visibleWildlife=layers.filter(layer=>layer.wildlife&&layer.depth>0).reverse();
   // Paint solid buildings first. Every subsequent world sprite uses their
   // actual nearest surface depth, rather than the building entrance's depth.
   for(const layer of layers)if(layer.building)buildingOcclusion.drawBuilding(c,layer.building,()=>layer.draw());
@@ -457,6 +470,7 @@ function drawOutdoorScenery(interiorKind){
   background(showGrove);
   if(!interiorKind)drawMarker();
   const petFocus=!interiorKind&&interaction.active?.kind==='pet'&&interaction.active.phase==='playing'?interaction.active.animal:null;
+  const lowPet=interiorKind?null:kneelingForestPet();
   const layers=sheep.map(a=>({
     x:a.x,z:a.z,actor:true,focused:a===petFocus,cover:{halfWidth:1.9*a.size,above:3*a.size+(a.hop||0)*a.size+.5,below:.5*a.size},draw:()=>interiorKind?renderSheep(c,a,{project,time:t,width:W,height:H,player:lookoutView.target}):drawSheep(a)
   }));
@@ -471,12 +485,12 @@ function drawOutdoorScenery(interiorKind){
   layers.push({x:CONFIG.lodge.x,z:CONFIG.lodge.entrance.z,building:'lodge',draw:()=>{lodgeScreen=drawBuilding3D(c,'lodge',project,view,W,H,{night:atmosphere.night,snow:atmosphere.kind==='snow',occupants:Number(shepherd.insideLodge)+companions.dogs.filter(a=>a.hiddenInLodge).length,label:false});}});
   if(!interiorKind&&started&&!hammocking)layers.push({
     x:player.x,z:player.z,focused:!!petFocus,cover:{halfWidth:2.8,above:3,below:.5},draw:()=>drawVisitor(c,project(player.x,player.z),{
-      time:t,walking:player.walking,seated,feeding,petting:interaction.active?.kind==='pet'&&interaction.active.phase==='playing',milking:interaction.active?.kind==='milk'&&interaction.active.phase==='playing',lambSize:interaction.active?.animal.size,pose:interaction.active?.phase==='playing'?visitorPose(interaction.active.animal.x-player.x,interaction.active.animal.z-player.z,view.yaw):visitorPose(player.headingX??0,player.headingZ??1,view.yaw)
+      time:t,walking:player.walking,seated,feeding,petting:!!lowPet||interaction.active?.kind==='pet'&&interaction.active.phase==='playing',milking:interaction.active?.kind==='milk'&&interaction.active.phase==='playing',lambSize:lowPet?.size??interaction.active?.animal.size,pose:lowPet?((lowPet.x-player.x)*Math.cos(view.yaw)-(lowPet.z-player.z)*Math.sin(view.yaw)<0?'left':'right'):interaction.active?.phase==='playing'?visitorPose(interaction.active.animal.x-player.x,interaction.active.animal.z-player.z,view.yaw):visitorPose(player.headingX??0,player.headingZ??1,view.yaw)
     })
   });
   addDenLayers(layers,c,project,dugDens);
   addBirchLayers(layers,c,project,W,H);
-  if(showGrove)addForestLayers(layers,c,project,W,H,t,view.yaw);
+  if(showGrove)addForestLayers(layers,c,project,W,H,t,view.yaw,forestPet);
   for(const a of meadowTrees)layers.push({
     x:a.x,z:a.z,cover:{halfWidth:a.size*1.3,above:a.size*1.8,below:.4},draw:()=>{
       const p=project(a.x,a.z);if(p&&p.x>-300&&p.x<W+300)tree(p.x,p.y,p.s*a.size/45);
@@ -522,7 +536,8 @@ function render(){
   c.save();
   drawOutdoorScenery();
   const visitor=project(player.x,player.z);
-  if(visitor)buildingOcclusion.draw(c,visitor.depth,spriteBounds(visitor,{halfWidth:5,above:4,below:1}),()=>drawInteraction(c,interaction,player,project,t));
+  const lowPet=kneelingForestPet();
+  if(visitor)buildingOcclusion.draw(c,visitor.depth,spriteBounds(visitor,{halfWidth:5,above:4,below:1}),()=>drawInteraction(c,lowPet?{active:{kind:"pet",phase:"playing",animal:lowPet}}:interaction,player,project,t));
   for(const p of particles){
     const v=project(p.x,p.z,p.y);
     if(v&&!buildingOcclusion.occluded(v.x,v.y,v.depth)){
@@ -776,6 +791,20 @@ function tapWorld(screenX,screenY){
   const hit=[...sheep,...(shepherd.insideLodge?[]:[shepherd])].sort((a,b)=>(project(a.x,a.z)?.depth??Infinity)-(project(b.x,b.z)?.depth??Infinity)).find(a=>{
     const p=a.screen,root=project(a.x,a.z);return !a.hiddenInBarn&&p&&root&&!buildingOcclusion.occluded(x,y,root.depth)&&Math.abs(x-p.x)<p.w*.5&&y<p.y+8&&y>p.y-p.h;
   });
+  const wild=visibleWildlife.find(({wildlife:w,depth})=>x>=w.left&&x<=w.right&&y>=w.top&&y<=w.bottom&&!buildingOcclusion.occluded(x,y,depth));
+  if(wild&&(!hit||wild.depth<project(hit.x,hit.z).depth)){
+    interaction.cancel(view);
+    if(wild.rabbit||wild.fox){
+      if(seated||hammocking){notify('일어난 뒤 다가가 쓰다듬을 수 있어요.');return;}
+      const side=(player.x-wild.x)*Math.cos(view.yaw)-(player.z-wild.z)*Math.sin(view.yaw)<0?-1:1;
+      const reach=wild.rabbit?.55:.70;
+      keys.clear();
+      walkToOutdoor({x:wild.x+side*reach*Math.cos(view.yaw),z:wild.z-side*reach*Math.sin(view.yaw)});
+      forestPet={id:wild.wildlife.id,small:true,x:wild.x,z:wild.z,size:wild.rabbit?.33:.46,start:Infinity,walk:outdoorWalk};
+    }else forestPet={id:wild.wildlife.id,start:t};
+    notify(wild.wildlife.name+' 쓰다듬기');
+    return;
+  }
   if(hit===shepherd){requestShepherdTalk();return;}
   if(hit){
     if(shelter.active){notify('양들이 축사로 들어가 쉬고 있어요. 하늘이 개면 다시 만나요.');return;}

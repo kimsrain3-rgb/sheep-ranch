@@ -171,7 +171,7 @@ function drawAnimal(c,p,a,yaw){
   }
   c.restore();
 }
-export function addForestLayers(layers,c,project,w,h,time,yaw){
+export function addForestLayers(layers,c,project,w,h,time,yaw,pet=null){
   for(const tree of firs){
     const p=project(tree.x,tree.z,0);
     if(!p||p.x+p.s*tree.width/2<0||p.x-p.s*tree.width/2>w||p.y<0||p.y-p.s*tree.height>h)continue;
@@ -181,9 +181,30 @@ export function addForestLayers(layers,c,project,w,h,time,yaw){
     }});
   }
   addUnderstory(layers,c,project,w,h,ferns);
-  for(const a of wildlifeAt(time)){
+  for(const [id,moving] of wildlifeAt(time).entries()){
+    const elapsed=pet?.id===id ? time-pet.start : Infinity;
+    const touching=elapsed>=0 && elapsed<1.5;
+    const waiting=pet?.small && pet.id===id && (pet.start===Infinity || elapsed<2);
+    const blend=waiting?Math.max(0,Math.min(1,(elapsed-1.5)*2)):1;
+    const a=waiting?{...moving,x:pet.x+(moving.x-pet.x)*blend,z:pet.z+(moving.z-pet.z)*blend,hop:0,stride:0,frame:0}:touching?{...moving,hop:0,stride:0,frame:0}:moving;
     const p=project(a.x,a.z,0);if(!p||p.x<-p.s||p.x>w+p.s||p.y<0||p.y>h+p.s*2)continue;
-    layers.push({...a,projected:p,cover:{halfWidth:1.2,above:2,below:.2},draw:()=>drawAnimal(c,p,a,yaw)});
+    const height=a.rabbit?.64:a.fox?.95:1.92;
+    const half=a.rabbit?.35:a.fox?.75:.88;
+    const foot=p.y-(a.hop||0)*p.s;
+    const pad=Math.max(3,Math.min(10,12-p.s*half));
+    const wildlife={id,name:a.rabbit?'토끼':a.fox?'여우':'사슴',left:p.x-half*p.s-pad,right:p.x+half*p.s+pad,top:foot-height*p.s-pad,bottom:foot+pad};
+    layers.push({...a,wildlife,projected:p,cover:{halfWidth:1.2,above:2.7,below:.2},draw:()=>{
+      drawAnimal(c,p,a,yaw);
+      if(touching){
+        c.save();
+        const size=Math.max(14,Math.min(34,p.s*.55));
+        c.font=size+'px sans-serif';c.textAlign='center';
+        if(!pet.small)c.fillText('✋',p.x+Math.sin(elapsed*12)*size*.32,foot-height*p.s*.70);
+        c.fillStyle='#ed8391';c.globalAlpha=1-elapsed/1.5;
+        c.fillText('♥',p.x,foot-height*p.s-elapsed*size*.7);
+        c.restore();
+      }
+    }});
   }
 }
 
