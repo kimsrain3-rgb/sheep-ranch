@@ -78,7 +78,8 @@ export function drawArctic(canvas,s,elapsed){
   }
   // Render the original coach shifted along the rails while it brakes.
   const cameraX=v.target.x;
-  const key=[pw,ph,b.x-offset,b.z,b.height,b.sp,b.sy,b.cy,b.f,s.phase==='walk'||s.phase==='disembark'].join(',');
+  const outside=['walk','disembark','toTram','board','inside'].includes(s.phase);
+  const key=[pw,ph,b.x-offset,b.z,b.height,b.sp,b.sy,b.cy,b.f,outside,!!s.returnPath].join(',');
   if(s.tramKey!==key){
     s.tramImage??=document.createElement('canvas');
     const image=s.tramImage;
@@ -92,7 +93,7 @@ export function drawArctic(canvas,s,elapsed){
     s.tramKey=key;
   }
   c.drawImage(s.tramImage,0,0,w,h);
-  if(s.phase==='walk'||s.phase==='disembark'){
+  if(outside){
     const feet=project(ox+s.x,oz+s.z,s.height+.025);
     if(feet)drawVisitor(c,feet,{time:s.clock,walking:s.walking,label:false,pose:visitorPose(s.headingX,s.headingZ,v.yaw)});
   }

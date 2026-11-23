@@ -95,7 +95,7 @@ const renderedTram=renderer.buildings.tram;
 assert.equal(renderedTram.model.userData.parts.filter(part=>part.name==='wine destination box').length,2);
 assert.equal(renderedTram.model.userData.parts.some(part=>part.name==='painted sign stroke'),false);
 assert.equal(renderedTram.lettering,undefined,'both destination boards start blank');
-for(const name of ['북극','사막','정글','북극']){
+for(const name of ['북극','사막','정글','목장역','북극']){
   renderer.caches.set('tram',{});
   renderer.setTramDestination(name);
   const ink=renderedTram.lettering;

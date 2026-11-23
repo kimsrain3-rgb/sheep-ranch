@@ -1,4 +1,4 @@
-import {createArcticLanding,stepArctic,turnOnIce,tapOnIce,APPROACH_START} from './game/arctic-landing.js';
+import {createArcticLanding,returnToArcticTram,stepArctic,turnOnIce,tapOnIce,APPROACH_START} from './game/arctic-landing.js';
 import {drawArctic} from './render/arctic-landing.js';
 import {forestHeight,hillPick,denSites,nearbyDen} from './game/forest-hills.js';
 import {drawHills,addDenLayers} from './render/forest-hills.js?v=hill-draw-2';
@@ -131,6 +131,8 @@ function boardTram(name){
   ride={name,elapsed:0,arrived:false,windowView:false,yaw:.36,pitch:.02,drag:null};
   ride.boarding={start:{x:player.x,z:player.z},time:0,last:null,landedAt:null};
   rideDialog.classList.add('boarding');
+  $('ride-return').textContent='승차 취소';
+  $('ride-return').hidden=false;
   $('ride-look-hint').textContent='화면을 밀어 둘러보기';
   $('ride-view').textContent='창밖 크게 보기';
   $('ride-view').hidden=true;
@@ -154,7 +156,16 @@ $('ride-view').onclick=()=>{
 };
 const shoreCanvas=$('arctic-shore');
 $('ride-exit').onclick=()=>{
+  if(ride?.homeward&&ride.arrived){
+    if(ride.boarding)return;
+    ride.boarding={start:{x:player.x,z:player.z},time:0,last:null,exiting:true};
+    rideDialog.classList.add('boarding');
+    $('ride-status').textContent='목장역 · 내리는 중';
+    $('ride-exit').hidden=$('ride-view').hidden=$('ride-look-hint').hidden=true;
+    return;
+  }
   if(ride?.shore?.phase!=='arrived')return;
+  $('ride-return').hidden=true;
   ride.shore.phase='disembark';
   ride.drag=null;
   setTramBoardingDoor(true);
@@ -187,7 +198,37 @@ shoreCanvas.onpointerup=e=>{
 shoreCanvas.onpointercancel=shoreCanvas.onlostpointercapture=e=>{
   if(shoreDrag?.id===e.pointerId)shoreDrag=null;
 };
-$('ride-return').onclick=()=>rideDialog.close();
+function beginHomewardRide(){
+  if(!ride||ride.homeward)return;
+  setTramDestination('목장역');
+  if(ride.shore?.phase==='inside'){
+    ride.windowView=false;ride.yaw=.36;ride.pitch=.02;
+  }
+  if(ride.shore)setTramBoardingDoor(false);
+  ride.homeward=true;ride.shore=null;ride.arrived=false;ride.drag=null;
+  shoreDrag=null;shoreCanvas.hidden=true;
+  $('ride-exit').hidden=$('ride-return').hidden=true;
+  $('ride-view').hidden=false;$('ride-look-hint').hidden=false;
+  $('ride-look-hint').textContent='화면을 밀어 둘러보기';
+  $('ride-view').textContent=ride.windowView?'좌석 보기':'창밖 크게 보기';
+  $('ride-status').textContent='목장역행 · 운행 중';
+}
+function requestHomewardRide(){
+  if(!ride||ride.homeward)return;
+  if(ride.boarding){rideDialog.close();return;}
+  if(ride.shore?.phase==='walk'){
+    returnToArcticTram(ride.shore);
+    shoreDrag=null;
+    setTramDestination('목장역');
+    $('ride-return').hidden=$('ride-look-hint').hidden=true;
+    $('ride-status').textContent='목장역행 · 승강장으로 이동 중';
+    return;
+  }
+  if(ride.shore&&ride.shore.phase!=='arrived'&&ride.shore.phase!=='approach')return;
+  beginHomewardRide();
+}
+$('ride-return').onclick=requestHomewardRide;
+rideDialog.addEventListener('cancel',e=>{e.preventDefault();requestHomewardRide();});
 function turnInTram(dx,dy){
   const radiansPerPixel=Math.PI/Math.max(280,Math.min(W,H)*.9);
   ride.yaw=(ride.yaw-dx*radiansPerPixel)%(Math.PI*2);
@@ -218,6 +259,7 @@ rideDialog.addEventListener('keydown',event=>{
 });
 rideDialog.addEventListener('close',()=>{
   if(ride?.shore)setTramBoardingDoor(false);
+  if(ride?.homeward)setTramDestination(selectedDestination);
   shoreCanvas.hidden=true;
   $('ride-exit').hidden=true;
   shoreDrag=null;
@@ -768,11 +810,11 @@ function drawBoardingShot(boarding){
   ctx.setTransform(1,0,0,1,0,0);
   ctx.drawImage(canvas,0,0);
   ctx.setTransform(dpr,0,0,dpr,0,0);
-  const pose=tramBoardingPose(boarding.start,boarding.time);
+  const pose=tramBoardingPose(boarding.start,boarding.exiting?TRAM_BOARDING_WALK-boarding.time:boarding.time);
   const feet=boardingView.project(pose.x,pose.z,pose.height+.025,W,H);
   if(!feet)return;
   buildingOcclusion.draw(ctx,feet.depth,spriteBounds(feet),()=>drawVisitor(ctx,feet,{
-    time:boarding.time,walking:pose.walking,pose:visitorPose(0,-1,boardingView.yaw),label:false
+    time:boarding.time,walking:boarding.exiting?boarding.time<TRAM_BOARDING_WALK:pose.walking,pose:visitorPose(0,boarding.exiting?1:-1,boardingView.yaw),label:false
   }));
 }
 function advanceTramBoarding(now){
@@ -783,11 +825,13 @@ function advanceTramBoarding(now){
   boarding.last=now;
   drawBoardingShot(boarding);
   if(boarding.time<TRAM_BOARDING_WALK)return;
+  if(boarding.exiting){player.headingX=0;player.headingZ=1;rideDialog.close();return;}
   boarding.landedAt??=now;
   if(now-boarding.landedAt<TRAM_BOARDING_HOLD*1000)return;
   ride.boarding=null;
   drawTramRide($('ride-landscape'),$('ride-cabin'),ride.name,0,ride.yaw,ride.pitch,false);
   rideDialog.classList.toggle('boarding',false);
+  $('ride-return').textContent='목장역행 열차 타기';
   $('ride-status').textContent=ride.name+'행 · 운행 중';
   $('ride-view').hidden=false;
   $('ride-look-hint').hidden=false;
@@ -798,6 +842,14 @@ function frame(now){
   last=now;
   if(ride?.boarding){
     advanceTramBoarding(now);
+  }else if(ride?.homeward){
+    ride.elapsed=Math.max(0,ride.elapsed-rideDelta);
+    drawTramRide($('ride-landscape'),$('ride-cabin'),ride.name,ride.elapsed/16,ride.yaw,ride.pitch,ride.windowView);
+    if(ride.elapsed===0&&!ride.arrived){
+      ride.arrived=true;
+      $('ride-status').textContent='목장역 도착';
+      $('ride-exit').hidden=false;
+    }
   }else if(ride){
     ride.elapsed=Math.min(16,ride.elapsed+rideDelta);
     if(ride.name==='북극'&&ride.elapsed>=APPROACH_START&&!ride.shore){
@@ -822,7 +874,13 @@ function frame(now){
       const phase=ride.shore.phase;
       stepArctic(ride.shore,rideDelta);
       drawArctic(shoreCanvas,ride.shore,ride.elapsed);
-      if(phase==='disembark'&&ride.shore.phase==='walk'){
+      if(phase==='toTram'&&ride.shore.phase==='board')$('ride-status').textContent='목장역행 · 탑승 중';
+      if(ride.shore.phase==='inside'){
+        ride.shore.landedAt??=now;
+        if(now-ride.shore.landedAt>=TRAM_BOARDING_HOLD*1000)beginHomewardRide();
+      }
+      if(phase==='disembark'&&ride.shore?.phase==='walk'){
+        $('ride-return').hidden=false;
         $('ride-status').textContent='북극 해안';
         $('ride-look-hint').textContent='얼음을 눌러 걷기 · 밀어서 둘러보기';
         $('ride-look-hint').hidden=false;

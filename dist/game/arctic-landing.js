@@ -14,7 +14,7 @@ export function createArcticLanding(){
     headingX:0,headingZ:1,walking:false,goal:null,view:new BarnInteriorView()};
 }
 export function arcticCamera(s,w,h){
-  const v=s.view,free=s.phase==='walk';
+  const v=s.view,free=s.phase==='walk'||s.phase==='toTram';
   v.yaw=free?s.yaw:2.90;v.pitch=free?s.pitch:.16;
   let distance=free?5.8:9;
   const x=free?s.x:-.9,z=free?s.z:.8;
@@ -35,6 +35,17 @@ export function walkOnIce(s,x,z){
   if(s.phase!=='walk'||!(onSurface(x,z,ICE)||onSurface(x,z,DOCK)))return;
   s.goal={x,z};
 }
+export function returnToArcticTram(s){
+  if(s.phase!=='walk')return;
+  const door={x:TRAM_STOP.entrance.x-TRAM_STOP.x,z:TRAM_STOP.entrance.z-TRAM_STOP.z};
+  // Cross from ice to dock through their overlap, including from either
+  // distant end of the shore. Both legs stay on a walkable surface.
+  s.returnPath=[door];
+  if(!onSurface(s.x,s.z,DOCK))s.returnPath.unshift({x:door.x,z:(ICE.front+DOCK.back)/2});
+  s.goal=s.returnPath.shift();
+  s.phase='toTram';
+  s.yaw=2.90;
+}
 export function stepArctic(s,dt){
   s.clock+=dt;
   s.walking=false;
@@ -45,9 +56,21 @@ export function stepArctic(s,dt){
     if(s.step>TRAM_BOARDING_WALK)s.z+=(s.step-TRAM_BOARDING_WALK)*2.65;
     s.walking=s.step<2;
     if(!s.walking){s.phase='walk';s.height=FLOOR;}
-  }else if(s.phase==='walk'&&s.goal){
+  }else if(s.phase==='board'){
+    s.step=Math.min(TRAM_BOARDING_WALK,s.step+dt);
+    const pose=tramBoardingPose(TRAM_STOP.entrance,s.step);
+    s.x=pose.x-TRAM_STOP.x;s.z=pose.z-TRAM_STOP.z;s.height=pose.height;
+    s.walking=pose.walking;
+    if(!s.walking)s.phase='inside';
+  }else if((s.phase==='walk'||s.phase==='toTram')&&s.goal){
     const dx=s.goal.x-s.x,dz=s.goal.z-s.z,len=Math.hypot(dx,dz);
-    if(len<.02){s.goal=null;return;}
+    if(len<.02){
+      s.x=s.goal.x;s.z=s.goal.z;s.goal=s.returnPath?.shift()??null;
+      if(s.phase==='toTram'&&!s.goal){
+        s.phase='board';s.step=0;s.headingX=0;s.headingZ=-1;
+      }
+      return;
+    }
     const travel=Math.min(dt*2.8,len);
     s.headingX=dx/len;s.headingZ=dz/len;
     const x=s.x+travel*s.headingX,z=s.z+travel*s.headingZ;

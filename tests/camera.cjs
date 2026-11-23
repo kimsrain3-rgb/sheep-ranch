@@ -198,8 +198,22 @@ read('frame(last+16)');
 assert.notEqual(drawnLook[0],firstYaw,'can turn after arrival');
 assert.equal(drawnLook[1],-1.05,'looking up stays within the cabin camera tilt limit');
 assert.deepEqual(read('[player.x,player.z]'),seat);
-el('ride-return').onclick();
-assert.equal(read('ride'),null);
+function finishHomeward(){
+  assert.equal(read('ride.homeward'),true);
+  const start=read('ride.elapsed');
+  read('frame(last+200)');
+  assert.ok(read('ride.elapsed')<start);
+  for(let i=0;i<40&&!read('ride.arrived');i++)read('frame(last+500)');
+  assert.equal(el('ride-status').textContent,'목장역 도착');
+  assert.equal(el('ride-exit').hidden,false);
+  el('ride-exit').onclick();el('ride-exit').onclick();
+  assert.ok(read('ride.boarding.exiting'));
+  for(let i=0;i<20&&read('ride');i++)read('frame(last+160)');
+  assert.equal(read('ride'),null);
+  assert.equal(read('nearBoardingDoor()'),true);
+}
+el('ride-return').onclick();el('ride-return').onclick();
+finishHomeward();
 el('station-board-open').onclick();options.children[0].onclick();
 el('station-ride-open').onclick();read('advanceOutdoorWalk()');
 assert.equal(read('ride.name'),'북극');assert.ok(read('ride.boarding'),'reboarding gets its own exterior scene');
@@ -235,7 +249,27 @@ assert.ok(read('ride.shore.yaw')>4);
 read('walkOnIce(ride.shore,0,-4)');
 assert.equal(read('ride.shore.goal'),null);
 
-el('ride-return').onclick();
+// Return from a remote corner via the shared ice/dock edge, never over water.
+read('Object.assign(ride.shore,{x:13.8,z:21.8})');
+read('ride.windowView=true;ride.yaw=2.1');
+el('ride-return').onclick();el('ride-return').onclick();
+assert.equal(read('ride.shore.phase'),'toTram');
+for(let i=0;i<200&&read('ride.shore.phase')==='toTram';i++){
+  read('frame(last+100)');
+  assert.ok(read('ride.shore.z>=3.7||Math.abs(ride.shore.x)<=4.6'));
+}
+assert.equal(read('ride.shore.phase'),'board');
+for(let i=0;i<20&&read('ride.shore.phase')==='board';i++)read('frame(last+100)');
+assert.equal(read('ride.shore.phase'),'inside');
+assert.equal(read('ride.shore.height'),.797);
+read('frame(last+999)');assert.equal(read('ride.homeward'),undefined);
+read('frame(last+1)');
+assert.equal(read('ride.elapsed'),16);
+assert.equal(shown.at(-1),'목장역');
+assert.equal(read('ride.windowView'),false);assert.equal(read('ride.yaw'),.36);
+el('ride-view').onclick();assert.equal(read('ride.windowView'),true);
+finishHomeward();
+assert.equal(shown.at(-1),'북극');
 assert.equal(openDoor,false);assert.equal(el('arctic-shore').hidden,true);
 console.log('Tram ride: platform approach, replacement walk, arrival, return and repeat boarding passed.');
 

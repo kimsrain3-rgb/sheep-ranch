@@ -187,7 +187,7 @@ export class BuildingRenderer{
     this.setTramDestination(destination);
   }
   setTramDestination(destination){
-    if(!TRAM_DESTINATIONS.includes(destination))return;
+    if(destination!=='목장역'&&!TRAM_DESTINATIONS.includes(destination))return;
     this.prepareRailway();
     const tram=this.buildings.tram;
     if(tram.destination===destination)return;
