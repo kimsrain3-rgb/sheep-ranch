@@ -60,10 +60,15 @@ for(const preset of presets){
   colors.clear();passengerAnchor=null;
   drawTramRide(scenery,cabin,'북극',1,.36,.02);
   assert.ok(colors.has(look.hairColor)&&colors.has(look.coat),'tram uses active hair and coat: '+preset.id);
-  assert.ok(passengerAnchor.x>0&&passengerAnchor.x<390,'seated visitor visible when boarding');
-  assert.ok(passengerAnchor.y-passengerAnchor.sy*1.6>0&&passengerAnchor.y+passengerAnchor.sy*.5<760,'framed from hat to feet');
+  assert.ok(passengerAnchor.x>0&&passengerAnchor.x+.48*passengerAnchor.sx<390*.59,'the passenger sits to one side of the window');
+  assert.ok(passengerAnchor.y-passengerAnchor.sy*1.6>0&&passengerAnchor.y+passengerAnchor.sy*.5<760-65,'framed from hat to feet');
 }
 const initialAnchor=passengerAnchor;
+passengerAnchor=null;
+drawTramRide(scenery,cabin,'북극',1,.36,.02,true);
+assert.equal(passengerAnchor,null,'the close window view has a clear sightline even after arrival');
+drawTramRide(scenery,cabin,'북극',1,.36,.02,false);
+assert.deepEqual(passengerAnchor,initialAnchor,'seat view returns to the same passenger and bench');
 passengerAnchor=null;colors.clear();
 drawTramRide(scenery,cabin,'북극',1,.36+Math.PI,.02);
 assert.equal(passengerAnchor,null,'visitor does not follow the screen when looking away');

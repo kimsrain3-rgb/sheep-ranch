@@ -80,8 +80,9 @@ function paintRegion(c,w,name,distance,heading){
 // The visitor sits on the edge of the long bench, facing across the aisle.
 const passengerSeat={x:TRAM_STOP.x+.87,z:TRAM_STOP.z+.50,hipHeight:1.35};
 const coachView=new BarnInteriorView();
-coachView.eyeHeight=2.13;
+
 let lastLook=null;
+let lastWindowView=null;
 
 function drawPassenger(context,w,h,look){
   const {x,z,hipHeight}=passengerSeat;
@@ -103,7 +104,7 @@ function drawPassenger(context,w,h,look){
   context.restore();
 }
 
-export function drawTramRide(scenery,cabin,name,progress,yaw,pitch){
+export function drawTramRide(scenery,cabin,name,progress,yaw,pitch,windowView=false){
   const w=scenery.clientWidth,h=scenery.clientHeight;
   if(!w||!h)return;
   const ratio=Math.min(window.devicePixelRatio||1,1.5);
@@ -114,20 +115,26 @@ export function drawTramRide(scenery,cabin,name,progress,yaw,pitch){
     cabin.width=pw;cabin.height=ph;
     scenery.dataset.ready='1';
   }
-  // Start across the aisle, with room in the frame for the windows and feet.
-  // Turning keeps the camera within the carriage, with a small shoulder orbit.
-  yaw+=.90;
+  // In the cabin, frame the occupied bench on the left and sight through the
+  // adjacent pane. At the window, the eye stays inside the glass as it turns.
+  const eyeX=windowView ? -.342 : 1.70;
+  const eyeZ=windowView ? .71 : -.84;
+  const focal=h*(windowView ? .79 : .43);
+  yaw-=windowView ? .36 : .66;
+  // On tall screens leave the bottom action row below the shoes.
+  if(!windowView)pitch+=h>w ? .22 : .12;
   const look=currentAppearance();
   const turned=coachView.yaw!==yaw||coachView.pitch!==pitch;
-  if(resized||turned||look!==lastLook){
-    lastLook=look;
+  if(resized||turned||look!==lastLook||windowView!==lastWindowView){
+    lastLook=look;lastWindowView=windowView;
     coachView.yaw=yaw;coachView.pitch=pitch;
-    coachView.target.x=TRAM_STOP.x-1.68-.23*Math.sin(yaw);
-    coachView.target.z=TRAM_STOP.z-.49-.23*Math.cos(yaw);
+    coachView.eyeHeight=windowView ? 2.65 : 2.70;
+    coachView.target.x=TRAM_STOP.x+eyeX;
+    coachView.target.z=TRAM_STOP.z+eyeZ;
     const interior=cabin.getContext('2d');
     interior.setTransform(pw/w,0,0,ph/h,0,0);
     interior.clearRect(0,0,w,h);
-    coachView.orbitFocal=h*.77;
+    coachView.orbitFocal=focal;
     drawTramCabin(interior,coachView,w,h);
     drawPassenger(interior,w,h,look);
     scenery.dataset.arrived='';
@@ -139,7 +146,7 @@ export function drawTramRide(scenery,cabin,name,progress,yaw,pitch){
   const travel=1760*(progress-Math.sin(2*Math.PI*progress)/(2*Math.PI));
   const heading=panoramaWidth*(yaw-.36)/(2*Math.PI);
   const distance=travel*Math.cos(yaw);
-  c.translate(0,-462*Math.tan(pitch-.02));
+  c.translate(0,-600*focal/h*Math.tan(pitch));
   if(progress<.34)paintRegion(c,width,'목장',distance,heading);
   if(progress>.12){
     c.globalAlpha=Math.min(1,(progress-.12)/.22);

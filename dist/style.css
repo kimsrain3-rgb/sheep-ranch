@@ -171,3 +171,6 @@ dialog#welcome #start {width:100%;margin:.5rem 0 0;text-align:center;font-size:1
 #tram-ride #ride-cabin{pointer-events:auto;touch-action:none;cursor:grab}
 #tram-ride #ride-cabin:active{cursor:grabbing}
 #ride-look-hint{position:absolute;top:max(14px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);padding:6px 12px;border-radius:16px;background:#382a24bf;color:#fff7e3;font-size:.87rem;white-space:nowrap;pointer-events:none}
+
+#ride-view{position:absolute;right:max(10px,env(safe-area-inset-right));top:max(12px,env(safe-area-inset-top));min-height:44px;padding:8px 13px;border:1px solid #ad9271;border-radius:24px;font-size:.9rem;font-weight:600;line-height:1.25;font-family:inherit;color:#4b3528;background:#fff2d7;cursor:pointer}
+@media(max-width:560px){#ride-look-hint{left:max(8px,env(safe-area-inset-left));transform:none}}

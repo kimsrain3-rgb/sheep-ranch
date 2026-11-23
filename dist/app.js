@@ -3,7 +3,7 @@ import {drawHills,addDenLayers} from './render/forest-hills.js?v=hill-draw-2';
 import {addGardenLayers} from './render/pond-garden.js?v=stream-banks-1';
 import {setupRanchMap,streamLookout} from './ranch-map.js?v=tram-station-1';
 import {stationWalkingHeight,TRAM_DESTINATIONS,TRAM_STATION,TRAM_STOP} from './game/tram-station.js';
-import {drawTramRide} from './render/tram-ride.js?v=bench-passenger-1';
+import {drawTramRide} from './render/tram-ride.js?v=window-framing-2';
 import {tramPlatformOrigin} from './render/tram-station.js';
 import {trailX,inGrove,clearTrunks,groveRoute} from './game/fir-grove.js?v=birch-edge-1';
 import {addBirchLayers,drawForestFloor,addForestLayers,groveVisible} from './render/fir-grove.js?v=low-pet-2';
@@ -126,13 +126,20 @@ function boardTram(name){
   if(ride||name!==selectedDestination||!nearBoardingDoor())return;
   keys.clear();
   player.walking=false;
-  ride={name,elapsed:0,arrived:false,yaw:.36,pitch:.02,drag:null};
+  ride={name,elapsed:0,arrived:false,windowView:false,yaw:.36,pitch:.02,drag:null};
+  $('ride-view').textContent='창밖 크게 보기';
   $('ride-look-hint').hidden=false;
   $('ride-status').textContent=name+'행 · 운행 중';
   rideDialog.showModal();
 }
 $('station-ride-open').onclick=()=>{
   if(atStationBoard()||nearBoardingDoor())walkToTram();
+};
+$('ride-view').onclick=()=>{
+  if(!ride)return;
+  ride.windowView=!ride.windowView;
+  ride.yaw=.36;ride.pitch=.02;ride.drag=null;
+  $('ride-view').textContent=ride.windowView?'좌석 보기':'창밖 크게 보기';
 };
 $('ride-return').onclick=()=>rideDialog.close();
 function turnInTram(dx,dy){
@@ -679,7 +686,7 @@ function frame(now){
   last=now;
   if(ride){
     ride.elapsed=Math.min(16,ride.elapsed+rideDelta);
-    drawTramRide($('ride-landscape'),$('ride-cabin'),ride.name,ride.elapsed/16,ride.yaw,ride.pitch);
+    drawTramRide($('ride-landscape'),$('ride-cabin'),ride.name,ride.elapsed/16,ride.yaw,ride.pitch,ride.windowView);
     if(ride.elapsed>=16&&!ride.arrived){
       ride.arrived=true;
       $('ride-status').textContent=ride.name+' 도착';
