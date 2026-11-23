@@ -21,7 +21,7 @@ for(const kind of buildings){
   if(FARM_ROOMS[kind])assert.ok(place.walkableFloors>0,kind+': walkable utility room needs a door');
 }
 
-for(const b of footprints){
+for(const b of footprints.filter(b=>!b.shelterWalls)){
   for(const actor of [{type:'visitor'},{type:'dog'},{type:'chicken'},{id:'sheep-adult',size:1.18},{id:'lamb-test',isLamb:true,size:.33}]){
     const radius=actorRadius(actor);
     const middleX=(b.left+b.right)/2,middleZ=(b.front+b.back)/2;
@@ -35,8 +35,9 @@ for(const b of footprints){
     }
   }
   for(const size of [.3,.8,1.18]){
-    const a={id:'sheep-test',size,x:(b.left+b.right)/2,z:b.front-4,state:'roam'},radius=actorRadius(a);
-    const goal={x:a.x,z:b.back+4};
+    const a={id:'sheep-test',size,x:(b.left+b.right)/2,z:b.front-6,state:'roam'},radius=actorRadius(a);
+    // A neighboring building may occupy the far-side target for larger animals.
+    const goal=keepOutsideBuildings({x:a.x,z:b.back+6},CONFIG,{radius});
     assert.equal(buildingPathClear(a,goal,CONFIG),false,`${b.kind}: a straight crossing intersects the walls`);
     const route=dryRoute(a,goal);
     assert.ok(distance(route.at(-1),goal)<.001,`${b.kind}: detour reaches the far side`);
@@ -58,7 +59,7 @@ for(const b of footprints){
   assert.ok(spawned.x<=b.left-actorRadius(spawned)||spawned.x>=b.right+actorRadius(spawned)||spawned.z<=b.front-actorRadius(spawned)||spawned.z>=b.back+actorRadius(spawned));
   const door={x:b.doorX,z:b.front},front={x:b.doorX,z:b.front-4};
   assert.equal(buildingPathClear(front,door,CONFIG),false,'ordinary roaming cannot enter a building');
-  assert.equal(buildingPathClear(front,door,CONFIG,{access:b.kind,radius:.4}),true,'authorized entry reaches the actual doorway');
+  assert.equal(buildingPathClear(front,door,CONFIG,{access:b.kind,radius:.4}),b.doorHalf>0,'only buildings with a walkable door accept entry');
   assert.equal(buildingPathClear({x:b.left-4,z:b.front+2},door,CONFIG,{access:b.kind,radius:.4}),false,'entry permission never opens a side wall');
 }
 

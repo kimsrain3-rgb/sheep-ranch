@@ -6,6 +6,8 @@ import {createBarnModel,createBarnRoomModel,createLodgeModel,createLodgeDoor,cre
 import {CONFIG} from '../game/config.js?v=windmill-1';
 import {createWindmill,createSails,axle} from './windmill.js';
 import {windmillStage,windmillStatus} from '../game/windmill-construction.js';
+import {TRAM_DESTINATIONS,TRAM_STATION,TRAM_STOP} from '../game/tram-station.js';
+import {createTram,createTramLettering,createTramPlatform,createTramStation,createTramTrack,tramPlatformOrigin} from './tram-station.js';
 
 // The existing Canvas actors and these Three.js meshes use exactly the same
 // projection. A single transparent WebGL canvas is composited at each building's
@@ -56,6 +58,35 @@ export function clipRoomDoorway(c,kind,view,W,H){
   return true;
 }
 
+// Canvas fallback uses the same board atlas and per-face UVs as WebGL.
+const softwarePatterns=new WeakMap();
+function woodPattern(context,texture,uv,points){
+  if(!context.createPattern||!globalThis.document?.createElement)return null;
+  let cache=softwarePatterns.get(context);
+  if(!cache){cache=new WeakMap();softwarePatterns.set(context,cache);}
+  if(!cache.has(texture)){
+    const {width,height,data}=texture.image;
+    const tile=document.createElement('canvas');tile.width=width;tile.height=height;
+    const paint=tile.getContext('2d');
+    if(!paint?.createImageData)return null;
+    const pixels=paint.createImageData(width,height);pixels.data.set(data);paint.putImageData(pixels,0,0);
+    cache.set(texture,context.createPattern(tile,'no-repeat'));
+  }
+  const pattern=cache.get(texture);
+  if(!pattern?.setTransform)return null;
+  const {width,height}=texture.image;
+  const [u,v]=uv[0],du=(uv[1][0]-u)*width,dv=(uv[1][1]-v)*height;
+  const eu=(uv[2][0]-u)*width,ev=(uv[2][1]-v)*height;
+  const det=du*ev-dv*eu;
+  if(Math.abs(det)<.000001)return null;
+  const [start,one,two]=points;
+  const dx=one.x-start.x,dy=one.y-start.y,ex=two.x-start.x,ey=two.y-start.y;
+  const a=(dx*ev-ex*dv)/det,b=(dy*ev-ey*dv)/det;
+  const c=(ex*du-dx*eu)/det,d=(ey*du-dy*eu)/det;
+  pattern.setTransform({a,b,c,d,e:start.x-a*u*width-c*v*height,f:start.y-b*u*width-d*v*height});
+  return pattern;
+}
+
 function prepareBuilding(model,origin,cullBackFaces=false){
   model.position.set(origin.x,origin.y??0,-origin.z);model.updateWorldMatrix(true,true);
   const bounds=new THREE.Box3().setFromObject(model),corners=[];
@@ -69,7 +100,9 @@ function prepareBuilding(model,origin,cullBackFaces=false){
         const v=new THREE.Vector3().fromBufferAttribute(position,i+j).applyMatrix4(mesh.matrixWorld);return [v.x,-v.z,v.y];
       });
       const n=new THREE.Vector3().fromBufferAttribute(normal,i).transformDirection(mesh.matrixWorld);
-      faces.push({points,normal:cullBackFaces?n:null,material:mesh.material,snow:mesh.userData.snow,shade:.72+.28*Math.max(0,-.38*n.x+.8*n.y+.46*n.z)});
+      const uv=mesh.material.map?.isDataTexture&&geometry.attributes.uv?
+        [i,i+1,i+2].map(j=>[geometry.attributes.uv.getX(j),geometry.attributes.uv.getY(j)]):null;
+      faces.push({points,uv,normal:cullBackFaces?n:null,material:mesh.material,snow:mesh.userData.snow,shade:.72+.28*Math.max(0,-.38*n.x+.8*n.y+.46*n.z)});
     }
   });
   return {model,origin,bounds,corners,faces};
@@ -98,6 +131,7 @@ export class BuildingRenderer{
     this.sun=new THREE.DirectionalLight('#fff0cf',2.2);this.sun.position.set(-35,65,45);
     this.scene.add(this.ambient,this.sun,this.roomLight);
     this.buildings={barn:prepareBuilding(createBarnModel(),buildingOrigin('barn')),lodge:prepareBuilding(createLodgeModel(false),buildingOrigin('lodge')),coop:prepareBuilding(createCoopModel(),buildingOrigin('coop'))};
+    this.railwayReady=false;
     const lodge=this.buildings.lodge;
     lodge.staticFaces=lodge.faces;
     lodge.door=createLodgeDoor();lodge.model.add(lodge.door);
@@ -119,6 +153,43 @@ export class BuildingRenderer{
     lodge.faces=lodge.staticFaces.concat(leaf.faces);
     lodge.dryOcclusion=lodge.snowOcclusion=null;
     this.caches.delete('lodge');
+  }
+  prepareRailway(){
+    if(this.railwayReady)return;
+    for(const [kind,create,origin] of [
+      ['station',createTramStation,TRAM_STATION],
+      ['tram',createTram,TRAM_STOP],
+      ['tram-platform',createTramPlatform,tramPlatformOrigin],
+      ['tram-track',createTramTrack,{x:0,z:0}]
+    ]){
+      const building=prepareBuilding(create(),origin,true);
+      building.model.visible=false;
+      this.scene.add(building.model);
+      this.buildings[kind]=building;
+    }
+    this.buildings.tram.bodyFaces=this.buildings.tram.faces;
+    this.railwayReady=true;
+  }
+  setTramDestination(destination){
+    if(!TRAM_DESTINATIONS.includes(destination))return;
+    this.prepareRailway();
+    const tram=this.buildings.tram;
+    if(tram.destination===destination)return;
+    const previous=tram.lettering;
+    const lettering=createTramLettering(destination);
+    const {faces}=prepareBuilding(lettering,tram.origin,true);
+    lettering.position.set(0,0,0);
+    tram.model.add(lettering);
+    if(previous){
+      tram.model.remove(previous);
+      previous.geometry.dispose();
+      previous.material.dispose();
+    }
+    tram.lettering=lettering;
+    tram.destination=destination;
+    tram.faces=tram.bodyFaces.concat(faces);
+    tram.dryOcclusion=tram.snowOcclusion=null;
+    this.caches.delete('tram');
   }
   setMillStage(stage){
     const previous=this.buildings.windmill;
@@ -186,13 +257,24 @@ export class BuildingRenderer{
         if(n.x*(basis.x-x)+n.y*(basis.height-y)-n.z*(basis.z-z)<=0)continue;
       }
       const clip=face.material.userData.stairSlab?slabNear:near;
-      const points=clippedPolygon(face.points,basis,clip+.005).map(p=>project(...p));if(points.length<3||points.some(p=>!p))continue;
-      visible.push({face,points,depth:points.reduce((sum,p)=>sum+p.depth,0)/points.length});
+      const vertices=face.uv?face.points.map((p,i)=>[...p,...face.uv[i]]):face.points;
+      const clipped=clippedPolygon(vertices,basis,clip+.005);
+      const points=clipped.map(p=>project(p[0],p[1],p[2]));
+      if(points.length<3||points.some(p=>!p))continue;
+      const uv=face.uv?clipped.map(p=>p.slice(3)):null;
+      visible.push({face,points,uv,depth:points.reduce((sum,p)=>sum+p.depth,0)/points.length});
     }
     visible.sort((a,b)=>b.depth-a.depth);
-    for(const {face,points} of visible){
+    for(const {face,points,uv} of visible){
+      if(uv){
+        c.fillStyle=woodPattern(c,face.material.map,uv,points)||'#93633e';
+        c.beginPath();points.forEach((p,i)=>i?c.lineTo(p.x,p.y):c.moveTo(p.x,p.y));c.closePath();c.fill();
+        c.fillStyle='rgba(12,8,4,'+(1-face.shade*(night?.55:1))+')';c.fill();continue;
+      }
       const color=face.material.color.clone().convertLinearToSRGB().multiplyScalar(face.shade*(night?.55:1));
-      c.fillStyle=`#${color.getHexString(THREE.LinearSRGBColorSpace)}`;
+      const hex=color.getHexString(THREE.LinearSRGBColorSpace);
+      const alpha=Math.round(face.material.opacity*255).toString(16).padStart(2,'0');
+      c.fillStyle=face.material.transparent?`#${hex}${alpha}`:`#${hex}`;
       c.beginPath();points.forEach((p,i)=>i?c.lineTo(p.x,p.y):c.moveTo(p.x,p.y));c.closePath();c.fill();
     }
   }
@@ -228,10 +310,11 @@ export class BuildingRenderer{
     return {left:point.x-w/2,right:point.x+w/2,top:point.y-h,bottom:point.y};
   }
   draw(c,kind,project,view,W,H,options={}){
+    if(kind==='tram-track')this.prepareRailway();
     const building=this.buildings[kind];if(!building)return null;
     const basis=view.basis(W,H),crop=buildingScreenBounds(building,project,basis,W,H);if(!crop)return null;
     this.initialise();this.appearance(building,options);this.roomLight.intensity=0;
-    c.save();this.drawShadow(c,building,project,basis);
+    c.save();if(options.shadow!==false)this.drawShadow(c,building,project,basis);
     let mode='three-mesh-canvas';
     if(this.renderer&&!this.lost){
       try{this.drawWebGL(c,building,kind,basis,crop,W,H,options);mode='three-webgl';}
@@ -325,13 +408,14 @@ export class BuildingRenderer{
   dispose(){
     this.renderer?.dispose();this.caches.clear();
     for(const building of [...Object.values(this.buildings),...this.rooms.values()]){
-      building.model.traverse(mesh=>{if(mesh.isMesh)mesh.geometry.dispose();});
+      building.model.traverse(mesh=>{if(mesh.isMesh){mesh.geometry.dispose();mesh.material.dispose();}});
       for(const material of Object.values(building.model.userData.palette))material.dispose();
     }
   }
 }
 
 let shared=null;
+export function setTramDestination(destination){shared??=new BuildingRenderer();shared.setTramDestination(destination);}
 export function drawBuilding3D(...args){shared??=new BuildingRenderer();return shared.draw(...args);}
 export function drawBuildingLabel3D(...args){shared??=new BuildingRenderer();return shared.drawLabel(...args);}
 export function drawFarmRoom3D(...args){shared??=new BuildingRenderer();return shared.drawInterior(...args);}
@@ -345,8 +429,8 @@ export function getBuildingOcclusionMeshes({snow=false,millTime,lodgeDoor=0}={})
   shared.setLodgeDoor(lodgeDoor);
   shared.setMillStage(windmillStage());
   if(millTime!==undefined&&shared.buildings.windmill.stage===10)shared.turnSails(millTime);
-  return Object.values(shared.buildings).map(building=>{
+  return Object.values(shared.buildings).filter(building=>building.model.userData.kind!=='tram-track').map(building=>{
     const key=snow?'snowOcclusion':'dryOcclusion';
-    return building[key]??={kind:building.model.userData.kind,near:.8,skipNearCrossing:building.model.userData.kind==='barn',polygons:building.faces.filter(face=>!face.snow||snow).map(face=>face.points)};
+    return building[key]??={kind:building.model.userData.kind,near:.8,skipNearCrossing:building.model.userData.kind==='barn',polygons:building.faces.filter(face=>(!face.snow||snow)&&!face.material.transparent).map(face=>face.points)};
   });
 }

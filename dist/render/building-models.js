@@ -9,7 +9,7 @@ export const BUILDING_SPECS=Object.freeze({
   shed:Object.freeze({width:9.4,depth:11,eave:4.2,ridge:6.2})
 });
 
-function builder(name){
+export function builder(name,spec=BUILDING_SPECS[name]){
   const root=new THREE.Group();root.name=name;
   const parts=[],materials=new Map();
   const material=(name,color)=>{
@@ -81,7 +81,7 @@ function builder(name){
     }
   }
   function sideWindow(side,z,y,w=1.5,h=1.5){
-    const x=side*(BUILDING_SPECS[name].width/2+.04);
+    const x=side*(spec.width/2+.04);
     box('side window',x,y,z,.10,h,w,palette.glass);
     for(const dz of [-w/2,w/2])box('side jamb',x+side*.05,y,z+dz,.14,h+.12,.09,palette.frame);
     for(const dy of [-h/2,0,h/2])box('side sill',x+side*.06,y+dy,z,.16,.08,w+.14,palette.frame);
@@ -98,8 +98,9 @@ function builder(name){
     const batches=new Map();
     for(const part of parts){
       const key=part.material.uuid+(part.userData.snow?':snow':'');
-      if(!batches.has(key))batches.set(key,{material:part.material,snow:!!part.userData.snow,positions:[],normals:[]});
+      if(!batches.has(key))batches.set(key,{material:part.material,snow:!!part.userData.snow,positions:[],normals:[],uv:[]});
       const batch=batches.get(key),geometry=part.geometry.index?part.geometry.toNonIndexed():part.geometry.clone();
+      if(part.material.map&&geometry.attributes.uv)batch.uv.push(...geometry.attributes.uv.array);
       geometry.applyMatrix4(part.matrixWorld);
       batch.positions.push(...geometry.attributes.position.array);batch.normals.push(...geometry.attributes.normal.array);
       geometry.dispose();part.geometry.dispose();
@@ -109,11 +110,12 @@ function builder(name){
       const geometry=new THREE.BufferGeometry();
       geometry.setAttribute('position',new THREE.Float32BufferAttribute(batch.positions,3));
       geometry.setAttribute('normal',new THREE.Float32BufferAttribute(batch.normals,3));
+      if(batch.uv.length)geometry.setAttribute('uv',new THREE.Float32BufferAttribute(batch.uv,2));
       geometry.computeBoundingBox();geometry.computeBoundingSphere();
       const mesh=new THREE.Mesh(geometry,batch.material);mesh.name=batch.material.name;
       mesh.userData.snow=batch.snow;mesh.visible=!batch.snow;root.add(mesh);
     }
-    root.userData={kind:name,parts:metadata,palette,spec:BUILDING_SPECS[name]};
+    root.userData={kind:name,parts:metadata,palette,spec};
     return root;
   }
   return {root,palette,box,beam,sphere,add,material,gable,roof,frontWindow,sideWindow,finish};

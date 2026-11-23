@@ -1,7 +1,9 @@
 import {forestHeight,hillPick,denSites,nearbyDen} from './game/forest-hills.js';
 import {drawHills,addDenLayers} from './render/forest-hills.js?v=hill-draw-2';
 import {addGardenLayers} from './render/pond-garden.js?v=stream-banks-1';
-import {setupRanchMap,streamLookout} from './ranch-map.js?v=stream-banks-1';
+import {setupRanchMap,streamLookout} from './ranch-map.js?v=tram-station-1';
+import {TRAM_DESTINATIONS,TRAM_STATION,TRAM_STOP} from './game/tram-station.js';
+import {tramPlatformOrigin} from './render/tram-station.js';
 import {trailX,inGrove,clearTrunks,groveRoute} from './game/fir-grove.js?v=birch-edge-1';
 import {addBirchLayers,drawForestFloor,addForestLayers,groveVisible} from './render/fir-grove.js?v=low-pet-2';
 import {frameLodgeStairs,followRoomVisitor,roomVisitorProjection} from './game/room-follow.js?v=coop-circle-1';
@@ -20,7 +22,7 @@ import {MeadowTime} from './game/meadow-time.js?v=chosen-time-2';
 import {SheepBond} from './game/bond.js?v=night-barn';
 import {WeatherShelter} from './game/shelter.js?v=solid-buildings-2';
 import {LambPlay} from './game/lamb-play.js?v=solid-buildings-2';
-import {pickLodgeStairs,clipRoomDoorway,drawBuilding3D,drawBuildingLabel3D,drawBarnRoom3D,drawFarmRoom3D,drawLodgeRoom3D,getBuildingOcclusionMeshes} from './render/buildings-three.js?v=lodge-hearth-1';
+import {setTramDestination,pickLodgeStairs,clipRoomDoorway,drawBuilding3D,drawBuildingLabel3D,drawBarnRoom3D,drawFarmRoom3D,drawLodgeRoom3D,getBuildingOcclusionMeshes} from './render/buildings-three.js?v=tram-station-1';
 import {windmillStage,windmillStatus,windmillCountdown,windmillOpeningLabel} from './game/windmill-construction.js?v=countdown-1';
 import {drawWeather,drawFriendBadge} from './render/weather.js?v=night-barn';
 import {setupMeadowPanel} from './meadow-panel.js?v=chosen-time-2';
@@ -105,6 +107,38 @@ let atmosphere=meadowTime.apply(weather.snapshot()),environmentTimer=0;
 bond.apply(flock);
 const shepherd=new ShepherdBoy(),barnVisit=new BarnVisit(),lodgeVisit=new LodgeVisit(),farmVisit=new FarmRoomVisit();
 let chat=null,pendingShepherdTalk=false;
+const stationBoard=$('station-board');
+let selectedDestination=null;
+function atStationBoard(){
+  const spot=TRAM_STATION.waitingSpot;
+  return started && view===outdoorView && Math.hypot(player.x-spot.x,player.z-spot.z)<.82;
+}
+function openStationBoard(){
+  if(stationBoard.open||!atStationBoard())return;
+  keys.clear();
+  const options=$('station-options');
+  if(!options.childElementCount){
+    for(const name of TRAM_DESTINATIONS){
+      const button=document.createElement('button');
+      button.type='button';button.value=name;button.textContent=name;
+      button.onclick=()=>{
+        if(!stationBoard.open||!atStationBoard())return;
+        setTramDestination(name);
+        selectedDestination=name;
+        stationBoard.close();
+        notify(name+'행 트램이에요.');
+      };
+      options.append(button);
+    }
+  }
+  for(const button of options.children){
+    button.setAttribute('aria-pressed',String(button.value===selectedDestination));
+  }
+  stationBoard.showModal();
+}
+$('station-board-open').onclick=openStationBoard;
+$('station-board-close').onclick=()=>stationBoard.close();
+stationBoard.addEventListener('keydown',event=>event.stopPropagation());
 let coopScreen=null,lodgeScreen=null,shedScreen=null;
 const grass=makeVegetation().filter(p=>!inGrove(p.x,p.z));
 const meadowTrees=trees.filter(p=>!inGrove(p.x,p.z));
@@ -225,6 +259,8 @@ function advanceOutdoorWalk(){
   if(walk.route.length){walk.target=walk.route.shift();player.tx=walk.target.x;player.tz=walk.target.z;}
   else{
     outdoorWalk=null;marker=null;
+    const stop=TRAM_STATION.waitingSpot;
+    if(Math.hypot(walk.goal.x-stop.x,walk.goal.z-stop.z)<.12 && atStationBoard())openStationBoard();
     if(forestPet?.walk===walk){
       if(Math.hypot(player.x-forestPet.x,player.z-forestPet.z)<1.3)forestPet.start=t;
       else forestPet=null;
@@ -314,6 +350,7 @@ function update(dt){
   if(!barnVisit.inside&&!lodgeVisit.inside&&!farmVisit.inside)player.buildingAccess=barnVisit.trip==='enter'?'barn':lodgeVisit.trip==='enter'?'lodge':farmVisit.trip==='enter'?farmVisit.kind:interaction.supplyTrip?'shed':null;
   updateEntranceDoors(dt);
   advanceOutdoorWalk();
+  $('station-board-open').hidden=!atStationBoard()||stationBoard.open;
   player.walking=false;
   if(started&&!seated&&!hammocking&&interaction.active?.phase!=='playing'&&(dx||dz)){
     const wx=dx*Math.cos(view.yaw)+dz*Math.sin(view.yaw),wz=-dx*Math.sin(view.yaw)+dz*Math.cos(view.yaw);
@@ -468,6 +505,9 @@ function paintWorldLayers(layers){
 function drawOutdoorScenery(interiorKind){
   const showGrove=groveVisible(project,W,H);
   background(showGrove);
+  const railwayVisible=Math.hypot(view.target.x-TRAM_STATION.x,view.target.z-TRAM_STATION.z)<115;
+  const railwayLighting={snow:atmosphere.kind==='snow',night:atmosphere.night,label:false};
+  if(railwayVisible)drawBuilding3D(c,'tram-track',project,view,W,H,{...railwayLighting,shadow:false});
   if(!interiorKind)drawMarker();
   const petFocus=!interiorKind&&interaction.active?.kind==='pet'&&interaction.active.phase==='playing'?interaction.active.animal:null;
   const lowPet=interiorKind?null:kneelingForestPet();
@@ -475,6 +515,11 @@ function drawOutdoorScenery(interiorKind){
     x:a.x,z:a.z,actor:true,focused:a===petFocus,cover:{halfWidth:1.9*a.size,above:3*a.size+(a.hop||0)*a.size+.5,below:.5*a.size},draw:()=>interiorKind?renderSheep(c,a,{project,time:t,width:W,height:H,player:lookoutView.target}):drawSheep(a)
   }));
   layers.push(windmillLayer());
+  if(railwayVisible){
+    for(const [kind,origin] of [['station',TRAM_STATION],['tram',TRAM_STOP],['tram-platform',tramPlatformOrigin]]){
+      layers.push({...origin,building:kind,draw:()=>drawBuilding3D(c,kind,project,view,W,H,{...railwayLighting,shadow:kind!=='tram-platform'})});
+    }
+  }
   layers.push({
     x:CONFIG.hammock.x,z:CONFIG.hammock.z,cover:{halfWidth:4.3,above:5.1,below:.6},draw:()=>drawHammock(c,project(CONFIG.hammock.x,CONFIG.hammock.z),{
       time:t,occupied:hammocking,sunset
@@ -582,6 +627,11 @@ function start(){
   $('welcome').hidden=true;
   view.zoom=1.65;
   const spawn=new URLSearchParams(location.search).get('start');
+  if(spawn==='station'){
+    const x=TRAM_STATION.entrance.x-6,z=TRAM_STATION.entrance.z-3;
+    Object.assign(player,{x,z,tx:x,tz:z,headingX:1,headingZ:0});
+    view.yaw=1.05;view.pitch=.15;view.zoom=1.08;
+  }
   if(spawn==='birch'){
     const x=-23,z=108;
     Object.assign(player,{x,z,tx:x,tz:z});
@@ -834,6 +884,12 @@ function tapWorld(screenX,screenY){
   }
   if(seated){
     notify('일어나기 버튼을 누르면 다시 걸을 수 있어요.');
+    return;
+  }
+  if(building==='station'||building==='tram'||building==='tram-platform'){
+    walkToOutdoor(building==='station'?TRAM_STATION.waitingSpot:TRAM_STATION.entrance);
+    following=true;
+    updateViewLabel();
     return;
   }
   const ground=pickBridge(x,y,project)||hillPick(view,x,y,W,H);

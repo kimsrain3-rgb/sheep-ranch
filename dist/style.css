@@ -151,3 +151,10 @@ dialog#welcome #start {width:100%;margin:.5rem 0 0;text-align:center;font-size:1
 #mobile-menu-help #help, #mobile-menu-help #avatar-open { flex:1; width:auto; white-space:nowrap }
 
 #welcome #welcome-sound { display:block; margin:4px auto 8px; min-height:38px; padding:5px 14px; border-radius:18px; background:#e4e9da; color:#355440; font-size:13px }
+
+#station-board-open{position:fixed;z-index:28;left:50%;top:max(72px,15dvh);transform:translateX(-50%);border:1px solid #a08058;border-radius:24px;background:#fff5dd;color:#513925;padding:11px 20px;font-weight:700}
+#station-board{width:min(340px,90vw);box-sizing:border-box;background:#fcf4e3;color:#523b2d;border:2px solid #816449;border-radius:12px;padding:16px 20px 22px}
+#station-board::backdrop{background:#1f281f66}
+#station-options{display:flex;gap:8px;margin-top:16px}
+#station-options button{flex:1;min-height:50px;border:1px solid #b79870;background:#fffaf0;color:#533c2f;border-radius:6px;font-weight:700}
+#station-options button[aria-pressed=true]{background:#754332;color:white}

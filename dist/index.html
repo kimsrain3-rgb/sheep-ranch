@@ -1,4 +1,4 @@
-<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#e9ead9"><title>바람목장 · 양에게 건초를</title><link rel="stylesheet" href="style.css?v=welcome-audio-1"><link rel="stylesheet" href="ranch-map.css"></head><body>
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#e9ead9"><title>바람목장 · 양에게 건초를</title><link rel="stylesheet" href="style.css?v=station-destinations-1"><link rel="stylesheet" href="ranch-map.css"></head><body>
 <canvas id="world" aria-label="양들이 풀을 뜯고 나무와 연못이 있는 목장. 풀밭을 누르면 이동합니다."></canvas>
 <header><a class="brand" href="./"><span class="logo">❋</span><span>바람목장<small>THE SLOW MEADOW</small></span></a><div class="top-actions"><button id="map-open" aria-haspopup="dialog" aria-controls="ranch-map">지도 보기</button><button id="avatar-open" aria-haspopup="dialog" aria-controls="avatar-panel">내 모습</button><button id="my-sheep">♡ 내 양</button><button id="help" aria-label="조작 안내">?<span class="help-text">조작 안내</span></button></div></header>
 <dialog id="welcome" aria-labelledby="welcome-title"><h1 id="welcome-title">바람목장에 오신 걸 환영해요.</h1>
@@ -22,6 +22,11 @@
 <div class="map-key"><span>내 위치</span><span>목적지</span></div></dialog>
 <button id="mobile-menu-toggle" aria-label="목장 메뉴" aria-expanded="false" aria-controls="mobile-menu">☰ <span>메뉴</span></button>
 <div id="mobile-menu" hidden><section id="mobile-sheet" role="dialog" aria-modal="true" aria-labelledby="mobile-menu-title"><div class="mobile-sheet-title"><strong id="mobile-menu-title">바람목장</strong><button id="mobile-menu-close" aria-label="메뉴 닫기">×</button></div><div id="mobile-menu-help"></div><p class="mobile-section-label">시점</p><div id="mobile-menu-camera"></div><p class="mobile-section-label">쉬어가기</p><div id="mobile-menu-rest"></div><p class="mobile-section-label">동물 돌보기</p><div id="mobile-menu-care"></div><div id="mobile-menu-stats"></div><p class="mobile-gesture-note">밀어서 회전 · 두 손가락으로 확대<br>풀밭을 짧게 누르면 걸어요</p></section></div>
+<button id="station-board-open" type="button" aria-haspopup="dialog" aria-controls="station-board" hidden>행선지 고르기</button>
+<dialog id="station-board" aria-labelledby="station-board-title">
+<div class="panel-title"><h2 id="station-board-title">어디로 갈까요?</h2><button type="button" id="station-board-close" aria-label="행선지 선택 닫기">×</button></div>
+<div id="station-options" role="group" aria-label="바람목장역 행선지"></div>
+</dialog>
 <dialog id="meadow-panel" aria-labelledby="meadow-panel-title">
 <div class="panel-title"><h2 id="meadow-panel-title">목장의 하루</h2><button id="meadow-panel-close" aria-label="목장 설정 닫기">×</button></div>
 <section id="meadow-time-section" aria-labelledby="meadow-time-title"><h3 id="meadow-time-title">내가 고르는 시간</h3><p>접속한 시간과 상관없이 원하는 목장을 만나요. 낮을 고르면 양들이 풀밭으로 차례로 나와요.</p><div class="time-presets" role="group" aria-label="목장의 시간대"><button type="button" data-meadow-time="07:00" aria-pressed="false">아침</button><button type="button" data-meadow-time="12:00" aria-pressed="true">낮</button><button type="button" data-meadow-time="18:00" aria-pressed="false">노을</button><button type="button" data-meadow-time="22:00" aria-pressed="false">밤</button></div><form id="time-form"><label for="meadow-time">원하는 시각</label><div class="field-row"><input id="meadow-time" type="time" value="12:00" step="60" required><button type="submit">시간 적용</button></div></form><p id="time-choice-status" role="status" aria-live="polite"></p><p class="panel-note" id="time-choice-storage"></p><p class="panel-note">비나 눈이 오면 선택한 시간과 관계없이 동물들이 축사에서 쉬어요.</p></section>
@@ -45,4 +50,4 @@
 <script type="importmap">{"imports":{"./game/waterways.js?v=lake-bridge-1":"./game/waterways.js?v=stream-banks-1","./game/waterways.js?v=river-14":"./game/waterways.js?v=stream-banks-1"}}</script>
 <script type="module" src="avatar-panel.js?v=limb-light-1"></script>
 <script type="module" src="mobile-ui.js?v=ranch-map-1"></script>
-<script type="module" src="app.js?v=low-pet-2"></script></body></html>
+<script type="module" src="app.js?v=station-destinations-1"></script></body></html>

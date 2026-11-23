@@ -4,8 +4,9 @@ const elements=new Map(),listeners=new Map(),captures=new Set();
 function el(id){if(!elements.has(id))elements.set(id,{style:{},classList:{add(){},toggle(){}},setAttribute(k,v){this[k]=v},querySelector(){return el(id+'child')},focus(){},addEventListener(k,fn){listeners.set(k,fn)},setPointerCapture(id){captures.add(id)},hasPointerCapture(id){return captures.has(id)},releasePointerCapture(id){captures.delete(id)}});return elements.get(id)}
 el('world').getContext=()=>({setTransform(){}});
 const ctx=vm.createContext({console,Math,Map,Set,Object,URLSearchParams,location:{search:''},innerWidth:390,innerHeight:780,devicePixelRatio:1,document:{querySelector:()=>el('world'),getElementById:el,body:el('body')},addEventListener(){},requestAnimationFrame(){}});
- const modules=await Promise.all(['forest-hills','fir-grove','flock','interactions','companions','audio','config','layout','weather','bond','shelter','lamb-play','shepherd','barn','barn-camera','lodge','navigation','farm-room','room-follow','lodge-camera','meadow-time'].map(name=>import('../dist/game/'+name+'.js')));
+ const modules=await Promise.all(['forest-hills','fir-grove','flock','interactions','companions','audio','config','layout','weather','bond','shelter','lamb-play','shepherd','barn','barn-camera','lodge','navigation','farm-room','room-follow','lodge-camera','meadow-time','tram-station'].map(name=>import('../dist/game/'+name+'.js')));
 for(const module of modules)Object.assign(ctx,module);Object.assign(ctx,await import('../dist/pasture.js'),await import('../dist/render/fir-grove.js'));Object.assign(ctx,await import('../dist/render/details.js'));Object.assign(ctx,await import('../dist/render/bridge.js'));Object.assign(ctx,await import('../dist/render/occlusion.js'));
+Object.assign(ctx,await import('../dist/render/tram-station.js'));
 const source=fs.readFileSync('dist/orbit.js','utf8').replace('export class','class')+'\n'+fs.readFileSync('dist/app.js','utf8').replace(/^import[\s\S]*?;\n/gm,'');
 vm.runInContext(source,ctx);vm.runInContext('start()',ctx);
 const read=expression=>vm.runInContext(expression,ctx),event=(k,id,x,y)=>listeners.get(k)({pointerId:id,button:0,clientX:x,clientY:y});
@@ -117,6 +118,24 @@ assert.equal(read('shelter.active'),true,'time selection preserves explicit gath
 read(`shelter.manual=false;weather.preview='rain';meadowTime.set('12:00');refreshMeadowTime();update(.05)`);
 assert.equal(read('shelter.active'),true,'daylight never forces animals out in rain');
 console.log('App time choice: selected night herds, selected daylight releases promptly, rain and manual gathering retain priority.');
+
+// Exercise the same station arrival and modal controls the map and canvas use.
+const options=el('station-options'),board=el('station-board'),shown=[];
+options.children=[];
+options.append=button=>{options.children.push(button);options.childElementCount=options.children.length;};
+ctx.document.createElement=()=>({setAttribute(key,value){this[key]=value;}});
+board.showModal=()=>{board.open=true;};board.close=()=>{board.open=false;};
+ctx.setTramDestination=name=>shown.push(name);
+read('view=outdoorView;Object.assign(player,TRAM_STATION.waitingSpot);walkToOutdoor(TRAM_STATION.waitingSpot);advanceOutdoorWalk()');
+assert.equal(board.open,true);assert.deepEqual(shown,[]);
+assert.deepEqual(options.children.map(b=>b.value),['북극','사막','정글']);
+el('station-board-close').onclick();assert.deepEqual(shown,[]);
+el('station-board-open').onclick();options.children[1].onclick();
+assert.deepEqual(shown,['사막']);assert.equal(board.open,false);
+el('station-board-open').onclick();assert.equal(options.children[1]['aria-pressed'],'true');
+options.children[2].onclick();assert.deepEqual(shown,['사막','정글']);
+read('Object.assign(player,{x:0,z:0})');el('station-board-open').onclick();
+assert.equal(board.open,false,'the board is only available inside the station');
 
 console.log('App bridge: continuous dry crossing, raised feet, destination arrival and replacement-action cancellation passed.');
 console.log('Hammock: continuous normal-speed walk, rest only on arrival, stand in place, cancellation and replacement actions.');

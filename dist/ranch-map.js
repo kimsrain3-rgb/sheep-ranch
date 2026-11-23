@@ -1,5 +1,6 @@
 import {CONFIG,pondPoint,BRIDGES,bridgePoint,WATERWAYS,buildingFootprints,isWater,keepDry,clamp} from './game/config.js';
 import {forestPins,trailX,clearTrunks} from './game/fir-grove.js';
+import {TRAM_STATION} from './game/tram-station.js';
 
 const bounds=CONFIG.playerBounds;
 const buildings=buildingFootprints(CONFIG);
@@ -10,12 +11,13 @@ export const places=[
   {name:'자작나무숲',x:-23,z:108,kind:'birch'},
   streamLookout,
   {name:'연못가',...pondPoint(4.82,1.29),kind:'water'},
-  ...buildings.map(b=>({name:names[b.kind],x:b.doorX,z:b.front-1.4,kind:b.kind})),
+  ...buildings.filter(b=>b.kind in names).map(b=>({name:names[b.kind],x:b.doorX,z:b.front-1.4,kind:b.kind})),
+  {name:'바람목장역',...TRAM_STATION.waitingSpot,kind:'station'},
   {name:'해먹',...CONFIG.hammock,kind:'hammock'}
 ];
 export function mapDestination(point){
   const footprint=buildings.find(b=>point.x>=b.left&&point.x<=b.right&&point.z>=b.front&&point.z<=b.back);
-  if(footprint)return {...places.find(p=>p.kind===footprint.kind)};
+  if(footprint)return {...places.find(p=>p.kind===(footprint.kind==='tram'?'station':footprint.kind))};
   const goal={x:clamp(point.x,bounds.minX,bounds.maxX),z:clamp(point.z,bounds.minZ,bounds.maxZ)};
   const wet=isWater(goal);
   keepDry(goal);clearTrunks(goal);

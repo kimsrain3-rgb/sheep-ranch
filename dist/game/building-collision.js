@@ -12,17 +12,39 @@ export function buildingAccess(a={}){
   return null;
 }
 export function buildingFootprints(config){
-  return [['barn',9.65,18,3.1],['coop',3.8,10.8,1.05],['lodge',5.6,13.5,1.2],['shed',5.75,10.8,1.5],['windmill',4,8,1.1]].filter(([kind])=>config[kind]).map(([kind,half,depth,doorHalf])=>{
+  const footprints=[['barn',9.65,18,3.1],['coop',3.8,10.8,1.05],['lodge',5.6,13.5,1.2],['shed',5.75,10.8,1.5],['windmill',4,8,1.1]].filter(([kind])=>config[kind]).map(([kind,half,depth,doorHalf])=>{
     const b=config[kind];return {kind,left:b.x-half,right:b.x+half,front:b.entrance.z,back:b.entrance.z+depth,doorX:b.entrance.x,doorHalf};
   });
+  for(const kind of ['station','tram']){
+    const object=config[kind];
+    if(!object)continue;
+    const {x,z,width,depth}=object;
+    const footprint={kind,left:x-width/2,right:x+width/2,front:z-depth/2,back:z+depth/2,doorX:x,doorHalf:0};
+    if(kind==='station'){
+      const {left,right,front,back}=footprint;
+      const {wallThickness,benchDepth}=object;
+      footprint.shelterWalls=[
+        {left,right:left+wallThickness,front,back},
+        {left:right-wallThickness,right,front,back},
+        {left,right,front:back-wallThickness,back},
+        {left:left+.22,right:right-.22,front:back-wallThickness-benchDepth,back}
+      ];
+    }
+    footprints.push(footprint);
+  }
+  return footprints;
 }
 export function doorAt(point,config){
-  return buildingFootprints(config).find(b=>Math.hypot(point.x-b.doorX,point.z-b.front)<.16)?.kind||null;
+  return buildingFootprints(config).find(b=>b.doorHalf>0&&Math.hypot(point.x-b.doorX,point.z-b.front)<.16)?.kind||null;
 }
 export function buildingSolids(config,radius=.4,access=null){
   return buildingFootprints(config).flatMap(b=>{
+    if(b.shelterWalls)return b.shelterWalls.map(wall=>({
+      kind:b.kind,left:wall.left-radius,right:wall.right+radius,
+      front:wall.front-radius,back:wall.back+radius
+    }));
     const left=b.left-radius,right=b.right+radius,front=b.front-radius,back=b.back+radius;
-    if(access!==b.kind)return [{kind:b.kind,left,right,front,back}];
+    if(access!==b.kind||!b.doorHalf)return [{kind:b.kind,left,right,front,back}];
     // Entry/exit controllers may reach the open front door, never the side or
     // back walls. Outdoor coordinates stop at the threshold before room entry.
     const gap=Math.max(.25,b.doorHalf-radius);
@@ -66,5 +88,7 @@ export function buildingPathClear(a,b,config,{radius=actorRadius(a),access=build
   return !buildingSolids(config,radius,access).some(box=>enters(a,b,box));
 }
 export function buildingWaypoints(config,radius){
-  return buildingFootprints(config).flatMap(b=>[-1,1].flatMap(x=>[-1,1].map(z=>({x:(x<0?b.left:b.right)+x*(radius+.45),z:(z<0?b.front:b.back)+z*(radius+.45)}))));
+  const corners=buildingFootprints(config).flatMap(b=>[-1,1].flatMap(x=>[-1,1].map(z=>({x:(x<0?b.left:b.right)+x*(radius+.45),z:(z<0?b.front:b.back)+z*(radius+.45)}))));
+  if(config.station)corners.push({...config.station.entrance});
+  return corners;
 }
