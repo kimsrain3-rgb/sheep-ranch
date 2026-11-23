@@ -2,7 +2,7 @@ import {forestHeight,hillPick,denSites,nearbyDen} from './game/forest-hills.js';
 import {drawHills,addDenLayers} from './render/forest-hills.js?v=hill-draw-2';
 import {addGardenLayers} from './render/pond-garden.js?v=stream-banks-1';
 import {setupRanchMap,streamLookout} from './ranch-map.js?v=tram-station-1';
-import {TRAM_DESTINATIONS,TRAM_STATION,TRAM_STOP} from './game/tram-station.js';
+import {stationWalkingHeight,TRAM_DESTINATIONS,TRAM_STATION,TRAM_STOP} from './game/tram-station.js';
 import {tramPlatformOrigin} from './render/tram-station.js';
 import {trailX,inGrove,clearTrunks,groveRoute} from './game/fir-grove.js?v=birch-edge-1';
 import {addBirchLayers,drawForestFloor,addForestLayers,groveVisible} from './render/fir-grove.js?v=low-pet-2';
@@ -528,11 +528,16 @@ function drawOutdoorScenery(interiorKind){
   layers.push({x:CONFIG.barn.x,z:CONFIG.barn.entrance.z,building:'barn',draw:()=>{barnVisit.screen=drawBuilding3D(c,'barn',project,view,W,H,{inside:shelter.inside,total:sheep.length,snow:atmosphere.kind==='snow',night:atmosphere.night,label:false});}});
   layers.push({x:CONFIG.coop.x,z:CONFIG.coop.entrance.z,building:'coop',draw:()=>{coopScreen=drawBuilding3D(c,'coop',project,view,W,H,{inside:companions.coopInside,total:companions.chickens.length,snow:atmosphere.kind==='snow',night:atmosphere.night,label:false});}});
   layers.push({x:CONFIG.lodge.x,z:CONFIG.lodge.entrance.z,building:'lodge',draw:()=>{lodgeScreen=drawBuilding3D(c,'lodge',project,view,W,H,{night:atmosphere.night,snow:atmosphere.kind==='snow',occupants:Number(shepherd.insideLodge)+companions.dogs.filter(a=>a.hiddenInLodge).length,label:false});}});
-  if(!interiorKind&&started&&!hammocking)layers.push({
-    x:player.x,z:player.z,focused:!!petFocus,cover:{halfWidth:2.8,above:3,below:.5},draw:()=>drawVisitor(c,project(player.x,player.z),{
-      time:t,walking:player.walking,seated,feeding,petting:!!lowPet||interaction.active?.kind==='pet'&&interaction.active.phase==='playing',milking:interaction.active?.kind==='milk'&&interaction.active.phase==='playing',lambSize:lowPet?.size??interaction.active?.animal.size,pose:lowPet?((lowPet.x-player.x)*Math.cos(view.yaw)-(lowPet.z-player.z)*Math.sin(view.yaw)<0?'left':'right'):interaction.active?.phase==='playing'?visitorPose(interaction.active.animal.x-player.x,interaction.active.animal.z-player.z,view.yaw):visitorPose(player.headingX??0,player.headingZ??1,view.yaw)
-    })
-  });
+  if(!interiorKind&&started&&!hammocking){
+    const deck=stationWalkingHeight(player.x,player.z);
+    // The resting shoe extends .025 below the visitor drawing origin.
+    const feet=project(player.x,player.z,deck ? deck+.025 : undefined);
+    layers.push({
+      x:player.x,z:player.z,projected:feet,focused:!!petFocus,cover:{halfWidth:2.8,above:3,below:.5},draw:()=>drawVisitor(c,feet,{
+        time:t,walking:player.walking,seated,feeding,petting:!!lowPet||interaction.active?.kind==='pet'&&interaction.active.phase==='playing',milking:interaction.active?.kind==='milk'&&interaction.active.phase==='playing',lambSize:lowPet?.size??interaction.active?.animal.size,pose:lowPet?((lowPet.x-player.x)*Math.cos(view.yaw)-(lowPet.z-player.z)*Math.sin(view.yaw)<0?'left':'right'):interaction.active?.phase==='playing'?visitorPose(interaction.active.animal.x-player.x,interaction.active.animal.z-player.z,view.yaw):visitorPose(player.headingX??0,player.headingZ??1,view.yaw)
+      })
+    });
+  }
   addDenLayers(layers,c,project,dugDens);
   addBirchLayers(layers,c,project,W,H);
   if(showGrove)addForestLayers(layers,c,project,W,H,t,view.yaw,forestPet);

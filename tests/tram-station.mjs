@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import * as THREE from '../dist/vendor/three/three.module.js';
 import {CONFIG,isWater} from '../dist/game/config.js';
 import {buildingPathClear} from '../dist/game/building-collision.js';
-import {TRAM_STATION,TRAM_STOP,TRACK_CURVE,RAIL_TOP} from '../dist/game/tram-station.js';
+import {stationWalkingHeight,TRAM_STATION,TRAM_STOP,TRACK_CURVE,TRACK_GAUGE,RAIL_TOP} from '../dist/game/tram-station.js';
 import {dryRoute} from '../dist/game/navigation.js';
 import {mapDestination,places} from '../dist/ranch-map.js';
 import {MeadowView} from '../dist/orbit.js';
@@ -23,6 +23,12 @@ for(const side of [-1,1]){
 }
 assert.equal(buildingPathClear(sheltered,{x:sheltered.x,z:TRAM_STATION.z+2},CONFIG),false,'the rear wall and bench block visitors');
 const stationModel=createTramStation();
+const floorTop=stationModel.userData.parts.find(part=>part.name==='worn platform floorboard').max[1];
+const lintelBottom=stationModel.userData.parts.find(part=>part.name==='open entrance lintel').min[1];
+assert.ok(lintelBottom-floorTop>2.16+.30,'hat clears the entrance beam from the real deck');
+assert.ok(Math.abs(stationWalkingHeight(sheltered.x,sheltered.z)-floorTop)<.0001);
+assert.equal(stationWalkingHeight(TRAM_STATION.entrance.x,TRAM_STATION.entrance.z),.144);
+assert.equal(stationWalkingHeight(TRAM_STATION.x-10,TRAM_STATION.z),0);
 const sightline=new THREE.Raycaster(new THREE.Vector3(0,1.2,-.78),new THREE.Vector3(0,0,1));
 assert.equal(sightline.intersectObject(stationModel,true).length,0,'seated passengers see the track through the opening');
 const step=stationModel.userData.parts.find(p=>p.name==='low entrance step');
@@ -46,17 +52,31 @@ for(const mesh of woodGroups){
 }
 assert.ok(woodGroups.find(m=>m.name.includes('seats')).material.roughness<
   woodGroups.find(m=>m.name.includes('floor')).material.roughness);
-const wheel=tram.userData.parts.find(part=>part.name==='rail wheel');
+const tramParts=name=>tram.userData.parts.filter(part=>part.name===name);
+const floorY=tramParts('longitudinal floorboard')[0].max[1];
+for(const light of [...tramParts('warm glass ceiling bulb'),...tramParts('curved ivory ceiling')]){
+  assert.ok(light.min[1]-floorY>=2.45,'the aisle and ceiling clear a standing adult');
+}
+for(const lintel of [...tramParts('driver door header'),...tramParts('ivory strip above windows')]){
+  assert.ok(lintel.min[1]-floorY>=2.22,'driver and exterior doorways have adult headroom');
+}
+assert.ok(tramParts('door upper oak frame').every(door=>door.max[0]-door.min[0]>.80),'side door is wide enough');
+const extents=new THREE.Box3().setFromObject(tram);
+assert.ok(Math.max(-extents.min.x,extents.max.x)<=TRAM_STOP.width/2&&
+  Math.max(-extents.min.z,extents.max.z)<=TRAM_STOP.depth/2,'collision covers the resized tram');
 const seats=tram.userData.parts.filter(part=>part.name==='long bench seat slat');
 assert.equal(seats.length,16);
 assert.ok(seats.every(part=>part.min[2]>.37||part.max[2]<-.37),'both benches leave a clear center aisle');
 assert.ok(tram.children.some(mesh=>mesh.material.transparent&&mesh.material.opacity<.25),'the passenger windows are transparent');
 assert.equal(tram.userData.parts.filter(part=>part.name==='curved ivory ceiling').length,16);
-const eye=new THREE.Vector3(.33,1.75,0),glassDirection=new THREE.Vector3(0,0,1);
+const eye=new THREE.Vector3(.35,seats[0].max[1]+1.03,0),glassDirection=new THREE.Vector3(0,0,1);
 const ray=new THREE.Raycaster(eye,glassDirection);
 const faces=ray.intersectObject(tram,true);
 assert.ok(faces.length&&faces.every(hit=>hit.object.material.transparent),'a seated sightline passes out through the window');
-assert.ok(Math.abs(wheel.min[1]-RAIL_TOP)<.00001,'wheel meets the rail head');
+for(const wheel of tramParts('rail wheel')){
+  assert.ok(Math.abs(wheel.min[1]-RAIL_TOP)<.00001,'wheel meets the rail head');
+  assert.ok(Math.abs(Math.abs(wheel.min[2]+wheel.max[2])-TRACK_GAUGE)<.00001,'wheel sits over its rail');
+}
 for(const model of [stationModel,tram,createTramTrack()]){
   assert.ok(model instanceof THREE.Group&&model.children.length<20);
   for(const mesh of model.children)assert.ok(mesh.geometry.attributes.position.array.every(Number.isFinite));
@@ -76,6 +96,10 @@ for(const name of ['북극','사막','정글','북극']){
   assert.equal(ink.parent,renderedTram.model,'WebGL shows lettering on the actual tram');
   assert.equal(renderer.caches.has('tram'),false,'a parked camera must refresh the tram image');
   const inkFaces=renderedTram.faces.filter(face=>face.material===ink.material);
+  const box=tramParts('wine destination box')[0];
+  assert.ok(inkFaces.every(face=>face.points.every(([x,z,y])=>y>box.min[1]&&y<box.max[1]&&
+    Math.abs(z-TRAM_STOP.z)<box.max[2]&&Math.abs(x-TRAM_STOP.x)>-box.min[0])),
+    'all painted letters sit on the raised board');
   assert.equal(inkFaces.length,ink.geometry.attributes.position.count/3);
   const front=inkFaces.filter(face=>face.points.every(([x])=>x>TRAM_STOP.x+2.85));
   const back=inkFaces.filter(face=>face.points.every(([x])=>x<TRAM_STOP.x-2.85));

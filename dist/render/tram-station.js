@@ -1,5 +1,5 @@
 import * as THREE from '../vendor/three/three.module.js';
-import {RAIL_TOP,TRACK_CURVE,TRACK_GAUGE,TRAM_STATION,TRAM_STOP} from '../game/tram-station.js';
+import {RAIL_TOP,TRACK_CURVE,TRACK_GAUGE,STATION_FLOOR_TOP,TRAM_PLATFORM,TRAM_STATION,TRAM_STOP} from '../game/tram-station.js';
 import {cabinOak,mapOakBoard} from './tram-oak.js';
 import {builder} from './building-models.js?v=tram-station-1';
 
@@ -31,7 +31,7 @@ function signLetters(model,text,x,y,z,side,height,material){
 
 export function createTramStation(){
   const {depth:width,width:depth,wallThickness,benchDepth}=TRAM_STATION;
-  const b=builder('station',{width:TRAM_STATION.width,depth:TRAM_STATION.depth,eave:2.26,ridge:2.91});
+  const b=builder('station',{width:TRAM_STATION.width,depth:TRAM_STATION.depth,eave:2.74,ridge:3.39});
   const {box,beam,add}=b;
   const timber=['#74654d','#7d6b52','#695943','#847357'].map((color,i)=>b.material('weathered cedar '+i,color));
   const framing=b.material('structural timber','#524536');
@@ -42,7 +42,7 @@ export function createTramStation(){
   const green=b.material('old green noticeboard','#435946');
   const stone=b.material('porous step stone','#a19b85');
   const left=-width/2,right=width/2,half=depth/2;
-  const eave=2.26,ridge=2.91,overhang=half+.37,rise=ridge-eave;
+  const eave=2.74,ridge=3.39,overhang=half+.37,rise=ridge-eave;
   const roofLength=width+.91,roofCenter=-.12;
   const groove=b.material('dark cedar grain','#685942');
   const j=i=>timber[(i*7+Math.floor(i/4))%timber.length];
@@ -51,25 +51,25 @@ export function createTramStation(){
   box('low entrance step',left-.12,.022,0,.30,.044,1.82,stone);
   for(let i=0;i<12;i++){
     const pitch=depth/12;
-    box('worn platform floorboard',0,.091,-half+(i+.5)*pitch,width,pitch*.055,pitch-.007,j(i));
-    box('back wall vertical cedar board',right-wallThickness/2,1.157,-half+(i+.5)*pitch,
-      wallThickness,2.13,pitch-.008,j(i+3));
+    box('worn platform floorboard',0,STATION_FLOOR_TOP-pitch*.055/2,-half+(i+.5)*pitch,width,pitch*.055,pitch-.007,j(i));
+    box('back wall vertical cedar board',right-wallThickness/2,1.397,-half+(i+.5)*pitch,
+      wallThickness,2.61,pitch-.008,j(i+3));
   }
 
   for(const side of [-1,1]){
     const z=side*(half-wallThickness/2);
-    for(const x of [left+.075,right-.075])box('heavy corner post',x,1.166,z,.15,2.25,.15,framing);
+    for(const x of [left+.075,right-.075])box('heavy corner post',x,1.406,z,.15,2.73,.15,framing);
     for(let i=0;i<15;i++){
       const pitch=width/15;
       const x=left+(i+.5)*pitch;
-      box('side wall vertical cedar board',x,1.161,z,pitch-.009,2.12,.086,j(i+side+1));
+      box('side wall vertical cedar board',x,1.401,z,pitch-.009,2.60,.086,j(i+side+1));
       const grainOffset=((i*5)%7-3)*.022;
       for(const face of [-1,1]){
         box('faint cedar grain',x+grainOffset,.68+(i%4)*.19,z+face*.044,.009,.46+(i%5)*.22,.005,groove);
       }
     }
     box('side wall sill',0,.22,z,width,.126,.115,framing);
-    box('eaves beam',0,2.22,z,width+.23,.144,.143,framing);
+    box('eaves beam',0,2.70,z,width+.23,.144,.143,framing);
     const angle=-side*Math.atan2(rise,overhang);
     const slant=Math.hypot(rise,overhang);
     box('corrugated graphite roof',roofCenter,(ridge+eave)/2,side*overhang/2,roofLength,.073,slant,roof,[angle,0,0]);
@@ -84,9 +84,9 @@ export function createTramStation(){
     }
   }
   box('ridge cover',roofCenter,ridge+.044,0,roofLength+.06,.069,.139,ribs);
-  box('open entrance lintel',left+.075,2.199,0,.154,.116,depth,framing);
-  beam('gable diagonal brace',[left+.074,2.22,-.78],[left+.074,2.55,0],.075,timber[1]);
-  beam('gable diagonal brace',[left+.074,2.22,.78],[left+.074,2.55,0],.075,timber[1]);
+  box('open entrance lintel',left+.075,2.679,0,.154,.116,depth,framing);
+  beam('gable diagonal brace',[left+.074,2.70,-.78],[left+.074,3.03,0],.075,timber[1]);
+  beam('gable diagonal brace',[left+.074,2.70,.78],[left+.074,3.03,0],.075,timber[1]);
   box('back wall crosspiece',right-.168,1.31,0,.081,.096,depth-.09,framing);
   for(let i=0;i<4;i++){
     box('shelter bench seat',right-wallThickness-benchDepth+(i+.49)*benchDepth/4,.48,0,
@@ -96,11 +96,11 @@ export function createTramStation(){
     benchDepth-.05,.392,.124,framing);
 
   const signX=left-.19,signZ=half-.33;
-  beam('round sign hanger',[left-.02,2.19,signZ],[signX,1.96,signZ],.047,framing);
-  add(new THREE.CylinderGeometry(.305,.305,.065,36),ivory,'round station sign rim',signX,1.79,signZ,[0,0,Math.PI/2]);
-  add(new THREE.CylinderGeometry(.274,.274,.083,36),red,'red round station sign',signX,1.79,signZ,[0,0,Math.PI/2]);
-  signLetters(b,'바람',signX-.045,1.861,signZ,-1,.124,ivory);
-  signLetters(b,'목장역',signX-.045,1.699,signZ,-1,.112,ivory);
+  beam('round sign hanger',[left-.02,2.67,signZ],[signX,2.44,signZ],.047,framing);
+  add(new THREE.CylinderGeometry(.305,.305,.065,36),ivory,'round station sign rim',signX,2.27,signZ,[0,0,Math.PI/2]);
+  add(new THREE.CylinderGeometry(.274,.274,.083,36),red,'red round station sign',signX,2.27,signZ,[0,0,Math.PI/2]);
+  signLetters(b,'바람',signX-.045,2.341,signZ,-1,.124,ivory);
+  signLetters(b,'목장역',signX-.045,2.179,signZ,-1,.112,ivory);
 
   const board=right-wallThickness-.04,boardHeight=1.51;
   box('framed noticeboard',board,boardHeight,-.48,.071,.88,1.10,framing);
@@ -120,10 +120,10 @@ export function createTramStation(){
 }
 
 export function createTramPlatform(){
-  const b=builder('tram-platform',{width:10.5,depth:1.28});
+  const b=builder('tram-platform',{width:TRAM_PLATFORM.width,depth:TRAM_PLATFORM.depth});
   const {box,palette:p}=b;
   for(let i=0;i<36;i++){
-    box('platform boards',-5.10+i*.29,.072,0,.278,.144,1.28,i%3?p.trim:p.wood);
+    box('platform boards',-5.10+i*.29,TRAM_PLATFORM.height/2,0,.278,TRAM_PLATFORM.height,TRAM_PLATFORM.depth,i%3?p.trim:p.wood);
   }
   box('platform edge',0,.116,-.65,10.5,.095,.12,p.stone);
   box('bench seat',-2.65,.49,.38,1.18,.08,.37,p.wood);
@@ -269,19 +269,54 @@ function addTramCabin(b,{cream,iron,gold,lamp}){
 const tramEndX=2.83;
 const destinationBoardY=2.731;
 
+// The original coach was drawn in miniature. Keep the axles and floor at
+// rail height, widen the door bays and grow the occupied cabin to visitor scale.
+function finishPassengerCoach(b){
+  const floor=.797,roof=2.35,bayStart=1.96,bayEnd=2.48;
+  const widthScale=1.19;
+  const heightAt=y=>y+.79*Math.max(0,Math.min(y,roof)-floor)
+    +.12*Math.max(0,y-roof);
+  const lengthAt=x=>x*1.07+Math.sign(x)*.66*Math.max(0,Math.min(Math.abs(x),bayEnd)-bayStart);
+  const point=new THREE.Vector3();
+  for(const mesh of b.root.children){
+    if(mesh.name==='rail wheel'||mesh.name==='wheel hub'){
+      mesh.position.x=lengthAt(mesh.position.x);
+      continue;
+    }
+    mesh.updateMatrix();
+    const geometry=mesh.geometry;
+    geometry.applyMatrix4(mesh.matrix);
+    const position=geometry.attributes.position;
+    const roundLamp=mesh.name==='brass headlight ring'||mesh.name==='single round headlight';
+    const centerY=mesh.position.y;
+    for(let i=0;i<position.count;i++){
+      point.fromBufferAttribute(position,i);
+      const y=roundLamp?heightAt(centerY)+(point.y-centerY)*widthScale:heightAt(point.y);
+      position.setXYZ(i,lengthAt(point.x),y,point.z*widthScale);
+    }
+    geometry.computeVertexNormals();
+    geometry.computeBoundingBox();
+    geometry.computeBoundingSphere();
+    mesh.position.set(0,0,0);
+    mesh.quaternion.identity();
+    mesh.scale.set(1,1,1);
+  }
+  return b.finish();
+}
+
 export function createTramLettering(destination){
   const b=builder('tram-lettering');
   const ink=b.material('destination lettering','#f5e4ba');
   for(const side of [-1,1]){
     signLetters(b,destination+'행',side*(tramEndX+.050),destinationBoardY,0,side,.200,ink);
   }
-  const mesh=b.finish().children[0];
+  const mesh=finishPassengerCoach(b).children[0];
   mesh.name=destination+'행';
   return mesh;
 }
 
 export function createTram(){
-  const b=builder('tram',{width:1.96,depth:5.9});
+  const b=builder('tram',{width:TRAM_STOP.width,depth:TRAM_STOP.depth});
   const {box,add,beam}=b;
   const red=b.material('vermilion enamel','#a21d23'),redPanel=b.material('red painted wood','#b1272c');
   const claret=b.material('dark wine trim','#511e25'),cream=b.material('ivory window bands','#eddec3');
@@ -376,7 +411,7 @@ export function createTram(){
       }
     }
   }
-  return b.finish();
+  return finishPassengerCoach(b);
 }
 
 const vector=(x,z)=>new THREE.Vector3(x,0,-z);
@@ -415,4 +450,4 @@ export function createTramTrack(){
   return b.finish();
 }
 
-export const tramPlatformOrigin=Object.freeze({x:65.6,z:47.98});
+export const tramPlatformOrigin=TRAM_PLATFORM;
