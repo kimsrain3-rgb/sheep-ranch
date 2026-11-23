@@ -22,7 +22,7 @@ import {MeadowTime} from './game/meadow-time.js?v=chosen-time-2';
 import {SheepBond} from './game/bond.js?v=night-barn';
 import {WeatherShelter} from './game/shelter.js?v=solid-buildings-2';
 import {LambPlay} from './game/lamb-play.js?v=solid-buildings-2';
-import {setTramDestination,pickLodgeStairs,clipRoomDoorway,drawBuilding3D,drawBuildingLabel3D,drawBarnRoom3D,drawFarmRoom3D,drawLodgeRoom3D,getBuildingOcclusionMeshes} from './render/buildings-three.js?v=tram-station-1';
+import {setTramDestination,pickLodgeStairs,clipRoomDoorway,drawBuilding3D,drawBarnRoom3D,drawFarmRoom3D,drawLodgeRoom3D,getBuildingOcclusionMeshes} from './render/buildings-three.js?v=tram-station-1';
 import {windmillStage,windmillStatus,windmillCountdown,windmillOpeningLabel} from './game/windmill-construction.js?v=countdown-1';
 import {drawWeather,drawFriendBadge} from './render/weather.js?v=night-barn';
 import {setupMeadowPanel} from './meadow-panel.js?v=chosen-time-2';
@@ -92,7 +92,7 @@ $('dig-den').onclick=()=>{
 };
 let view=outdoorView;
 const millView=new LodgeInteriorView();
-let millMode=null,millLabel=null;
+let millMode=null;
 let following=true;
 const flock=new Flock(rnd,{adults:45,lambs:CONFIG.lambs}),sheep=flock.animals,lambs=flock.lambs;
 flock.adults.forEach((animal,i)=>{
@@ -291,6 +291,9 @@ function barn(x,y,s){
   path([[-60,-38],[0,-77],[58,-38]],sunset?'#76604d':'#7d6650');
   c.fillStyle='#433f32';
   c.fillRect(-14,-15,26,37);
+  c.fillStyle='#593c2a';c.fillRect(-22,-35,44,12);
+  c.fillStyle='#f7deab';c.font='bold 8px sans-serif';c.textAlign='center';c.textBaseline='middle';
+  c.fillText('건초 창고',0,-29);
   c.fillStyle='#ebe5cb';
   c.fillRect(-34,-21,13,13);
   c.fillRect(24,-21,13,13);
@@ -493,12 +496,6 @@ function paintWorldLayers(layers){
   // Paint solid buildings first. Every subsequent world sprite uses their
   // actual nearest surface depth, rather than the building entrance's depth.
   for(const layer of layers)if(layer.building)buildingOcclusion.drawBuilding(c,layer.building,()=>layer.draw());
-  millLabel=null;
-  for(const kind of ['barn','lodge','coop','windmill'])if(visibleBuildings.has(kind)&&!millMode&&view!==lookoutView){
-    const options=kind==='barn'?{inside:shelter.inside,total:sheep.length}:kind==='coop'?{inside:companions.coopInside,total:companions.chickens.length}:{occupants:Number(shepherd.insideLodge)+companions.dogs.filter(a=>a.hiddenInLodge).length};
-    const label=drawBuildingLabel3D(c,kind,project,options);
-    if(kind==='windmill')millLabel=label;
-  }
   for(const layer of layers)if(!layer.building&&!layer.focused&&layer.depth>0)drawWorldLayer(layer);
   for(const layer of layers)if(!layer.building&&layer.focused&&layer.depth>0)drawWorldLayer(layer);
 }
@@ -876,7 +873,7 @@ function tapWorld(screenX,screenY){
     return;
   }
   const building=buildingOcclusion.buildingAt(x,y);
-  if(building==='windmill'||(millLabel&&x>=millLabel.left&&x<=millLabel.right&&y>=millLabel.top&&y<=millLabel.bottom)){visitWindmill();return;}
+  if(building==='windmill'){visitWindmill();return;}
   if(building==='barn'){goBarn();return;}
   if(building==='coop'||building==='shed'){goFarmRoom(building);return;}
   if(building==='lodge'){goLodge();return;}

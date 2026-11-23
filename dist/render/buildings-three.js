@@ -5,7 +5,7 @@ import * as THREE from '../vendor/three/three.module.js';
 import {createBarnModel,createBarnRoomModel,createLodgeModel,createLodgeDoor,createCoopModel,createFarmRoomModel} from './building-models.js?v=entry-motion-1';
 import {CONFIG} from '../game/config.js?v=windmill-1';
 import {createWindmill,createSails,axle} from './windmill.js';
-import {windmillStage,windmillStatus} from '../game/windmill-construction.js';
+import {windmillStage} from '../game/windmill-construction.js';
 import {TRAM_DESTINATIONS,TRAM_STATION,TRAM_STOP} from '../game/tram-station.js';
 import {createTram,createTramLettering,createTramPlatform,createTramStation,createTramTrack,tramPlatformOrigin} from './tram-station.js';
 
@@ -296,19 +296,6 @@ export class BuildingRenderer{
     }
     c.drawImage(cache.image,crop.x,crop.y,crop.w,crop.h);
   }
-  label(c,kind,building,project,options){
-    const {x,z}=building.origin,spec=building.model.userData.spec;
-    const point=project(x,z+spec.depth*.2,spec.ridge+1.15);if(!point)return null;
-    const title=kind==='windmill'?'풍차 전망대':kind==='barn'?'양들의 축사':kind==='lodge'?'목동과 강아지의 집':'닭장';
-    const status=kind==='windmill'?windmillStatus(building.stage):kind==='barn'?`쉬는 양 ${options.inside||0} / ${options.total??0}`:kind==='lodge'?`2층 전망대${options.occupants?` · 쉬는 친구 ${options.occupants}`:''}`:`쉬는 닭 ${options.inside||0} / ${options.total??10}`;
-    const size=Math.max(10,Math.min(17,point.s*.38));
-    c.font=`${size}px sans-serif`;c.textAlign='center';c.textBaseline='middle';
-    const w=Math.max(c.measureText(title).width,c.measureText(status).width)+20,h=size*3.1;
-    c.fillStyle='#35533ee8';c.fillRect(point.x-w/2,point.y-h,w,h);
-    c.fillStyle='#fff7e0';c.fillText(title,point.x,point.y-h+size*.85);
-    c.font=`${size*.83}px sans-serif`;c.fillStyle='#ede9cf';c.fillText(status,point.x,point.y-size*.75);
-    return {left:point.x-w/2,right:point.x+w/2,top:point.y-h,bottom:point.y};
-  }
   draw(c,kind,project,view,W,H,options={}){
     if(kind==='tram-track')this.prepareRailway();
     const building=this.buildings[kind];if(!building)return null;
@@ -320,13 +307,9 @@ export class BuildingRenderer{
       try{this.drawWebGL(c,building,kind,basis,crop,W,H,options);mode='three-webgl';}
       catch{this.lost=true;this.caches.clear();this.drawSoftware(c,building,project,basis,options);}
     }else this.drawSoftware(c,building,project,basis,options);
-    const label=options.label===false?null:this.label(c,kind,building,project,options);c.restore();
+    c.restore();
     this.lastMode=mode;if(c.canvas?.dataset)c.canvas.dataset.buildings=mode;
-    return {x:(crop.left+crop.right)/2,y:Math.max(crop.bottom,label?.bottom??-Infinity),w:crop.right-crop.left,h:Math.max(crop.bottom,label?.bottom??-Infinity)-Math.min(crop.top,label?.top??Infinity)};
-  }
-  drawLabel(c,kind,project,options={}){
-    const building=this.buildings[kind];
-    return building?this.label(c,kind,building,project,options):null;
+    return {x:(crop.left+crop.right)/2,y:crop.bottom,w:crop.right-crop.left,h:crop.bottom-crop.top};
   }
   drawInterior(c,kind,view,W,H,options={}){
     if(!this.rooms.has(kind)){
@@ -417,7 +400,6 @@ export class BuildingRenderer{
 let shared=null;
 export function setTramDestination(destination){shared??=new BuildingRenderer();shared.setTramDestination(destination);}
 export function drawBuilding3D(...args){shared??=new BuildingRenderer();return shared.draw(...args);}
-export function drawBuildingLabel3D(...args){shared??=new BuildingRenderer();return shared.drawLabel(...args);}
 export function drawFarmRoom3D(...args){shared??=new BuildingRenderer();return shared.drawInterior(...args);}
 
 export function pickLodgeStairs(...args){shared??=new BuildingRenderer();return shared.pickLodgeStairs(...args);}

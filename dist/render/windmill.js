@@ -1,3 +1,4 @@
+import {woodenSign} from './wood-sign.js';
 import * as THREE from '../vendor/three/three.module.js';
 import {createBuildingBuilder} from './building-models.js?v=barn-three-1';
 import {CONFIG} from '../game/config.js?v=windmill-1';
@@ -50,6 +51,13 @@ export function createWindmill(stage=10){
   }
   if(stage>=5)for(const [y,z] of [[6.3,.44],[11.4,.82]])b.frontWindow(0,y,z,1.05,1.48);
   if(stage>=9)b.beam('sail shaft',[0,axle.height,.96],[0,axle.height,axle.front],.64,p.wood);
+  if(stage>=3){
+    b.box('nameboard mounting rail',0,3.91,.19,2.95,.36,.72,p.wood);
+    woodenSign(b,'풍차 전망대',3.91,-.22,.54);
+  }else{
+    for(const x of [1.5,3.8])b.box('site sign post',x,.83,-.67,.16,1.66,.14,p.wood);
+    woodenSign(b,'풍차 전망대',1.34,-.81,.51,2.65);
+  }
   const tower=b.finish();
   tower.userData.spec={width:8,depth:8,ridge:new THREE.Box3().setFromObject(tower).max.y};
   return tower;

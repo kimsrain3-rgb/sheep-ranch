@@ -1,3 +1,4 @@
+import {woodenSign} from './wood-sign.js';
 import * as THREE from '../vendor/three/three.module.js';
 
 // Model space uses metres-like game units: x = east, y = up, -z = meadow north.
@@ -180,10 +181,7 @@ export function createLodgeModel(withDoor=true){
   box('balcony handrail',0,5.36,-1.6,8.5,.15,.16,p.wood);
   for(const side of [-1,1])for(const z of [3.3,9.9])for(const y of [2.35,6.25])b.sideWindow(side,z,y);
   for(const x of [-3.6,3.6])for(const y of [2.35,6.2])b.frontWindow(x,y,13.7,1.6,1.65);
-  box('lodge name board',0,8.7,-.17,3.6,.58,.18,p.door);
-  // Small carved bone identifies the house shared with the shepherd dogs.
-  box('bone emblem',0,8.7,-.29,1.05,.15,.09,p.frame);
-  for(const x of [-.52,.52])for(const y of [8.6,8.8])sphere('bone end',x,y,-.3,.13,.13,.06,p.frame);
+  woodenSign(b,'목동과 강아지의 집',8.76,-.17,.62);
   return b.finish();
 }
 
@@ -221,7 +219,7 @@ export function createCoopModel(){
   box('nest boxes',0,1.12,9.5,4.8,1.25,1.2,p.wood);
   for(const x of [-1.6,0,1.6])box('nest lid',x,1.8,9.55,1.55,.12,1.4,p.roof,[.16,0,0]);
   box('nest sill',0,.48,9.5,5,.12,1.35,p.trim);
-  box('coop name plaque',0,4.25,-.16,2.3,.52,.18,p.door);
+  woodenSign(b,'닭들의 집',4.15,-.17,.62);
   // A simple timber vent in the gable.
   box('gable vent',0,5.05,-.14,.8,.65,.11,p.dark);
   for(const y of [4.84,5.05,5.26])box('vent slat',0,y,-.23,.85,.075,.13,p.door);
@@ -266,8 +264,7 @@ export function createBarnModel(){
   b.frontWindow(5.8,2.75,-.15,1.75,1.65);
   box('barn loft vent',0,6.05,-.37,1.5,1.25,.12,p.dark);
   for(const y of [5.7,6.05,6.4])box('barn vent slat',0,y,-.46,1.6,.09,.13,door);
-  box('barn sign board',0,4.85,-.35,3.4,.5,.15,door);
-  for(const x of [-1.25,1.25])box('barn sign end cap',x,4.85,-.46,.14,.53,.12,p.frame);
+  woodenSign(b,'양들의 축사',4.89,-.39,.70);
   // Interior details are visible through the open doorway.
   for(const side of [-1,1])for(const z of [3,6,9,12,15]){
     box('barn stall rail',side*3.1,1.05,z,.13,.14,2.7,timber);

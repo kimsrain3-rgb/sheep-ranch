@@ -9,6 +9,15 @@ import {buildingFootprints} from '../dist/game/building-collision.js';
 import {MeadowView} from '../dist/orbit.js';
 import {BarnInteriorView} from '../dist/game/barn-camera.js';
 
+// Names are raised geometry attached to the facade in both rendering paths.
+for(const [make,title] of [[createBarnModel,'양들의 축사'],[createCoopModel,'닭들의 집'],[createLodgeModel,'목동과 강아지의 집']]){
+ const parts=make().userData.parts,board=parts.find(p=>p.name===title+' · 나무간판');
+ assert.ok(board);
+ for(const char of title.replaceAll(' ','')){
+   const stroke=parts.find(p=>p.name==='wood letter '+char);
+   assert.ok(stroke && stroke.max[2]>board.max[2],'the letter stands proud of the board');
+ }
+}
 for(const model of [createBarnModel(),createBarnRoomModel(),createLodgeModel(),createCoopModel(),createFarmRoomModel('coop'),createFarmRoomModel('shed')]){
  assert.ok(model.isGroup&&model.children.every(mesh=>mesh.isMesh),'buildings are actual Three.js geometry');
  assert.ok(model.children.length<=13,'static details batch into a small draw count');
@@ -70,6 +79,7 @@ assert.ok(Math.abs(entranceDepth()-closedDepth)<1e-6,'closing returns the door t
 for(const yaw of [0,Math.PI/2,Math.PI,Math.PI*1.5])for(const kind of ['barn','lodge','coop']){
  const view=new MeadowView();view.target={x:CONFIG[kind].x,z:CONFIG[kind].entrance.z+5};view.yaw=yaw;view.zoom=.9;
  const project=(x,z,y=0)=>view.project(x,z,y,900,700);
+ context.fillText=()=>assert.fail("outdoor buildings must not paint floating captions");
  const hit=software.draw(context,kind,project,view,900,700,{night:true,snow:true,inside:5,total:10,occupants:3});
  assert.ok(hit&&hit.w>0&&hit.h>0,'projected building remains clickable from all four sides');
  assert.equal(context.canvas.dataset.buildings,'three-mesh-canvas','WebGL fallback still draws the real model');
