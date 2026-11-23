@@ -137,6 +137,33 @@ options.children[2].onclick();assert.deepEqual(shown,['사막','정글']);
 read('Object.assign(player,{x:0,z:0})');el('station-board-open').onclick();
 assert.equal(board.open,false,'the board is only available inside the station');
 
+// A booking follows this particular walk. Replacing the route cancels boarding.
+const ridePanel=el('tram-ride');
+ridePanel.showModal=()=>{ridePanel.open=true;};
+ridePanel.close=()=>{ridePanel.open=false;listeners.get('close')();};
+read('Object.assign(player,TRAM_STATION.waitingSpot)');
+el('station-ride-open').onclick();
+assert.equal(read('ride'),null);
+assert.equal(read('outdoorWalk.boardFor'),'정글');
+read('walkToOutdoor(TRAM_STATION.waitingSpot);advanceOutdoorWalk()');
+assert.equal(read('ride'),null);
+board.close();
+el('station-ride-open').onclick();
+for(let i=0;i<180&&!ridePanel.open;i++)read('update(.05)');
+assert.equal(ridePanel.open,true);
+assert.equal(read('ride.name'),'정글');
+assert.equal(read('nearBoardingDoor()'),true);
+ctx.drawTramRide=()=>{};
+read('ride.elapsed=15.9;frame(last+250)');
+assert.equal(el('ride-status').textContent,'정글 도착');
+el('ride-return').onclick();
+assert.equal(read('ride'),null);
+el('station-board-open').onclick();options.children[0].onclick();
+el('station-ride-open').onclick();read('advanceOutdoorWalk()');
+assert.equal(read('ride.name'),'북극');
+el('ride-return').onclick();
+console.log('Tram ride: platform approach, replacement walk, arrival, return and repeat boarding passed.');
+
 console.log('App bridge: continuous dry crossing, raised feet, destination arrival and replacement-action cancellation passed.');
 console.log('Hammock: continuous normal-speed walk, rest only on arrival, stand in place, cancellation and replacement actions.');
 console.log('Pinch expands zoom; pinch release and drag never walk; zoomed tap reaches correct world location; cancellation clears pointers.');

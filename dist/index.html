@@ -1,4 +1,4 @@
-<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#e9ead9"><title>바람목장 · 양에게 건초를</title><link rel="stylesheet" href="style.css?v=station-destinations-1"><link rel="stylesheet" href="ranch-map.css"></head><body>
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#e9ead9"><title>바람목장 · 양에게 건초를</title><link rel="stylesheet" href="style.css?v=tram-ride-1"><link rel="stylesheet" href="ranch-map.css"></head><body>
 <canvas id="world" aria-label="양들이 풀을 뜯고 나무와 연못이 있는 목장. 풀밭을 누르면 이동합니다."></canvas>
 <header><a class="brand" href="./"><span class="logo">❋</span><span>바람목장<small>THE SLOW MEADOW</small></span></a><div class="top-actions"><button id="map-open" aria-haspopup="dialog" aria-controls="ranch-map">지도 보기</button><button id="avatar-open" aria-haspopup="dialog" aria-controls="avatar-panel">내 모습</button><button id="my-sheep">♡ 내 양</button><button id="help" aria-label="조작 안내">?<span class="help-text">조작 안내</span></button></div></header>
 <dialog id="welcome" aria-labelledby="welcome-title"><h1 id="welcome-title">바람목장에 오신 걸 환영해요.</h1>
@@ -22,7 +22,11 @@
 <div class="map-key"><span>내 위치</span><span>목적지</span></div></dialog>
 <button id="mobile-menu-toggle" aria-label="목장 메뉴" aria-expanded="false" aria-controls="mobile-menu">☰ <span>메뉴</span></button>
 <div id="mobile-menu" hidden><section id="mobile-sheet" role="dialog" aria-modal="true" aria-labelledby="mobile-menu-title"><div class="mobile-sheet-title"><strong id="mobile-menu-title">바람목장</strong><button id="mobile-menu-close" aria-label="메뉴 닫기">×</button></div><div id="mobile-menu-help"></div><p class="mobile-section-label">시점</p><div id="mobile-menu-camera"></div><p class="mobile-section-label">쉬어가기</p><div id="mobile-menu-rest"></div><p class="mobile-section-label">동물 돌보기</p><div id="mobile-menu-care"></div><div id="mobile-menu-stats"></div><p class="mobile-gesture-note">밀어서 회전 · 두 손가락으로 확대<br>풀밭을 짧게 누르면 걸어요</p></section></div>
-<button id="station-board-open" type="button" aria-haspopup="dialog" aria-controls="station-board" hidden>행선지 고르기</button>
+<div id="station-actions"><button id="station-board-open" type="button" aria-haspopup="dialog" aria-controls="station-board" hidden>행선지 고르기</button><button id="station-ride-open" type="button" hidden>열차 타기</button></div>
+<dialog id="tram-ride" aria-labelledby="ride-status">
+<canvas id="ride-landscape" aria-hidden="true"></canvas><canvas id="ride-cabin" aria-hidden="true"></canvas>
+<div class="ride-controls"><strong id="ride-status" role="status"></strong><button id="ride-return" type="button">목장역으로 돌아가기</button></div>
+</dialog>
 <dialog id="station-board" aria-labelledby="station-board-title">
 <div class="panel-title"><h2 id="station-board-title">어디로 갈까요?</h2><button type="button" id="station-board-close" aria-label="행선지 선택 닫기">×</button></div>
 <div id="station-options" role="group" aria-label="바람목장역 행선지"></div>
@@ -47,7 +51,7 @@
   <fieldset><legend>옷 색</legend><div id="avatar-outfit" class="avatar-colors"></div></fieldset>
   <button id="avatar-apply">이 모습으로 걷기</button>
 </dialog>
-<script type="importmap">{"imports":{"./render/buildings-three.js?v=tram-station-1":"./render/buildings-three.js?v=wood-signs-1","./render/building-models.js?v=entry-motion-1":"./render/building-models.js?v=wood-signs-1","./render/windmill.js":"./render/windmill.js?v=wood-signs-1","./game/tram-station.js":"./game/tram-station.js?v=passenger-scale-1","./render/tram-station.js":"./render/tram-station.js?v=passenger-scale-1","./game/waterways.js?v=lake-bridge-1":"./game/waterways.js?v=stream-banks-1","./game/waterways.js?v=river-14":"./game/waterways.js?v=stream-banks-1"}}</script>
+<script type="importmap">{"imports":{"./render/buildings-three.js?v=tram-station-1":"./render/buildings-three.js?v=coach-2","./render/building-models.js?v=entry-motion-1":"./render/building-models.js?v=wood-signs-1","./render/windmill.js":"./render/windmill.js?v=wood-signs-1","./game/tram-station.js":"./game/tram-station.js?v=passenger-scale-1","./render/tram-station.js":"./render/tram-station.js?v=passenger-scale-1","./game/waterways.js?v=lake-bridge-1":"./game/waterways.js?v=stream-banks-1","./game/waterways.js?v=river-14":"./game/waterways.js?v=stream-banks-1"}}</script>
 <script type="module" src="avatar-panel.js?v=limb-light-1"></script>
 <script type="module" src="mobile-ui.js?v=ranch-map-1"></script>
-<script type="module" src="app.js?v=wood-signs-1"></script></body></html>
+<script type="module" src="app.js?v=coach-2"></script></body></html>

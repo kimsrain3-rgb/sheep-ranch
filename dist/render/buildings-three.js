@@ -312,11 +312,12 @@ export class BuildingRenderer{
     return {x:(crop.left+crop.right)/2,y:crop.bottom,w:crop.right-crop.left,h:crop.bottom-crop.top};
   }
   drawInterior(c,kind,view,W,H,options={}){
-    if(!this.rooms.has(kind)){
+    if(kind==='tram')this.prepareRailway();
+    else if(!this.rooms.has(kind)){
       const room=prepareBuilding(createFarmRoomModel(kind),{x:0,z:0});
       room.model.visible=false;this.scene.add(room.model);this.rooms.set(kind,room);
     }
-    const building=this.rooms.get(kind),basis=view.basis(W,H),settings={...options,near:.12,snow:false};
+    const building=kind==='tram'?this.buildings.tram:this.rooms.get(kind),basis=view.basis(W,H),settings={...options,near:.12,snow:false};
     const project=(x,z,y=0)=>view.project(x,z,y,W,H);
     this.initialise();this.appearance(building,settings);this.roomLight.intensity=options.night?.65:1.35;
     c.save();
@@ -400,6 +401,7 @@ export class BuildingRenderer{
 let shared=null;
 export function setTramDestination(destination){shared??=new BuildingRenderer();shared.setTramDestination(destination);}
 export function drawBuilding3D(...args){shared??=new BuildingRenderer();return shared.draw(...args);}
+export function drawTramCabin(c,view,w,h){shared??=new BuildingRenderer();shared.drawInterior(c,'tram',view,w,h);}
 export function drawFarmRoom3D(...args){shared??=new BuildingRenderer();return shared.drawInterior(...args);}
 
 export function pickLodgeStairs(...args){shared??=new BuildingRenderer();return shared.pickLodgeStairs(...args);}

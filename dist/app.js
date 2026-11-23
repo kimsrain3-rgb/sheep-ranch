@@ -3,6 +3,7 @@ import {drawHills,addDenLayers} from './render/forest-hills.js?v=hill-draw-2';
 import {addGardenLayers} from './render/pond-garden.js?v=stream-banks-1';
 import {setupRanchMap,streamLookout} from './ranch-map.js?v=tram-station-1';
 import {stationWalkingHeight,TRAM_DESTINATIONS,TRAM_STATION,TRAM_STOP} from './game/tram-station.js';
+import {drawTramRide} from './render/tram-ride.js?v=coach-2';
 import {tramPlatformOrigin} from './render/tram-station.js';
 import {trailX,inGrove,clearTrunks,groveRoute} from './game/fir-grove.js?v=birch-edge-1';
 import {addBirchLayers,drawForestFloor,addForestLayers,groveVisible} from './render/fir-grove.js?v=low-pet-2';
@@ -109,12 +110,43 @@ const shepherd=new ShepherdBoy(),barnVisit=new BarnVisit(),lodgeVisit=new LodgeV
 let chat=null,pendingShepherdTalk=false;
 const stationBoard=$('station-board');
 let selectedDestination=null;
+const rideDialog=$('tram-ride');
+let ride=null;
+function nearBoardingDoor(){
+  const door=TRAM_STOP.entrance;
+  return started && view===outdoorView && Math.hypot(player.x-door.x,player.z-door.z)<.9;
+}
+function walkToTram(){
+  if(!selectedDestination||ride)return;
+  walkToOutdoor(TRAM_STOP.entrance);
+  outdoorWalk.boardFor=selectedDestination;
+  keys.clear();
+}
+function boardTram(name){
+  if(ride||name!==selectedDestination||!nearBoardingDoor())return;
+  keys.clear();
+  player.walking=false;
+  ride={name,elapsed:0,arrived:false};
+  $('ride-status').textContent=name+'행 · 운행 중';
+  rideDialog.showModal();
+}
+$('station-ride-open').onclick=()=>{
+  if(atStationBoard()||nearBoardingDoor())walkToTram();
+};
+$('ride-return').onclick=()=>rideDialog.close();
+rideDialog.addEventListener('keydown',event=>event.stopPropagation());
+rideDialog.addEventListener('close',()=>{
+  ride=null;
+  keys.clear();
+  notify('바람목장역 승강장이에요.');
+  $('station-board-open').focus();
+});
 function atStationBoard(){
   const spot=TRAM_STATION.waitingSpot;
   return started && view===outdoorView && Math.hypot(player.x-spot.x,player.z-spot.z)<.82;
 }
 function openStationBoard(){
-  if(stationBoard.open||!atStationBoard())return;
+  if(stationBoard.open||ride||!(atStationBoard()||nearBoardingDoor()))return;
   keys.clear();
   const options=$('station-options');
   if(!options.childElementCount){
@@ -122,7 +154,7 @@ function openStationBoard(){
       const button=document.createElement('button');
       button.type='button';button.value=name;button.textContent=name;
       button.onclick=()=>{
-        if(!stationBoard.open||!atStationBoard())return;
+        if(!stationBoard.open||!(atStationBoard()||nearBoardingDoor()))return;
         setTramDestination(name);
         selectedDestination=name;
         stationBoard.close();
@@ -259,6 +291,7 @@ function advanceOutdoorWalk(){
   if(walk.route.length){walk.target=walk.route.shift();player.tx=walk.target.x;player.tz=walk.target.z;}
   else{
     outdoorWalk=null;marker=null;
+    if(walk.boardFor){boardTram(walk.boardFor);return;}
     const stop=TRAM_STATION.waitingSpot;
     if(Math.hypot(walk.goal.x-stop.x,walk.goal.z-stop.z)<.12 && atStationBoard())openStationBoard();
     if(forestPet?.walk===walk){
@@ -353,7 +386,9 @@ function update(dt){
   if(!barnVisit.inside&&!lodgeVisit.inside&&!farmVisit.inside)player.buildingAccess=barnVisit.trip==='enter'?'barn':lodgeVisit.trip==='enter'?'lodge':farmVisit.trip==='enter'?farmVisit.kind:interaction.supplyTrip?'shed':null;
   updateEntranceDoors(dt);
   advanceOutdoorWalk();
-  $('station-board-open').hidden=!atStationBoard()||stationBoard.open;
+  const byStation=atStationBoard()||nearBoardingDoor();
+  $('station-board-open').hidden=!byStation||stationBoard.open||!!outdoorWalk?.boardFor;
+  $('station-ride-open').hidden=$('station-board-open').hidden||!selectedDestination;
   player.walking=false;
   if(started&&!seated&&!hammocking&&interaction.active?.phase!=='playing'&&(dx||dz)){
     const wx=dx*Math.cos(view.yaw)+dz*Math.sin(view.yaw),wz=-dx*Math.sin(view.yaw)+dz*Math.cos(view.yaw);
@@ -612,8 +647,16 @@ function render(){
 }
 function frame(now){
   const dt=Math.min((now-last)/1000||.016,.06);
+  const rideDelta=Math.min(.5,Math.max(0,(now-last)/1000));
   last=now;
-  if(!paused){
+  if(ride){
+    ride.elapsed=Math.min(16,ride.elapsed+rideDelta);
+    drawTramRide($('ride-landscape'),$('ride-cabin'),ride.name,ride.elapsed/16);
+    if(ride.elapsed>=16&&!ride.arrived){
+      ride.arrived=true;
+      $('ride-status').textContent=ride.name+' 도착';
+    }
+  }else if(!paused){
     t+=dt;
     update(dt);
     render();
@@ -889,7 +932,8 @@ function tapWorld(screenX,screenY){
     return;
   }
   if(building==='station'||building==='tram'||building==='tram-platform'){
-    walkToOutdoor(building==='station'?TRAM_STATION.waitingSpot:TRAM_STATION.entrance);
+    if(building==='tram'&&selectedDestination)walkToTram();
+    else walkToOutdoor(building==='tram-platform'?TRAM_STATION.entrance:TRAM_STATION.waitingSpot);
     following=true;
     updateViewLabel();
     return;
