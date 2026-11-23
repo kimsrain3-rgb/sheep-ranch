@@ -1,3 +1,5 @@
+import {createArcticLanding,stepArctic,turnOnIce,tapOnIce,APPROACH_START} from './game/arctic-landing.js';
+import {drawArctic} from './render/arctic-landing.js';
 import {forestHeight,hillPick,denSites,nearbyDen} from './game/forest-hills.js';
 import {drawHills,addDenLayers} from './render/forest-hills.js?v=hill-draw-2';
 import {addGardenLayers} from './render/pond-garden.js?v=stream-banks-1';
@@ -129,6 +131,7 @@ function boardTram(name){
   ride={name,elapsed:0,arrived:false,windowView:false,yaw:.36,pitch:.02,drag:null};
   ride.boarding={start:{x:player.x,z:player.z},time:0,last:null,landedAt:null};
   rideDialog.classList.add('boarding');
+  $('ride-look-hint').textContent='화면을 밀어 둘러보기';
   $('ride-view').textContent='창밖 크게 보기';
   $('ride-view').hidden=true;
   $('ride-look-hint').hidden=true;
@@ -140,9 +143,49 @@ $('station-ride-open').onclick=()=>{
 };
 $('ride-view').onclick=()=>{
   if(!ride||ride.boarding)return;
+  if(ride.shore&&!$('arctic-shore').hidden){
+    if(ride.shore.phase!=='arrived')return;
+    $('arctic-shore').hidden=true;
+    ride.windowView=true;
+  }
   ride.windowView=!ride.windowView;
   ride.yaw=.36;ride.pitch=.02;ride.drag=null;
   $('ride-view').textContent=ride.windowView?'좌석 보기':'창밖 크게 보기';
+};
+const shoreCanvas=$('arctic-shore');
+$('ride-exit').onclick=()=>{
+  if(ride?.shore?.phase!=='arrived')return;
+  ride.shore.phase='disembark';
+  ride.drag=null;
+  setTramBoardingDoor(true);
+  shoreCanvas.hidden=false;
+  $('ride-exit').hidden=true;
+  $('ride-view').hidden=true;
+  $('ride-status').textContent='북극 승강장';
+};
+let shoreDrag=null;
+shoreCanvas.onpointerdown=e=>{
+  if(ride?.shore?.phase!=='walk'||e.button!==0||shoreDrag)return;
+  shoreDrag={id:e.pointerId,x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY,moved:false};
+  shoreCanvas.setPointerCapture(e.pointerId);
+};
+shoreCanvas.onpointermove=e=>{
+  if(!shoreDrag||shoreDrag.id!==e.pointerId)return;
+  const d=shoreDrag;
+  if(Math.hypot(e.clientX-d.startX,e.clientY-d.startY)>6)d.moved=true;
+  if(d.moved)turnOnIce(ride.shore,e.clientX-d.x,e.clientY-d.y);
+  d.x=e.clientX;d.y=e.clientY;
+};
+shoreCanvas.onpointerup=e=>{
+  if(!shoreDrag||shoreDrag.id!==e.pointerId)return;
+  if(!shoreDrag.moved){
+    const r=shoreCanvas.getBoundingClientRect();
+    tapOnIce(ride.shore,e.clientX-r.left,e.clientY-r.top,r.width,r.height);
+  }
+  shoreDrag=null;
+};
+shoreCanvas.onpointercancel=shoreCanvas.onlostpointercapture=e=>{
+  if(shoreDrag?.id===e.pointerId)shoreDrag=null;
 };
 $('ride-return').onclick=()=>rideDialog.close();
 function turnInTram(dx,dy){
@@ -168,12 +211,16 @@ rideWindow.onpointerup=rideWindow.onpointercancel=rideWindow.onlostpointercaptur
 };
 rideDialog.addEventListener('keydown',event=>{
   event.stopPropagation();
-  if(!ride||ride.boarding)return;
+  if(!ride||ride.boarding||ride.shore&&!shoreCanvas.hidden)return;
   const arrows={ArrowLeft:[18,0],ArrowRight:[-18,0],ArrowUp:[0,18],ArrowDown:[0,-18]};
   const delta=arrows[event.key];
   if(delta){event.preventDefault();turnInTram(...delta);}
 });
 rideDialog.addEventListener('close',()=>{
+  if(ride?.shore)setTramBoardingDoor(false);
+  shoreCanvas.hidden=true;
+  $('ride-exit').hidden=true;
+  shoreDrag=null;
   ride=null;
   rideDialog.classList.toggle('boarding',false);
   keys.clear();
@@ -753,10 +800,35 @@ function frame(now){
     advanceTramBoarding(now);
   }else if(ride){
     ride.elapsed=Math.min(16,ride.elapsed+rideDelta);
-    drawTramRide($('ride-landscape'),$('ride-cabin'),ride.name,ride.elapsed/16,ride.yaw,ride.pitch,ride.windowView);
+    if(ride.name==='북극'&&ride.elapsed>=APPROACH_START&&!ride.shore){
+      ride.shore=createArcticLanding();
+      ride.drag=null;
+      shoreCanvas.hidden=false;
+      $('ride-look-hint').hidden=true;
+      $('ride-view').hidden=true;
+      $('ride-status').textContent='북극 승강장 진입 중';
+    }
     if(ride.elapsed>=16&&!ride.arrived){
       ride.arrived=true;
       $('ride-status').textContent=ride.name+' 도착';
+      if(ride.shore){
+        ride.shore.phase='arrived';
+        $('ride-exit').hidden=false;
+        $('ride-view').hidden=false;
+        $('ride-view').textContent='객실 보기';
+      }
+    }
+    if(ride.shore&&!shoreCanvas.hidden){
+      const phase=ride.shore.phase;
+      stepArctic(ride.shore,rideDelta);
+      drawArctic(shoreCanvas,ride.shore,ride.elapsed);
+      if(phase==='disembark'&&ride.shore.phase==='walk'){
+        $('ride-status').textContent='북극 해안';
+        $('ride-look-hint').textContent='얼음을 눌러 걷기 · 밀어서 둘러보기';
+        $('ride-look-hint').hidden=false;
+      }
+    }else{
+      drawTramRide($('ride-landscape'),$('ride-cabin'),ride.name,ride.elapsed/16,ride.yaw,ride.pitch,ride.windowView);
     }
   }else if(!paused){
     t+=dt;

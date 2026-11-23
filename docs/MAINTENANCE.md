@@ -443,3 +443,9 @@ main 775212b 기준. 숲 네 방향의 윤곽과 밀도를 다르게 하고 물�
 - main cde8b7e 기준, tram-boarding-shot 브랜치. 행선지를 고르고 승강장에 도착하면 같은 차림의 캐릭터가 열린 트램 측면 문을 통해 발판과 객실 바닥으로 올라간다. 발이 안에 닿은 뒤 외부 시점을 1초 유지하고 객실로 전환하면서 운행을 시작한다.
 - dist/game/tram-station.js, dist/render/tram-station.js, dist/render/buildings-three.js에 동선과 열린 문을 연결했다. dist/app.js, dist/index.html, dist/style.css에서 승강장 구도, 탑승 단계와 객실 전환을 처리한다.
 - tests/camera.cjs와 tests/tram-station.mjs에서 탑승 시각, 운행 시작, 취소·재탑승, 실제 출입구 폭을 확인했다. 별도 검수에서 휴대폰과 PC 크기로 북극·사막행에 탑승해 기둥이 캐릭터나 문을 가리지 않고 같은 차림으로 객실에 들어가는 모습을 확인했다.
+
+### 2026-11-23 — 북극 트램 승강장과 얼음 해안
+
+- main c0c8e80, arctic-landing 브랜치. 북극행 마지막 3초에는 물결을 남기는 트램이 나무 승강장에 정차한다. 객실에 남거나 ‘내리기’로 열린 문에서 발판을 밟고 얼음까지 내려간다. 얼음을 누르면 걷고 화면을 밀면 제자리에서 주변과 트램을 돌아본다. 목장역으로 돌아가 재탑승할 수 있다.
+- dist/game/arctic-landing.js, dist/render/arctic-landing.js에서 카메라와 보행 경계, 해안과 트램을 구현했다. dist/app.js, dist/index.html, dist/style.css에서 기존 승차 흐름에 연결하고 dist/render/buildings-three.js의 폴리곤 클리핑을 재사용했다. tests/camera.cjs에 도착 전후와 귀환 검사를 추가했다.
+- PC와 휴대폰 크기 미리보기에서 북극행, 하차, 같은 차림으로 얼음 위를 걷는 모습을 독립 검수했다. 휴대폰에서 물결이 희미해 객차 앞뒤에 짧고 밝은 호를 넣고 정차 후 잦아들게 조정했다. 전체 npm test 통과.

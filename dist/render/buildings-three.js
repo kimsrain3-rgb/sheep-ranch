@@ -32,7 +32,7 @@ export function buildingOrigin(kind){
   const config=CONFIG[kind];return {x:config.x,z:config.entrance.z};
 }
 
-function clippedPolygon(points,basis,near=.805){
+export function clippedPolygon(points,basis,near=.805){
   const depth=p=>((p[0]-basis.x)*basis.sy+(p[1]-basis.z)*basis.cy)*basis.cp-(p[2]-basis.height)*basis.sp;
   const output=[];let previous=points.at(-1),pd=depth(previous);
   for(const current of points){

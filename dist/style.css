@@ -178,3 +178,7 @@ dialog#welcome #start {width:100%;margin:.5rem 0 0;text-align:center;font-size:1
 #tram-ride #boarding-shot{opacity:0;visibility:hidden;transition:opacity .28s ease,visibility 0s .28s}
 #tram-ride.boarding #boarding-shot{opacity:1;visibility:visible;transition:none}
 @media(prefers-reduced-motion:reduce){#tram-ride #boarding-shot{transition:none}}
+#tram-ride #arctic-shore{pointer-events:auto;touch-action:none;cursor:grab}
+#tram-ride #arctic-shore[hidden],#ride-exit[hidden]{display:none}
+#ride-exit{background:#864c3c;color:#fff8e7;border-color:#7b4537}
+@media(max-width:430px){.ride-controls{gap:5px}.ride-controls strong,.ride-controls button{font-size:.84rem;padding:10px}}
