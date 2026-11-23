@@ -167,3 +167,7 @@ dialog#welcome #start {width:100%;margin:.5rem 0 0;text-align:center;font-size:1
 .ride-controls strong,.ride-controls button{font-weight:600;line-height:1.3;font-family:inherit;font-size:.95rem;border-radius:24px;padding:11px 15px;white-space:nowrap}
 .ride-controls strong{color:#fff7e3;background:#442d25ed}
 .ride-controls button{color:#482e24;border:1px solid #ac9171;background:#fff2d7;min-height:44px}
+
+#tram-ride #ride-cabin{pointer-events:auto;touch-action:none;cursor:grab}
+#tram-ride #ride-cabin:active{cursor:grabbing}
+#ride-look-hint{position:absolute;top:max(14px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);padding:6px 12px;border-radius:16px;background:#382a24bf;color:#fff7e3;font-size:.87rem;white-space:nowrap;pointer-events:none}

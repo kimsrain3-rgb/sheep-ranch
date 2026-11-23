@@ -13,13 +13,17 @@ function poly(c,color,points){
   points.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));
   c.closePath();c.fill();
 }
+// Repeat the painted horizon exactly once per turn, keeping the two windows
+// on opposite sides of the same panorama.
+const panoramaWidth=20*173;
+const wrap=(value,size)=>((value%size)+size)%size;
 function ridge(c,width,base,height,travel,color){
-  c.beginPath();c.moveTo(0,610);
+  c.beginPath();c.moveTo(0,1800);
   for(let x=0;x<=width+8;x+=8){
     const p=x+travel;
-    c.lineTo(x,base-height*(.52+.32*Math.sin(p*.009)+.22*Math.cos(p*.022)));
+    c.lineTo(x,base-height*(.52+.32*Math.sin(p*2*Math.PI*5/panoramaWidth)+.22*Math.cos(p*2*Math.PI*12/panoramaWidth)));
   }
-  c.lineTo(width+8,610);c.closePath();c.fillStyle=color;c.fill();
+  c.lineTo(width+8,1800);c.closePath();c.fillStyle=color;c.fill();
 }
 function landmark(c,route,seed){
   const r=Math.abs(Math.sin(seed*73.37));
@@ -43,49 +47,58 @@ function landmark(c,route,seed){
     for(let i=0;i<3;i++)poly(c,i===2?'#557755':'#648460',[[-28+i*5,-14-i*16],[0,-59-i*11],[28-i*5,-14-i*16]]);
   }
 }
-function paintRegion(c,w,name,distance){
+function paintRegion(c,w,name,distance,heading){
   const [top,light,far,mid,near]=routes[name];
   const sky=c.createLinearGradient(0,40,0,414);
   sky.addColorStop(0,top);sky.addColorStop(1,light);
-  c.fillStyle=sky;c.fillRect(0,0,w,600);
-  c.fillStyle='#fff1c8';c.beginPath();c.arc(w*.72-distance*.012,164,27,0,Math.PI*2);c.fill();
-  ridge(c,w,322,55,distance*.10,far);
-  ridge(c,w,362,46,distance*.27,mid);
+  c.fillStyle=sky;c.fillRect(0,-1800,w,3600);
+  c.fillStyle='#fff1c8';
+  for(let x=wrap(w*.72-heading,panoramaWidth)-panoramaWidth;x<w+27;x+=panoramaWidth){
+    c.beginPath();c.arc(x,164,27,0,Math.PI*2);c.fill();
+  }
+  ridge(c,w,322,55,heading+distance*.10,far);
+  ridge(c,w,362,46,heading+distance*.27,mid);
   if(name==='북극'){
     const sea=c.createLinearGradient(0,338,0,600);
-    sea.addColorStop(0,mid);sea.addColorStop(1,near);c.fillStyle=sea;c.fillRect(0,342,w,258);
+    sea.addColorStop(0,mid);sea.addColorStop(1,near);c.fillStyle=sea;c.fillRect(0,342,w,1800);
     c.fillStyle='#bce0df';
     for(let i=0;i<52;i++){
-      const x=((i*137.7-distance*(.21+i%5*.13))%(w+90)+w+90)%(w+90)-50;
+      const x=wrap(i*137.7-heading-distance*(.21+i%5*.13),panoramaWidth)-50;
       c.fillRect(x,349+(i*37)%225,9+i%39,1.4);
     }
-  }else ridge(c,w,445,51,distance*.58,near);
-  const offset=distance*.73,first=Math.floor(offset/173)-1;
+  }else ridge(c,w,445,51,heading+distance*.58,near);
+  const offset=heading+distance*.73,first=Math.floor(offset/173)-1;
   for(let i=first;i<=first+Math.ceil(w/173)+2;i++){
-    const x=i*173-offset,y=373+Math.sin(i*32)*22;
-    c.save();c.translate(x,y);landmark(c,name,i+14);c.restore();
+    const seed=wrap(i,20);
+    const x=i*173-offset,y=373+Math.sin(seed*32)*22;
+    c.save();c.translate(x,y);landmark(c,name,seed+14);c.restore();
   }
 }
 
 // Seated eye height, looking diagonally across the aisle through the opposite windows.
 const coachView=new BarnInteriorView();
-coachView.target={x:TRAM_STOP.x-.60,z:TRAM_STOP.z-.74};
+coachView.target={x:TRAM_STOP.x-.60,z:TRAM_STOP.z-.45};
 coachView.eyeHeight=2.62;
-coachView.yaw=.36;
-coachView.pitch=.02;
-export function drawTramRide(scenery,cabin,name,progress){
+
+export function drawTramRide(scenery,cabin,name,progress,yaw,pitch){
   const w=scenery.clientWidth,h=scenery.clientHeight;
   if(!w||!h)return;
   const ratio=Math.min(window.devicePixelRatio||1,1.5);
   const pw=Math.round(w*ratio),ph=Math.round(h*ratio);
-  if(!scenery.dataset.ready||scenery.width!==pw||scenery.height!==ph){
+  const resized=!scenery.dataset.ready||scenery.width!==pw||scenery.height!==ph;
+  if(resized){
     scenery.width=pw;scenery.height=ph;
     cabin.width=pw;cabin.height=ph;
+    scenery.dataset.ready='1';
+  }
+  const turned=coachView.yaw!==yaw||coachView.pitch!==pitch;
+  if(resized||turned){
+    coachView.yaw=yaw;coachView.pitch=pitch;
     const interior=cabin.getContext('2d');
     interior.setTransform(pw/w,0,0,ph/h,0,0);
+    interior.clearRect(0,0,w,h);
     coachView.orbitFocal=h*.92;
     drawTramCabin(interior,coachView,w,h);
-    scenery.dataset.ready='1';
     scenery.dataset.arrived='';
   }
   if(progress===1 && scenery.dataset.arrived===name)return;
@@ -93,9 +106,12 @@ export function drawTramRide(scenery,cabin,name,progress){
   const c=scenery.getContext('2d'), width=600*w/h;
   c.setTransform(ph/600,0,0,ph/600,0,0);
   const travel=1760*(progress-Math.sin(2*Math.PI*progress)/(2*Math.PI));
-  if(progress<.34)paintRegion(c,width,'목장',travel);
+  const heading=panoramaWidth*(yaw-.36)/(2*Math.PI);
+  const distance=travel*Math.cos(yaw);
+  c.translate(0,-552*Math.tan(pitch-.02));
+  if(progress<.34)paintRegion(c,width,'목장',distance,heading);
   if(progress>.12){
     c.globalAlpha=Math.min(1,(progress-.12)/.22);
-    paintRegion(c,width,name,travel);c.globalAlpha=1;
+    paintRegion(c,width,name,distance,heading);c.globalAlpha=1;
   }
 }

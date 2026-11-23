@@ -3,7 +3,7 @@ import {drawHills,addDenLayers} from './render/forest-hills.js?v=hill-draw-2';
 import {addGardenLayers} from './render/pond-garden.js?v=stream-banks-1';
 import {setupRanchMap,streamLookout} from './ranch-map.js?v=tram-station-1';
 import {stationWalkingHeight,TRAM_DESTINATIONS,TRAM_STATION,TRAM_STOP} from './game/tram-station.js';
-import {drawTramRide} from './render/tram-ride.js?v=coach-2';
+import {drawTramRide} from './render/tram-ride.js?v=panorama-2';
 import {tramPlatformOrigin} from './render/tram-station.js';
 import {trailX,inGrove,clearTrunks,groveRoute} from './game/fir-grove.js?v=birch-edge-1';
 import {addBirchLayers,drawForestFloor,addForestLayers,groveVisible} from './render/fir-grove.js?v=low-pet-2';
@@ -126,7 +126,8 @@ function boardTram(name){
   if(ride||name!==selectedDestination||!nearBoardingDoor())return;
   keys.clear();
   player.walking=false;
-  ride={name,elapsed:0,arrived:false};
+  ride={name,elapsed:0,arrived:false,yaw:.36,pitch:.02,drag:null};
+  $('ride-look-hint').hidden=false;
   $('ride-status').textContent=name+'행 · 운행 중';
   rideDialog.showModal();
 }
@@ -134,7 +135,34 @@ $('station-ride-open').onclick=()=>{
   if(atStationBoard()||nearBoardingDoor())walkToTram();
 };
 $('ride-return').onclick=()=>rideDialog.close();
-rideDialog.addEventListener('keydown',event=>event.stopPropagation());
+function turnInTram(dx,dy){
+  const radiansPerPixel=Math.PI/Math.max(280,Math.min(W,H)*.9);
+  ride.yaw=(ride.yaw-dx*radiansPerPixel)%(Math.PI*2);
+  ride.pitch=clamp(ride.pitch-dy*radiansPerPixel,-1.05,.95);
+  $('ride-look-hint').hidden=true;
+}
+const rideWindow=$('ride-cabin');
+rideWindow.onpointerdown=event=>{
+  if(!ride||ride.drag||event.button!==0)return;
+  ride.drag={id:event.pointerId,x:event.clientX,y:event.clientY};
+  rideWindow.setPointerCapture(event.pointerId);
+};
+rideWindow.onpointermove=event=>{
+  const drag=ride?.drag;
+  if(!drag||drag.id!==event.pointerId)return;
+  turnInTram(event.clientX-drag.x,event.clientY-drag.y);
+  drag.x=event.clientX;drag.y=event.clientY;
+};
+rideWindow.onpointerup=rideWindow.onpointercancel=rideWindow.onlostpointercapture=event=>{
+  if(ride?.drag?.id===event.pointerId)ride.drag=null;
+};
+rideDialog.addEventListener('keydown',event=>{
+  event.stopPropagation();
+  if(!ride)return;
+  const arrows={ArrowLeft:[18,0],ArrowRight:[-18,0],ArrowUp:[0,18],ArrowDown:[0,-18]};
+  const delta=arrows[event.key];
+  if(delta){event.preventDefault();turnInTram(...delta);}
+});
 rideDialog.addEventListener('close',()=>{
   ride=null;
   keys.clear();
@@ -651,7 +679,7 @@ function frame(now){
   last=now;
   if(ride){
     ride.elapsed=Math.min(16,ride.elapsed+rideDelta);
-    drawTramRide($('ride-landscape'),$('ride-cabin'),ride.name,ride.elapsed/16);
+    drawTramRide($('ride-landscape'),$('ride-cabin'),ride.name,ride.elapsed/16,ride.yaw,ride.pitch);
     if(ride.elapsed>=16&&!ride.arrived){
       ride.arrived=true;
       $('ride-status').textContent=ride.name+' 도착';
