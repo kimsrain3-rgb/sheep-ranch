@@ -1,5 +1,7 @@
 import {BarnInteriorView} from '../game/barn-camera.js';
 import {TRAM_STOP} from '../game/tram-station.js';
+import {drawVisitor,visitorPose} from '../visitor.js?v=limb-light-1';
+import {currentAppearance} from '../game/visitor-appearance.js';
 import {drawTramCabin} from './buildings-three.js?v=tram-station-1';
 
 const routes={
@@ -75,10 +77,31 @@ function paintRegion(c,w,name,distance,heading){
   }
 }
 
-// Seated eye height, looking diagonally across the aisle through the opposite windows.
+// The visitor sits on the edge of the long bench, facing across the aisle.
+const passengerSeat={x:TRAM_STOP.x+.87,z:TRAM_STOP.z+.50,hipHeight:1.35};
 const coachView=new BarnInteriorView();
-coachView.target={x:TRAM_STOP.x-.60,z:TRAM_STOP.z-.45};
-coachView.eyeHeight=2.62;
+coachView.eyeHeight=2.13;
+let lastLook=null;
+
+function drawPassenger(context,w,h,look){
+  const {x,z,hipHeight}=passengerSeat;
+  const hip=coachView.project(x,z,hipHeight,w,h);
+  if(!hip)return;
+  const eye=coachView.target;
+  const bearing=Math.atan2(x-eye.x,z-eye.z);
+  const distance=Math.hypot(x-eye.x,z-eye.z);
+  // Anchor the seated pose at the hips. Project the upright axis too, so a
+  // tilted camera does not lift the visitor off the bench.
+  const crown=coachView.project(x,z,hipHeight+1,w,h);
+  if(!crown)return;
+  const scale=coachView.orbitFocal/distance;
+  const upX=crown.x-hip.x,upY=crown.y-hip.y;
+  if(hip.x+scale<0||hip.x-scale>w)return;
+  context.save();
+  context.transform(scale,0,-upX,-upY,hip.x,hip.y);
+  drawVisitor(context,{x:0,y:.5,s:1},{seated:true,pose:visitorPose(0,-1,bearing),appearance:look});
+  context.restore();
+}
 
 export function drawTramRide(scenery,cabin,name,progress,yaw,pitch){
   const w=scenery.clientWidth,h=scenery.clientHeight;
@@ -91,14 +114,22 @@ export function drawTramRide(scenery,cabin,name,progress,yaw,pitch){
     cabin.width=pw;cabin.height=ph;
     scenery.dataset.ready='1';
   }
+  // Start across the aisle, with room in the frame for the windows and feet.
+  // Turning keeps the camera within the carriage, with a small shoulder orbit.
+  yaw+=.90;
+  const look=currentAppearance();
   const turned=coachView.yaw!==yaw||coachView.pitch!==pitch;
-  if(resized||turned){
+  if(resized||turned||look!==lastLook){
+    lastLook=look;
     coachView.yaw=yaw;coachView.pitch=pitch;
+    coachView.target.x=TRAM_STOP.x-1.68-.23*Math.sin(yaw);
+    coachView.target.z=TRAM_STOP.z-.49-.23*Math.cos(yaw);
     const interior=cabin.getContext('2d');
     interior.setTransform(pw/w,0,0,ph/h,0,0);
     interior.clearRect(0,0,w,h);
-    coachView.orbitFocal=h*.92;
+    coachView.orbitFocal=h*.77;
     drawTramCabin(interior,coachView,w,h);
+    drawPassenger(interior,w,h,look);
     scenery.dataset.arrived='';
   }
   if(progress===1 && scenery.dataset.arrived===name)return;
@@ -108,7 +139,7 @@ export function drawTramRide(scenery,cabin,name,progress,yaw,pitch){
   const travel=1760*(progress-Math.sin(2*Math.PI*progress)/(2*Math.PI));
   const heading=panoramaWidth*(yaw-.36)/(2*Math.PI);
   const distance=travel*Math.cos(yaw);
-  c.translate(0,-552*Math.tan(pitch-.02));
+  c.translate(0,-462*Math.tan(pitch-.02));
   if(progress<.34)paintRegion(c,width,'목장',distance,heading);
   if(progress>.12){
     c.globalAlpha=Math.min(1,(progress-.12)/.22);

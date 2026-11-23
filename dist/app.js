@@ -3,7 +3,7 @@ import {drawHills,addDenLayers} from './render/forest-hills.js?v=hill-draw-2';
 import {addGardenLayers} from './render/pond-garden.js?v=stream-banks-1';
 import {setupRanchMap,streamLookout} from './ranch-map.js?v=tram-station-1';
 import {stationWalkingHeight,TRAM_DESTINATIONS,TRAM_STATION,TRAM_STOP} from './game/tram-station.js';
-import {drawTramRide} from './render/tram-ride.js?v=panorama-2';
+import {drawTramRide} from './render/tram-ride.js?v=bench-passenger-1';
 import {tramPlatformOrigin} from './render/tram-station.js';
 import {trailX,inGrove,clearTrunks,groveRoute} from './game/fir-grove.js?v=birch-edge-1';
 import {addBirchLayers,drawForestFloor,addForestLayers,groveVisible} from './render/fir-grove.js?v=low-pet-2';

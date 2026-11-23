@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {presets,resolveAppearance,applyAppearance,currentAppearance,appearanceKey} from '../dist/game/visitor-appearance.js';
 import {drawVisitor,drawHammock} from '../dist/visitor.js';
 import {handColor} from '../dist/render/visitor-limbs.js';
+import {drawTramRide} from '../dist/render/tram-ride.js';
 import {drawInteraction} from '../dist/render/interactions.js';
 
 const storage=new Map();
@@ -46,6 +47,29 @@ for(const preset of presets){
     else assert.ok(colors.has(look.coat));
   }
 }
+// Board with the same saved outfit, including when the previous trip ended
+// at this exact angle. Turning away should leave just the cabin in view.
+globalThis.window={devicePixelRatio:1};
+const surface=()=>({clientWidth:390,clientHeight:760,dataset:{},getContext:()=>ctx});
+const cabin=surface(),scenery=surface();
+let passengerAnchor;
+ctx.transform=(sx,b,c,sy,x,y)=>{passengerAnchor={sx,sy,x,y};};
+for(const preset of presets){
+  applyAppearance({id:preset.id,outfit:'navy',hair:'silver'});
+  const look=currentAppearance();
+  colors.clear();passengerAnchor=null;
+  drawTramRide(scenery,cabin,'북극',1,.36,.02);
+  assert.ok(colors.has(look.hairColor)&&colors.has(look.coat),'tram uses active hair and coat: '+preset.id);
+  assert.ok(passengerAnchor.x>0&&passengerAnchor.x<390,'seated visitor visible when boarding');
+  assert.ok(passengerAnchor.y-passengerAnchor.sy*1.6>0&&passengerAnchor.y+passengerAnchor.sy*.5<760,'framed from hat to feet');
+}
+const initialAnchor=passengerAnchor;
+passengerAnchor=null;colors.clear();
+drawTramRide(scenery,cabin,'북극',1,.36+Math.PI,.02);
+assert.equal(passengerAnchor,null,'visitor does not follow the screen when looking away');
+drawTramRide(scenery,cabin,'북극',1,.36,.02);
+assert.deepEqual(passengerAnchor,initialAnchor,'turning back finds the visitor on the same seat');
+delete globalThis.window;
 const reload=async tag=>(await import('../dist/game/visitor-appearance.js?'+tag)).currentAppearance();
 assert.deepEqual(await reload('returning'),currentAppearance());
 storage.set(appearanceKey,'{invalid');
