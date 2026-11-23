@@ -437,3 +437,9 @@ main 775212b 기준. 숲 네 방향의 윤곽과 밀도를 다르게 하고 물�
 - main 59581599 기준. 객실 입장 시 눈높이를 올리고 맞은편 옆창을 향해 구도를 잡았다. 앉은 캐릭터가 화면 한쪽에 남는다. ‘창밖 크게 보기’는 창유리 가까이에서 풍경을 보여주며 ‘좌석 보기’로 복귀할 수 있다. 두 시점 모두 기존 드래그 조작을 쓰고 이동 시간과 행선지를 공유한다.
 - dist/render/tram-ride.js, dist/app.js, dist/index.html, dist/style.css에서 시점과 버튼을 연결했다. tests/camera.cjs와 tests/visitor-appearance.mjs에 시점 전환, 시간 유지, 좌석 구도와 도착 후 복귀 검사를 추가했다.
 - 휴대폰 크기에서 북극 바다와 빙산이 보이는 창가 시점을 독립 검수했다. 좌석의 신발이 하단 버튼과 겹쳤던 세로 구도는 카메라 기울기를 조정하고 신발 아래 공간을 검사하도록 보완했다. 전체 npm test 통과.
+
+### 2026-11-23 — 승강장에서 보는 트램 탑승
+
+- main cde8b7e 기준, tram-boarding-shot 브랜치. 행선지를 고르고 승강장에 도착하면 같은 차림의 캐릭터가 열린 트램 측면 문을 통해 발판과 객실 바닥으로 올라간다. 발이 안에 닿은 뒤 외부 시점을 1초 유지하고 객실로 전환하면서 운행을 시작한다.
+- dist/game/tram-station.js, dist/render/tram-station.js, dist/render/buildings-three.js에 동선과 열린 문을 연결했다. dist/app.js, dist/index.html, dist/style.css에서 승강장 구도, 탑승 단계와 객실 전환을 처리한다.
+- tests/camera.cjs와 tests/tram-station.mjs에서 탑승 시각, 운행 시작, 취소·재탑승, 실제 출입구 폭을 확인했다. 별도 검수에서 휴대폰과 PC 크기로 북극·사막행에 탑승해 기둥이 캐릭터나 문을 가리지 않고 같은 차림으로 객실에 들어가는 모습을 확인했다.

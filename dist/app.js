@@ -2,7 +2,7 @@ import {forestHeight,hillPick,denSites,nearbyDen} from './game/forest-hills.js';
 import {drawHills,addDenLayers} from './render/forest-hills.js?v=hill-draw-2';
 import {addGardenLayers} from './render/pond-garden.js?v=stream-banks-1';
 import {setupRanchMap,streamLookout} from './ranch-map.js?v=tram-station-1';
-import {stationWalkingHeight,TRAM_DESTINATIONS,TRAM_STATION,TRAM_STOP} from './game/tram-station.js';
+import {TRAM_BOARDING_WALK,TRAM_BOARDING_HOLD,tramBoardingPose,stationWalkingHeight,TRAM_DESTINATIONS,TRAM_STATION,TRAM_STOP} from './game/tram-station.js';
 import {drawTramRide} from './render/tram-ride.js?v=window-framing-2';
 import {tramPlatformOrigin} from './render/tram-station.js';
 import {trailX,inGrove,clearTrunks,groveRoute} from './game/fir-grove.js?v=birch-edge-1';
@@ -23,7 +23,7 @@ import {MeadowTime} from './game/meadow-time.js?v=chosen-time-2';
 import {SheepBond} from './game/bond.js?v=night-barn';
 import {WeatherShelter} from './game/shelter.js?v=solid-buildings-2';
 import {LambPlay} from './game/lamb-play.js?v=solid-buildings-2';
-import {setTramDestination,pickLodgeStairs,clipRoomDoorway,drawBuilding3D,drawBarnRoom3D,drawFarmRoom3D,drawLodgeRoom3D,getBuildingOcclusionMeshes} from './render/buildings-three.js?v=tram-station-1';
+import {setTramBoardingDoor,setTramDestination,pickLodgeStairs,clipRoomDoorway,drawBuilding3D,drawBarnRoom3D,drawFarmRoom3D,drawLodgeRoom3D,getBuildingOcclusionMeshes} from './render/buildings-three.js?v=tram-station-1';
 import {windmillStage,windmillStatus,windmillCountdown,windmillOpeningLabel} from './game/windmill-construction.js?v=countdown-1';
 import {drawWeather,drawFriendBadge} from './render/weather.js?v=night-barn';
 import {setupMeadowPanel} from './meadow-panel.js?v=chosen-time-2';
@@ -127,16 +127,19 @@ function boardTram(name){
   keys.clear();
   player.walking=false;
   ride={name,elapsed:0,arrived:false,windowView:false,yaw:.36,pitch:.02,drag:null};
+  ride.boarding={start:{x:player.x,z:player.z},time:0,last:null,landedAt:null};
+  rideDialog.classList.add('boarding');
   $('ride-view').textContent='창밖 크게 보기';
-  $('ride-look-hint').hidden=false;
-  $('ride-status').textContent=name+'행 · 운행 중';
+  $('ride-view').hidden=true;
+  $('ride-look-hint').hidden=true;
+  $('ride-status').textContent=name+'행 · 탑승 중';
   rideDialog.showModal();
 }
 $('station-ride-open').onclick=()=>{
   if(atStationBoard()||nearBoardingDoor())walkToTram();
 };
 $('ride-view').onclick=()=>{
-  if(!ride)return;
+  if(!ride||ride.boarding)return;
   ride.windowView=!ride.windowView;
   ride.yaw=.36;ride.pitch=.02;ride.drag=null;
   $('ride-view').textContent=ride.windowView?'좌석 보기':'창밖 크게 보기';
@@ -150,7 +153,7 @@ function turnInTram(dx,dy){
 }
 const rideWindow=$('ride-cabin');
 rideWindow.onpointerdown=event=>{
-  if(!ride||ride.drag||event.button!==0)return;
+  if(!ride||ride.boarding||ride.drag||event.button!==0)return;
   ride.drag={id:event.pointerId,x:event.clientX,y:event.clientY};
   rideWindow.setPointerCapture(event.pointerId);
 };
@@ -165,13 +168,14 @@ rideWindow.onpointerup=rideWindow.onpointercancel=rideWindow.onlostpointercaptur
 };
 rideDialog.addEventListener('keydown',event=>{
   event.stopPropagation();
-  if(!ride)return;
+  if(!ride||ride.boarding)return;
   const arrows={ArrowLeft:[18,0],ArrowRight:[-18,0],ArrowUp:[0,18],ArrowDown:[0,-18]};
   const delta=arrows[event.key];
   if(delta){event.preventDefault();turnInTram(...delta);}
 });
 rideDialog.addEventListener('close',()=>{
   ride=null;
+  rideDialog.classList.toggle('boarding',false);
   keys.clear();
   notify('바람목장역 승강장이에요.');
   $('station-board-open').focus();
@@ -569,7 +573,7 @@ function paintWorldLayers(layers){
   for(const layer of layers)if(!layer.building&&!layer.focused&&layer.depth>0)drawWorldLayer(layer);
   for(const layer of layers)if(!layer.building&&layer.focused&&layer.depth>0)drawWorldLayer(layer);
 }
-function drawOutdoorScenery(interiorKind){
+function drawOutdoorScenery(interiorKind,showVisitor=true){
   const showGrove=groveVisible(project,W,H);
   background(showGrove);
   const railwayVisible=Math.hypot(view.target.x-TRAM_STATION.x,view.target.z-TRAM_STATION.z)<115;
@@ -595,7 +599,7 @@ function drawOutdoorScenery(interiorKind){
   layers.push({x:CONFIG.barn.x,z:CONFIG.barn.entrance.z,building:'barn',draw:()=>{barnVisit.screen=drawBuilding3D(c,'barn',project,view,W,H,{inside:shelter.inside,total:sheep.length,snow:atmosphere.kind==='snow',night:atmosphere.night,label:false});}});
   layers.push({x:CONFIG.coop.x,z:CONFIG.coop.entrance.z,building:'coop',draw:()=>{coopScreen=drawBuilding3D(c,'coop',project,view,W,H,{inside:companions.coopInside,total:companions.chickens.length,snow:atmosphere.kind==='snow',night:atmosphere.night,label:false});}});
   layers.push({x:CONFIG.lodge.x,z:CONFIG.lodge.entrance.z,building:'lodge',draw:()=>{lodgeScreen=drawBuilding3D(c,'lodge',project,view,W,H,{night:atmosphere.night,snow:atmosphere.kind==='snow',occupants:Number(shepherd.insideLodge)+companions.dogs.filter(a=>a.hiddenInLodge).length,label:false});}});
-  if(!interiorKind&&started&&!hammocking){
+  if(showVisitor&&!interiorKind&&started&&!hammocking){
     const deck=stationWalkingHeight(player.x,player.z);
     // The resting shoe extends .025 below the visitor drawing origin.
     const feet=project(player.x,player.z,deck ? deck+.025 : undefined);
@@ -680,11 +684,74 @@ function render(){
   else $('sheep-label').hidden=true;
   if(t>toastUntil)$('toast').style.opacity=started?0:1;
 }
+// Render the same outdoor station once for this shot. Only the walking
+// passenger needs repainting while the tram is stopped at the platform.
+const boardingView=new BarnInteriorView();
+// Look out through the open shelter front, clear of both its corner post and
+// the face of the coach at the far end of the passenger's step.
+boardingView.target={x:TRAM_STATION.x-.75,z:TRAM_STATION.z+.55};
+boardingView.yaw=2.83;
+boardingView.pitch=.095;
+boardingView.eyeHeight=1.9;
+function captureBoardingPlatform(){
+  const previous=view;
+  view=boardingView;
+  view.orbitFocal=Math.min(W*.87,H*.68);
+  c.save();
+  try{
+    setTramBoardingDoor(true);
+    c.setTransform(dpr,0,0,dpr,0,0);
+    c.clearRect(0,0,W,H);
+    drawOutdoorScenery(null,false);
+    drawWeather(c,W,H,t,atmosphere);
+  }finally{
+    setTramBoardingDoor(false);
+    c.restore();
+    view=previous;
+  }
+}
+function drawBoardingShot(boarding){
+  const shot=$('boarding-shot');
+  if(!boarding.captured||shot.width!==canvas.width||shot.height!==canvas.height){
+    shot.width=canvas.width;shot.height=canvas.height;
+    captureBoardingPlatform();
+    boarding.captured=true;
+  }
+  const ctx=shot.getContext('2d');
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.drawImage(canvas,0,0);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  const pose=tramBoardingPose(boarding.start,boarding.time);
+  const feet=boardingView.project(pose.x,pose.z,pose.height+.025,W,H);
+  if(!feet)return;
+  buildingOcclusion.draw(ctx,feet.depth,spriteBounds(feet),()=>drawVisitor(ctx,feet,{
+    time:boarding.time,walking:pose.walking,pose:visitorPose(0,-1,boardingView.yaw),label:false
+  }));
+}
+function advanceTramBoarding(now){
+  const boarding=ride.boarding;
+  if(boarding.last!==null){
+    boarding.time=Math.min(TRAM_BOARDING_WALK,boarding.time+clamp((now-boarding.last)/1000,0,.16));
+  }
+  boarding.last=now;
+  drawBoardingShot(boarding);
+  if(boarding.time<TRAM_BOARDING_WALK)return;
+  boarding.landedAt??=now;
+  if(now-boarding.landedAt<TRAM_BOARDING_HOLD*1000)return;
+  ride.boarding=null;
+  drawTramRide($('ride-landscape'),$('ride-cabin'),ride.name,0,ride.yaw,ride.pitch,false);
+  rideDialog.classList.toggle('boarding',false);
+  $('ride-status').textContent=ride.name+'행 · 운행 중';
+  $('ride-view').hidden=false;
+  $('ride-look-hint').hidden=false;
+}
 function frame(now){
   const dt=Math.min((now-last)/1000||.016,.06);
   const rideDelta=Math.min(.5,Math.max(0,(now-last)/1000));
   last=now;
-  if(ride){
+  if(ride?.boarding){
+    advanceTramBoarding(now);
+  }else if(ride){
     ride.elapsed=Math.min(16,ride.elapsed+rideDelta);
     drawTramRide($('ride-landscape'),$('ride-cabin'),ride.name,ride.elapsed/16,ride.yaw,ride.pitch,ride.windowView);
     if(ride.elapsed>=16&&!ride.arrived){

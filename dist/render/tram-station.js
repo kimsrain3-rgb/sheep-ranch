@@ -158,10 +158,12 @@ function carriageOutline(builder,name,y,height,material){
   builder.add(geometry,material,name,0,y,0);
 }
 
-function carriageSkin(b,name,y,height,material){
+function carriageSkin(b,name,y,height,material,boardingDoorOpen=false){
   for(let i=0;i<carriagePerimeter.length;i++){
     const start=carriagePerimeter[i],end=carriagePerimeter[(i+1)%carriagePerimeter.length];
-    const face=tramFacade(b,start,end,1);
+    // The platform-side west bay must be open through the full body skin.
+    const wallEnd=boardingDoorOpen&&start[1]===.93&&end[1]===.93 ? [-1.96,.93] : end;
+    const face=tramFacade(b,start,wallEnd,1);
     face.panel(name,0,y,face.length+.026,height,-.037,material,.074);
   }
 }
@@ -315,7 +317,7 @@ export function createTramLettering(destination){
   return mesh;
 }
 
-export function createTram(){
+export function createTram(boardingDoorOpen=false){
   const b=builder('tram',{width:TRAM_STOP.width,depth:TRAM_STOP.depth});
   const {box,add,beam}=b;
   const red=b.material('vermilion enamel','#a21d23'),redPanel=b.material('red painted wood','#b1272c');
@@ -336,9 +338,9 @@ export function createTram(){
   }
 
   carriageOutline(b,'dark lower sill',.55,.13,claret);
-  carriageSkin(b,'red wooden body',1.021,.682,red);
-  carriageSkin(b,'brass waist pinstripe',1.369,.020,gold);
-  carriageSkin(b,'ivory strip below windows',1.474,.194,cream);
+  carriageSkin(b,'red wooden body',1.021,.682,red,boardingDoorOpen);
+  carriageSkin(b,'brass waist pinstripe',1.369,.020,gold,boardingDoorOpen);
+  carriageSkin(b,'ivory strip below windows',1.474,.194,cream,boardingDoorOpen);
   carriageSkin(b,'ivory strip above windows',2.348,.104,cream);
   for(const [x,z] of carriagePerimeter)box('ivory cabin corner post',x*.989,1.945,z*.978,.087,.790,.078,cream);
   addTramCabin(b,{cream,iron,gold,lamp});
@@ -367,13 +369,17 @@ export function createTram(){
       box('enamel medallion center',x,.98,z+side*.057,.041,.041,.019,red,[0,0,Math.PI/4]);
     }
     for(const x of [-2.22,2.22]){
+      box('entry step',x,.56,side*.982,.48,.083,.13,iron);
+      if(boardingDoorOpen&&side===1&&x<0){
+        box('folded boarding door',x-.227,1.53,z-.10,.054,1.50,.22,wood);
+        continue;
+      }
       const door=tramFacade(b,[x-.25,z],[x+.25,z],-side);
       door.panel('door bottom oak panel',0,1.037,.462,.786,.028,wood);
       door.panel('door lower enamel panel',0,1.050,.385,.641,.050,red);
       door.sash('door upper oak frame',1.927,.484,.847,.019,.094,wood,[.347,.647]);
       door.sash('door upper glaze',1.927,.35,.652,.057,.005,glass);
       door.panel('folding door center rail',0,1.495,.033,1.596,.068,edge);
-      box('entry step',x,.56,side*.982,.48,.083,.13,iron);
     }
   }
 

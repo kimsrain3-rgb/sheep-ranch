@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import * as THREE from '../dist/vendor/three/three.module.js';
 import {CONFIG,isWater} from '../dist/game/config.js';
 import {buildingPathClear} from '../dist/game/building-collision.js';
-import {stationWalkingHeight,TRAM_STATION,TRAM_STOP,TRACK_CURVE,TRACK_GAUGE,RAIL_TOP} from '../dist/game/tram-station.js';
+import {tramBoardingPose,TRAM_BOARDING_WALK,stationWalkingHeight,TRAM_STATION,TRAM_STOP,TRACK_CURVE,TRACK_GAUGE,RAIL_TOP} from '../dist/game/tram-station.js';
 import {dryRoute} from '../dist/game/navigation.js';
 import {mapDestination,places} from '../dist/ranch-map.js';
 import {MeadowView} from '../dist/orbit.js';
@@ -43,6 +43,13 @@ for(let distance=0;distance<95;distance+=.12){
 }
 assert.ok(nearest<.12,'rail centerline passes the designated P01 curve');
 const tram=createTram();
+const endOfBoarding=tramBoardingPose(TRAM_STOP.entrance,TRAM_BOARDING_WALK);
+const openCoach=createTram(true);
+for(const height of [.87,1.1,1.6,2.2,2.65]){
+  const ray=new THREE.Raycaster(new THREE.Vector3(endOfBoarding.x-TRAM_STOP.x,height,-1.48),new THREE.Vector3(0,0,1),0,.74);
+  assert.equal(ray.intersectObject(openCoach,true).length,0,'the passenger path clears the platform-side doorway');
+  if(height===1.1)assert.ok(ray.intersectObject(tram,true).length,'the same door is shut during travel');
+}
 const woodGroups=tram.children.filter(mesh=>mesh.material.map?.isDataTexture);
 assert.equal(woodGroups.length,3,'cabin joinery, seat varnish and foot-worn floor each have a finish');
 for(const mesh of woodGroups){

@@ -170,6 +170,22 @@ export class BuildingRenderer{
     this.buildings.tram.bodyFaces=this.buildings.tram.faces;
     this.railwayReady=true;
   }
+  setBoardingDoor(open){
+    this.prepareRailway();
+    if(!!this.boardingDoorOpen===open)return;
+    if(!this.openCoach){
+      this.closedCoach=this.buildings.tram;
+      this.openCoach=prepareBuilding(createTram(true),TRAM_STOP,true);
+      this.openCoach.model.visible=false;
+      this.scene.add(this.openCoach.model);
+      this.openCoach.bodyFaces=this.openCoach.faces;
+    }
+    const destination=this.buildings.tram.destination;
+    this.buildings.tram=open?this.openCoach:this.closedCoach;
+    this.boardingDoorOpen=open;
+    this.caches.delete('tram');
+    this.setTramDestination(destination);
+  }
   setTramDestination(destination){
     if(!TRAM_DESTINATIONS.includes(destination))return;
     this.prepareRailway();
@@ -391,7 +407,7 @@ export class BuildingRenderer{
   }
   dispose(){
     this.renderer?.dispose();this.caches.clear();
-    for(const building of [...Object.values(this.buildings),...this.rooms.values()]){
+    for(const building of new Set([...Object.values(this.buildings),...this.rooms.values(),this.openCoach,this.closedCoach].filter(Boolean))){
       building.model.traverse(mesh=>{if(mesh.isMesh){mesh.geometry.dispose();mesh.material.dispose();}});
       for(const material of Object.values(building.model.userData.palette))material.dispose();
     }
@@ -399,6 +415,7 @@ export class BuildingRenderer{
 }
 
 let shared=null;
+export function setTramBoardingDoor(open){shared??=new BuildingRenderer();shared.setBoardingDoor(open);}
 export function setTramDestination(destination){shared??=new BuildingRenderer();shared.setTramDestination(destination);}
 export function drawBuilding3D(...args){shared??=new BuildingRenderer();return shared.draw(...args);}
 export function drawTramCabin(c,view,w,h){shared??=new BuildingRenderer();shared.drawInterior(c,'tram',view,w,h);}

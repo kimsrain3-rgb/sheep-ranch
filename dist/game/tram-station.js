@@ -21,3 +21,25 @@ export function stationWalkingHeight(x,z){
 export const TRACK_CURVE=Object.freeze({x:89.3,z:47.6});
 export const TRACK_GAUGE=1.12;
 export const RAIL_TOP=.19;
+
+// The west platform door and step are centered at local coach x = -2.55.
+export const TRAM_BOARDING_WALK=1.25;
+export const TRAM_BOARDING_HOLD=1;
+export function tramBoardingPose(start,elapsed){
+  const doorX=TRAM_STOP.x-2.55;
+  const points=[
+    [0,start.x,start.z,TRAM_PLATFORM.height],
+    [.38,doorX,TRAM_STOP.z+1.49,TRAM_PLATFORM.height],
+    [.82,doorX,TRAM_STOP.z+1.17,.60],
+    [TRAM_BOARDING_WALK,doorX,TRAM_STOP.z+.80,.797]
+  ];
+  for(let i=1;i<points.length;i++){
+    const [t0,x0,z0,h0]=points[i-1],[t1,x1,z1,h1]=points[i];
+    if(elapsed<=t1){
+      const f=Math.max(0,(elapsed-t0)/(t1-t0));
+      const rise=f*f*(3-2*f);
+      return {x:x0+(x1-x0)*f,z:z0+(z1-z0)*f,height:h0+(h1-h0)*rise,walking:elapsed<t1||i<3};
+    }
+  }
+  return {x:doorX,z:TRAM_STOP.z+.80,height:.797,walking:false};
+}
