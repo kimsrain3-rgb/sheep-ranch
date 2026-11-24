@@ -2,13 +2,17 @@ import {drawLimb,drawHand,trouserColor} from './render/visitor-limbs.js';
 import { currentAppearance } from './game/visitor-appearance.js';
 import { drawVisitorHead, drawVisitorClothes } from './render/visitor-look.js';
 import {gaitLegs,armSwing} from './game/gait.js';
+import {drawMintVisitor} from './render/mint-visitor.js';
 import {drawKneelingVisitor} from './render/milk-pose.js?v=limb-light-1';
 // World heading is resolved relative to the orbit camera, including while standing.
 export function visitorPose(dx=0,dz=1,yaw=0){
  const side=dx*Math.cos(yaw)-dz*Math.sin(yaw),away=dx*Math.sin(yaw)+dz*Math.cos(yaw);
- return Math.abs(side)>Math.abs(away)*1.15?(side>0?'right':'left'):(away>=0?'back':'front');
+ const sector=(Math.round(Math.atan2(side,-away)/(Math.PI/4))+8)%8;
+ return ['front','front-right','right','back-right','back','back-left','left','front-left'][sector];
 }
 export function drawVisitor(c,p,{time=0,walking=false,seated=false,feeding=false,reaching=false,petting=false,milking=false,lambSize=.33,pose='back',appearance=currentAppearance(),label=true}={}){
+ if(appearance.id==='mint' && drawMintVisitor(c,p,{time,walking,seated,feeding,reaching,petting,milking,lambSize,pose,appearance,label}))return;
+ pose=pose.split('-')[0];
  if(milking||(petting&&lambSize<.5))return drawKneelingVisitor(c,p,{pose,lambSize,petting,appearance});
  if(!p)return;c.save();c.translate(p.x,p.y);c.scale(p.s,p.s);
  const ell=(x,y,rx,ry,col)=>{c.fillStyle=col;c.beginPath();c.ellipse(x,y,rx,ry,0,0,Math.PI*2);c.fill();};
@@ -53,7 +57,10 @@ export function drawHammock(c,p,{time=0,occupied=false,sunset=false,appearance=c
  c.beginPath();c.moveTo(-2,-.73);c.bezierCurveTo(-1.2,-.14,1.2,-.14,2,-.73);c.bezierCurveTo(1.35,.62,-1.35,.62,-2,-.73);c.fillStyle='#e4d7b5';c.fill();
  // Woven sage and linen stripes follow the hammock's sag.
  for(let i=0;i<13;i++){const x=-1.7+i*.28,lower=.4*(1-x*x/4);line([[x,-.32*(1-x*x/4)],[x+.07,lower]],i%2?'#8da18a':'#c3bc9b',.09);}
- if(occupied){c.save();c.rotate(-.08);line([[-.65,-.10],[.4,-.05],[1.1,-.25]],appearance.coat,.39);drawLimb(c,[[.42,-.04],[1.1,-.22],[1.46,-.43]],.22,trouserColor);c.save();c.translate(-.60,-.10);c.rotate(-1.22);drawVisitorClothes(c,0,0,.82,'right',appearance);drawVisitorHead(c,0,-.52,.88,'right',appearance);c.restore();drawLimb(c,[[-.40,-.24],[-.15,-.62],[-.82,-.62]],.11,appearance.coat);drawHand(c,-.82,-.62,.075,.065);c.restore();}
+ if(occupied && appearance.id==='mint'){
+   c.save();c.translate(.96,-.28);c.rotate(-1.28);
+   drawVisitor(c,{x:0,y:0,s:.91},{seated:true,pose:'front-right',appearance,label:false});c.restore();
+ }else if(occupied){c.save();c.rotate(-.08);line([[-.65,-.10],[.4,-.05],[1.1,-.25]],appearance.coat,.39);drawLimb(c,[[.42,-.04],[1.1,-.22],[1.46,-.43]],.22,trouserColor);c.save();c.translate(-.60,-.10);c.rotate(-1.22);drawVisitorClothes(c,0,0,.82,'right',appearance);drawVisitorHead(c,0,-.52,.88,'right',appearance);c.restore();drawLimb(c,[[-.40,-.24],[-.15,-.62],[-.82,-.62]],.11,appearance.coat);drawHand(c,-.82,-.62,.075,.065);c.restore();}
  // Front edge and knotted fringe.
  c.beginPath();c.moveTo(-2,-.7);c.bezierCurveTo(-1.4,.66,1.4,.66,2,-.7);c.strokeStyle='#9ba788';c.lineWidth=.07;c.stroke();for(let i=0;i<15;i++){const x=-1.7+i*.24,y=.48*(1-x*x/3);line([[x,y],[x+.04,y+.15]],'#d8c9a3',.025);}
  c.restore();c.fillStyle='#3c543bd9';c.beginPath();c.roundRect(-.88,-2.67,1.76,.36,.08);c.fill();c.fillStyle='#fff7e0';c.font='.17px sans-serif';c.textAlign='center';c.fillText(occupied?'해먹에서 쉬는 중':'나무 그늘의 해먹',0,-2.44);c.restore();

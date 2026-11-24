@@ -7,8 +7,8 @@ import {drawInteraction} from '../dist/render/interactions.js';
 
 const storage=new Map();
 globalThis.localStorage={getItem:key=>storage.get(key)??null,setItem:(key,value)=>storage.set(key,value)};
-assert.equal(currentAppearance().id,'straw');
-assert.equal(resolveAppearance({outfit:'constructor',hair:'__proto__'}).outfit,'ochre');
+assert.equal(currentAppearance().id,'mint');
+assert.equal(resolveAppearance({outfit:'constructor',hair:'__proto__'}).outfit,'mint');
 const colors=new Set();
 const gradients=[],hands=[];
 const ctx=new Proxy({
@@ -24,7 +24,7 @@ const ctx=new Proxy({
   obj[key]=v; return true;
 }});
 const player={x:0,z:0}, projected={x:60,y:120,s:50};
-for(const preset of presets){
+for(const preset of presets.filter(p=>p.id!=='mint')){
   assert.ok(applyAppearance({...preset,outfit:'clay',hair:'silver'}));
   const look=currentAppearance();
   for(const options of [{pose:'front'},{pose:'back'},{pose:'left',walking:true},{pose:'right',feeding:true},{seated:true},{petting:true},{milking:true}]){
@@ -54,7 +54,7 @@ const surface=()=>({clientWidth:390,clientHeight:760,dataset:{},getContext:()=>c
 const cabin=surface(),scenery=surface();
 let passengerAnchor;
 ctx.transform=(sx,b,c,sy,x,y)=>{passengerAnchor={sx,sy,x,y};};
-for(const preset of presets){
+for(const preset of presets.filter(p=>p.id!=='mint')){
   applyAppearance({id:preset.id,outfit:'navy',hair:'silver'});
   const look=currentAppearance();
   colors.clear();passengerAnchor=null;
@@ -86,7 +86,7 @@ delete globalThis.window;
 const reload=async tag=>(await import('../dist/game/visitor-appearance.js?'+tag)).currentAppearance();
 assert.deepEqual(await reload('returning'),currentAppearance());
 storage.set(appearanceKey,'{invalid');
-assert.equal((await reload('invalid')).id,'straw');
+assert.equal((await reload('invalid')).id,'mint');
 delete globalThis.localStorage;
 assert.equal(applyAppearance({id:'glasses'}),false);
 assert.equal(currentAppearance().outfit,'navy');

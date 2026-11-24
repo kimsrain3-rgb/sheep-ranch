@@ -1,5 +1,6 @@
 import {presets,hairColors,outfitColors,resolveAppearance,currentAppearance,applyAppearance} from './game/visitor-appearance.js';
 import {drawVisitor} from './visitor.js?v=limb-light-1';
+import {onMintArtLoaded} from './render/mint-visitor.js';
 
 const byId=id=>document.getElementById(id);
 const panel=byId('avatar-panel'), opener=byId('avatar-open');
@@ -28,6 +29,11 @@ for(const p of presets) option('avatar-presets','id',p.id,p.name);
 for(const [id,[name,color]] of Object.entries(hairColors)) option('avatar-hair','hair',id,name,color);
 for(const [id,[name,color]] of Object.entries(outfitColors)) option('avatar-outfit','outfit',id,name,color);
 function refresh(){
+  const mint=draft.id==='mint';
+  byId('avatar-hair').closest('fieldset').hidden=mint;
+  byId('avatar-outfit').closest('fieldset').hidden=mint;
+  byId('mint-accessories').hidden=!mint;
+  for(const key of ['hat','bag']) byId('mint-'+key).checked=!!draft[key];
   for(const {input,key,value,canvas} of controls){
     input.checked=draft[key]===value;
     if(!canvas)continue;
@@ -37,6 +43,10 @@ function refresh(){
       appearance:input.checked?draft:resolveAppearance({id:value})});
   }
 }
+for(const key of ['hat','bag']){
+  byId('mint-'+key).onchange=e=>{draft=resolveAppearance({...draft,[key]:e.target.checked});refresh();};
+}
+onMintArtLoaded(()=>{if(panel.open)refresh();});
 opener.addEventListener('click',()=>{
   draft=currentAppearance(); refresh(); panel.showModal();
   panel.querySelector('input:checked').focus();

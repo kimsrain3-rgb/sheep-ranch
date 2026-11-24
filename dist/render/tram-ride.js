@@ -2,6 +2,7 @@ import {BarnInteriorView} from '../game/barn-camera.js';
 import {TRAM_STOP} from '../game/tram-station.js';
 import {drawVisitor,visitorPose} from '../visitor.js?v=limb-light-1';
 import {currentAppearance} from '../game/visitor-appearance.js';
+import {onMintArtLoaded} from './mint-visitor.js';
 import {drawTramCabin} from './buildings-three.js?v=tram-station-1';
 
 const routes={
@@ -82,6 +83,7 @@ const passengerSeat={x:TRAM_STOP.x+.87,z:TRAM_STOP.z+.50,hipHeight:1.35};
 const coachView=new BarnInteriorView();
 
 let lastLook=null;
+onMintArtLoaded(()=>{lastLook=null;});
 let lastWindowView=null;
 
 function drawPassenger(context,w,h,look){
@@ -120,10 +122,12 @@ export function drawTramRide(scenery,cabin,name,progress,yaw,pitch,windowView=fa
   const eyeX=windowView ? -.342 : 1.70;
   const eyeZ=windowView ? .71 : -.84;
   const focal=h*(windowView ? .79 : .43);
-  yaw-=windowView ? .36 : .66;
+  const look=currentAppearance();
+  // Frame the wider painted bob on portrait phones while the seat stays fixed.
+  const portraitOffset=look.id==='mint' ? Math.min(.25,Math.max(0,(h/w-1.25)*.27)) : 0;
+  yaw-=windowView ? .36 : .66+portraitOffset;
   // On tall screens leave the bottom action row below the shoes.
   if(!windowView)pitch+=h>w ? .22 : .12;
-  const look=currentAppearance();
   const turned=coachView.yaw!==yaw||coachView.pitch!==pitch;
   if(resized||turned||look!==lastLook||windowView!==lastWindowView){
     lastLook=look;lastWindowView=windowView;
