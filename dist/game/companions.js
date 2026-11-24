@@ -72,13 +72,17 @@ export class Companions {
     this.move(a,dt,a.state==='walk'?.55:0,yaw);
   }
   tick(dt,{
-    player,sheep,yaw=0,sheltering=false,shepherd=null
+    player,sheep,yaw=0,sheltering=false,shepherd=null,held=null
   }){
     this.time+=dt;
-    for(const [index,a] of this.chickens.entries())this.tickChicken(a,index,dt,{sheltering,yaw});
+    for(const [index,a] of this.chickens.entries()){
+      if(a===held&&!sheltering){a.walking=false;continue;}
+      this.tickChicken(a,index,dt,{sheltering,yaw});
+    }
     const sheepOutside=sheltering?sheep.filter(s=>s.state==='shelter-go').sort((a,b)=>distance(b,CONFIG.barn.entrance)-distance(a,CONFIG.barn.entrance)):[];
     const chickensOutside=sheltering?this.chickens.filter(a=>a.state==='coop-go').sort((a,b)=>distance(b,CONFIG.coop.entrance)-distance(a,CONFIG.coop.entrance)):[];
     for(const a of this.dogs){
+      if(a===held&&!sheltering){a.walking=false;continue;}
       if(a.buildingAccess==='lodge'&&a.z<CONFIG.lodge.entrance.z-actorRadius(a)-.05)a.buildingAccess=null;
       a.timer-=dt;
       if(!sheltering&&a.hiddenInLodge){

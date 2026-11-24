@@ -32,7 +32,7 @@ import {setupMeadowPanel} from './meadow-panel.js?v=chosen-time-2';
 import { isCompactViewport } from './game/layout.js';
 import { Flock } from './game/flock.js?v=head-posture-1';
 import { Interactions } from './game/interactions.js?v=solid-buildings-2';
-import { Companions } from './game/companions.js?v=solid-buildings-2';
+import { Companions } from './game/companions.js?v=companion-pet-1';
 import { MeadowAudio } from './game/audio.js?v=popup-sound-2';
 import {dryRoute} from './game/navigation.js?v=windmill-1';
 import {drawBridgeDeck,drawBridgeRail,pickBridge} from './render/bridge.js?v=lake-bridge-1';
@@ -606,7 +606,14 @@ function update(dt){
   bond.tick(dt,{flock,player:worldPlayer,active:interaction.active,feeding,yaw:view.yaw,available:started&&!outdoorWalk&&!shepherd.talk&&!pendingShepherdTalk&&!barnVisit.inside&&!lodgeVisit.inside&&!farmVisit.inside&&!barnVisit.trip&&!lodgeVisit.trip&&!farmVisit.trip&&!shelter.active&&!hammocking&&!seated&&!walkingToHammock,notify});
   lambPlay.tick(dt,{flock,feeding,sheltering:shelter.active,yaw:view.yaw});
   if(started)shepherd.tick(dt,{player:worldPlayer,sheep,sheltering:shelter.active});
+  if(forestPet?.companion){
+    const pet=forestPet, room=farmVisit.inside?farmVisit.kind:lodgeVisit.inside?'lodge':null;
+    if(room!==pet.room || (pet.room? !indoorPets.some(g=>g.animal===pet.companion) : shelter.active || (pet.start===Infinity && outdoorWalk!==pet.walk)))forestPet=null;
+    else if(pet.room && pet.start===Infinity && !player.walking && Math.hypot(player.x-pet.x,player.z-pet.z)<1.05)pet.start=t;
+    else if(t>=pet.start+1.5)forestPet=null;
+  }
   companions.tick(dt,{
+    held:forestPet?.companion,
     player:worldPlayer,sheep,yaw:outdoorView.yaw,sheltering:shelter.active,shepherd
   });
   updateCareUI();
@@ -649,6 +656,27 @@ function kneelingForestPet(){
 function outdoorVisitorFeet(){
   const deck=stationWalkingHeight(player.x,player.z);
   return project(player.x,player.z,deck ? deck+.025 : undefined);
+}
+let indoorPets=[];
+function companionHit(a,x,z){
+  const p=project(a.x,a.z);
+  if(!p)return false;
+  const scale=p.s*(a.type==='chicken'?.55:1);
+  return Math.abs(x-p.x)<=Math.max(6,scale*1.13)&&z>=p.y-Math.max(10,scale*1.6)&&z<=p.y+3;
+}
+function petCompanion(animal,position,room=null){
+  if(seated||hammocking||interaction.carrying){notify('손을 비우고 일어난 뒤 쓰다듬을 수 있어요.');return;}
+  if(!room&&shelter.active){notify('동물들이 비를 피하거나 쉴 곳으로 이동 중이에요.');return;}
+  interaction.cancel(view);keys.clear();
+  const chicken=animal.type==='chicken', size=chicken?.33:.56;
+  const side=(player.x-position.x)*Math.cos(view.yaw)-(player.z-position.z)*Math.sin(view.yaw)<0?-1:1;
+  const reach=chicken?.55:.85;
+  const goal={x:position.x+side*reach*Math.cos(view.yaw),z:position.z-side*reach*Math.sin(view.yaw)};
+  if(room)(room==='coop'?farmVisit:lodgeVisit).walkTo(goal,player);
+  else walkToOutdoor(goal);
+  forestPet={companion:animal,room,small:true,x:position.x,z:position.z,size,
+    headX:animal.dir*(chicken?.25:.52)/size,headY:-(chicken?.59:animal.state==='rest'?.66:1.12)/size,start:Infinity,walk:outdoorWalk};
+  notify((animal.name||'닭')+' 쓰다듬기');
 }
 let visibleWildlife=[];
 function paintWorldLayers(layers){
@@ -1091,6 +1119,10 @@ function tapWorld(screenX,screenY){
     x,y
   }
   =view.toWorld(screenX,screenY);
+  if(farmVisit.inside||lodgeVisit.inside){
+    const guest=indoorPets.find(g=>companionHit(g,x,y));
+    if(guest){petCompanion(guest.animal,guest,farmVisit.inside?farmVisit.kind:'lodge');return;}
+  }
   if(farmVisit.inside){
     const ground=view.ground(x,y,W,H);if(!ground)return;
     if(tapBeyondDoor(farmVisit.kind,farmVisit,ground,x,y))return;
@@ -1122,7 +1154,8 @@ function tapWorld(screenX,screenY){
   // are picked from the same nearest-surface map used to draw them, never
   // from their bounding rectangle (which also includes open sky and grass).
   cancelBarnTrip();cancelLodgeTrip();
-  const hit=[...sheep,...(shepherd.insideLodge?[]:[shepherd])].sort((a,b)=>(project(a.x,a.z)?.depth??Infinity)-(project(b.x,b.z)?.depth??Infinity)).find(a=>{
+  const hit=[...sheep,...companions.animals.filter(a=>!a.hiddenInCoop&&!a.hiddenInLodge),...(shepherd.insideLodge?[]:[shepherd])].sort((a,b)=>(project(a.x,a.z)?.depth??Infinity)-(project(b.x,b.z)?.depth??Infinity)).find(a=>{
+    if(companions.animals.includes(a)){const root=project(a.x,a.z);return root&&companionHit(a,x,y)&&!buildingOcclusion.occluded(x,y,root.depth);}
     const p=a.screen,root=project(a.x,a.z);return !a.hiddenInBarn&&p&&root&&!buildingOcclusion.occluded(x,y,root.depth)&&Math.abs(x-p.x)<p.w*.5&&y<p.y+8&&y>p.y-p.h;
   });
   const wild=visibleWildlife.find(({wildlife:w,depth})=>x>=w.left&&x<=w.right&&y>=w.top&&y<=w.bottom&&!buildingOcclusion.occluded(x,y,depth));
@@ -1139,6 +1172,7 @@ function tapWorld(screenX,screenY){
     notify(wild.wildlife.name+' 쓰다듬기');
     return;
   }
+  if(companions.animals.includes(hit)){petCompanion(hit,hit);return;}
   if(hit===shepherd){requestShepherdTalk();return;}
   if(hit){
     if(shelter.active){notify('양들이 축사로 들어가 쉬고 있어요. 하늘이 개면 다시 만나요.');return;}
@@ -1551,11 +1585,14 @@ function renderRoomOutlook(kind,elevation=0){
   }
 }
 function drawRoomOccupants(guests){
+  indoorPets=guests.filter(g=>g.animal).sort((a,b)=>(project(a.x,a.z)?.depth??Infinity)-(project(b.x,b.z)?.depth??Infinity));
+  const pet=forestPet?.room&&kneelingForestPet(), target=pet&&project(pet.x,pet.z);
   const visitor=roomVisitorProjection(view,player,W,H,lodgeVisit.inside?lodgeVisit.footLift:0);
   const layers=guests.map(guest=>({depth:project(guest.x,guest.z)?.depth??-1,draw:guest.draw}));
   layers.push({depth:visitor.depth,draw:()=>drawVisitor(c,visitor,{
-    time:t,walking:player.walking,pose:visitorPose(player.headingX??0,player.headingZ??1,view.yaw)
+    time:t,walking:player.walking,petting:!!target,lambSize:pet?.size,pose:target?(target.x>=visitor.x?'right':'left'):visitorPose(player.headingX??0,player.headingZ??1,view.yaw)
   })});
+  if(target)layers.push({depth:Math.min(visitor.depth,target.depth)-.01,draw:()=>drawInteraction(c,{active:{kind:"pet",phase:"playing",animal:pet}},player,project,t,visitor)});
   layers.sort((a,b)=>b.depth-a.depth).forEach(layer=>layer.draw());
 }
 function renderInsideLodge(){
@@ -1566,7 +1603,7 @@ function renderInsideLodge(){
   const people=[];shepherd.screen=null;
   if(lodgeVisit.elevation<1.8){
     if(shepherd.insideLodge){const guest={...shepherd,x:-3.1,z:7.8,walking:false};people.push({x:guest.x,z:guest.z,draw:()=>{drawShepherdBoy(c,project(guest.x,guest.z,-lodgeVisit.elevation),guest,view.yaw);shepherd.screen=guest.screen;}});}
-    for(const [index,dog] of companions.dogs.entries())if(dog.hiddenInLodge){const guest={...dog,x:index?1.65:-1.65,z:11.9,walking:false};people.push({x:guest.x,z:guest.z,draw:()=>drawCompanion(c,project(guest.x,guest.z,-lodgeVisit.elevation),guest,t)});}
+    for(const [index,dog] of companions.dogs.entries())if(dog.hiddenInLodge){const guest={...dog,x:index?1.65:-1.65,z:11.9,walking:false};people.push({animal:dog,type:dog.type,x:guest.x,z:guest.z,draw:()=>drawCompanion(c,project(guest.x,guest.z,-lodgeVisit.elevation),guest,t)});}
   }
   drawRoomOccupants(people);
   $('sheep-label').hidden=true;
@@ -1626,8 +1663,8 @@ function renderInsideFarmRoom(){
   drawMarker();
   const occupants=[];
   if(farmVisit.kind==='coop'){
-    const guests=companions.chickens.filter(a=>a.hiddenInCoop).map((a,i)=>({...a,x:i%2?1.7:-1.7,z:3.1+Math.floor(i/2)*1.05,walking:false}));
-    for(const guest of guests)occupants.push({x:guest.x,z:guest.z,draw:()=>drawCompanion(c,project(guest.x,guest.z),guest,t)});
+    const guests=companions.chickens.filter(a=>a.hiddenInCoop).map((a,i)=>({...a,animal:a,x:i%2?1.7:-1.7,z:3.1+Math.floor(i/2)*1.05,walking:false}));
+    for(const guest of guests)occupants.push({animal:guest.animal,type:guest.type,x:guest.x,z:guest.z,draw:()=>drawCompanion(c,project(guest.x,guest.z),guest,t)});
   }
   drawRoomOccupants(occupants);
   $('sheep-label').hidden=true;
