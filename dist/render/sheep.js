@@ -1,4 +1,5 @@
 import {drawLayeredLamb} from './lamb.js?v=head-posture-1';
+import {paintedHeadNod} from '../game/painted-sheep-contact.js';
 const handSheep = typeof Image === 'undefined' ? null : new Image();
 if(handSheep) handSheep.src = new URL('./hand-sheep.png', import.meta.url).href;
 const handParts = typeof Image === 'undefined' ? [] : ['body','head','leg0','leg1','leg2','leg3'].map(name=>{
@@ -49,7 +50,7 @@ export function drawSheep(c,a,{
     const step=a.walking?Math.sin(t*8+phase)*.12:0;
     [130,202,350,420].forEach((px,i)=>draw(selectedSheepParts[2+i],px,335,step*(i%2?1:-1)));
     c.drawImage(selectedSheepParts[0],x,y,w,h);
-    const nod=headTilt+Math.sin(t*1.1+phase)*.045;
+    const nod=paintedHeadNod(a,t);
     const blinking=resting||happy||((t+phase*1.4)%5.1<.17);
     c.save();if(happy)c.translate(.08,.02);
     draw(selectedSheepParts[1],405,95,nod,()=>{

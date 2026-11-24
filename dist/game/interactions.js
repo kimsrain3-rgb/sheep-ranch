@@ -4,6 +4,7 @@ import {
   CONFIG,distance,keepDry,actorRadius,buildingPathClear
 } from './config.js?v=solid-buildings-2';
 import {dryRoute} from './navigation.js?v=solid-buildings-2';
+import {hasPaintedCheek,paintedCheek} from './painted-sheep-contact.js';
 export class Interactions {
   constructor(flock){
     this.flock=flock;
@@ -36,8 +37,18 @@ export class Interactions {
     };
     if(kind==='pet'){
       const rigReach=animal.size<.5 ? .18 : .29;
-      destination=petStand(animal,player,currentAppearance().model==='3d' ? rigReach : .45);
+      const look=currentAppearance();
+      destination=petStand(animal,player,look.model==='3d' ? rigReach : .45);
       this.active.petYaw=petCameraYaw(animal,destination,view.yaw);
+      const dx=destination.x-animal.x,dz=destination.z-animal.z;
+      const side=Math.sign(dx*Math.cos(this.active.petYaw)-dz*Math.sin(this.active.petYaw));
+      if(look.id==='mint' && look.model!=='3d' && hasPaintedCheek(animal) && side===animal.dir){
+        // Place the visitor one sleeve away from this drawing's cheek.
+        const cheek=paintedCheek(animal,0,-.14);
+        const gap=(Math.abs(cheek.x)+.08)*animal.size+.42;
+        const ratio=Math.min(1,gap/(Math.hypot(dx,dz)||1));
+        destination={x:animal.x+dx*ratio,z:animal.z+dz*ratio};
+      }
     }
     if(kind==='milk'){
       // Stand close on either dry side of the lamb, then kneel beside it.

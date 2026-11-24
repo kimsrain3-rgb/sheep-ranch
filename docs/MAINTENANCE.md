@@ -474,3 +474,8 @@ main 775212b 기준. 숲 네 방향의 윤곽과 밀도를 다르게 하고 물�
 - mint-3d-play, main cddae43 기준. 내 모습에서 손그림과 블렌더 모델을 선택하고 같은 플레이어 위치·카메라·상호작용으로 비교한다. 기본은 손그림이다.
 - dist/assets/mint-girl.glb에 22개 관절과 걷기·앉기·쓰다듬기 클립을 포함했다. dist/render/mint-model-scene.js는 선택한 경우에만 로드되어 게임의 인물 그리기 순서에 맞춰 렌더링한다. 모자와 손가방도 함께 전환한다.
 - 독립 브라우저 검수에서 발견한 소품 위치를 고쳤다. tests/mint-model.mjs에서 GLB, 모션, 착용 기준점과 저장값을 검사한다.
+
+### 2026-11-24 — 손그림 캐릭터와 흰 양의 볼 접촉
+
+- white-pet, main 4d01c5d 기준. 갈색 얼굴을 가진 두 흰 성체의 원화에서 볼 좌표를 잡아 머리 회전, 좌우 반전과 쓰다듬기 동작을 반영한다. 민트 손그림으로 얼굴 쪽에서 접근할 때 그 위치에서 팔 한 뼘 거리에 선다.
+- dist/game/painted-sheep-contact.js, dist/game/interactions.js, dist/render/mint-visitor.js, dist/render/sheep.js 및 로딩 버전을 갱신했다. tests/mint-visitor.mjs에 두 얼굴, 양방향과 성체 크기별 접촉 검사를 추가했다.

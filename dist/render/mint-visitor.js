@@ -1,5 +1,7 @@
 import {WALK_CYCLES_PER_SECOND} from '../game/gait.js';
 
+import {hasPaintedCheek,paintedCheek} from '../game/painted-sheep-contact.js';
+
 const directions = ['front','front-right','right','back-right','back','back-left','left','front-left'];
 // Pixel pivots in each 160 x 232 cutout: shoulder, then grip.
 const sleeves = [
@@ -40,12 +42,13 @@ export function drawMintPetSleeve(ctx,feet,animalPoint,animal,time) {
   const shoulderY=feet.y+(b*sx+d*sy+f+(small?crouchDrop:0)-224)*pixelScale*feet.s;
   const stroke=Math.sin(time*3.4);
   const animalScale=animalPoint.s*animal.size;
-  const dx=animalPoint.x-side*animalScale*.89+side*stroke*.04*feet.s-shoulderX;
+  const cheek=hasPaintedCheek(animal) && animal.dir===-side ? paintedCheek(animal,time) : null;
+  const dx=cheek ? animalPoint.x+animalScale*cheek.x-shoulderX : animalPoint.x-side*animalScale*.89+side*stroke*.04*feet.s-shoulderX;
   // Stroke the near flank below the chin even when the sheep is taller.
-  const dy=Math.max(.16*feet.s,animalPoint.y-animalScale*.86-shoulderY)+stroke*.075*feet.s;
+  const dy=cheek ? animalPoint.y+animalScale*cheek.y-shoulderY : Math.max(.16*feet.s,animalPoint.y-animalScale*.86-shoulderY)+stroke*.075*feet.s;
   const distance=Math.max(.001,Math.hypot(dx,dy));
   const pixels=pixelScale*feet.s, span=hy-sy;
-  const reach=Math.min(distance/pixels,span*1.22);
+  const reach=cheek ? distance/pixels : Math.min(distance/pixels,span*1.22);
   ctx.save();
   ctx.translate(shoulderX,shoulderY);
   ctx.transform(dy/distance*pixels,-dx/distance*pixels,dx/distance*pixels,dy/distance*pixels,0,0);

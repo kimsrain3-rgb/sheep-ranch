@@ -52,6 +52,29 @@ for(const size of [.33,1.1])for(const side of [-1,1]){
     assert.ok(axis.x*side>0 && axis.y>0);
   }
 }
+// Map the actual painted palm back onto the rotating face artwork.
+for(const fifth of [false,true])for(const dir of [-1,1])for(const size of [.8,1.18]){
+  const feet={x:200,y:260,s:64};
+  const ap={x:feet.x-dir*(.42+.8*size)*feet.s,y:feet.y-4,s:62};
+  const sheep={x:1,z:0,size,dir,phase:1.2,headPosture:{angle:-.14},state:'pet',careContact:true,
+    thirdSheepAppearance:!fifth,fifthSheepAppearance:fifth};
+  for(const t of [.05,.45,.9,1.4]){
+    let shoulder,axis,stretch;
+    ctx.translate=(x,y)=>{shoulder={x,y};};
+    ctx.transform=(a,b,c,d)=>{axis={x:c,y:d};};
+    ctx.scale=(sx,sy)=>{stretch=sy;};
+    drawInteraction(ctx,{active:{kind:'pet',phase:'playing',animal:sheep}},feet,()=>ap,t,feet);
+    const scale=ap.s*size;
+    const palmX=(shoulder.x+axis.x*47*stretch-ap.x)/scale*dir;
+    const palmY=(shoulder.y+axis.y*47*stretch-ap.y)/scale;
+    const x=palmX-(-1.1+2.2*405/654+.08),y=palmY-(-1.52+1.5*95/446+.02);
+    const nod=-.14+Math.sin(t*1.1+1.2)*.045;
+    const artX=405+(x*Math.cos(nod)+y*Math.sin(nod))*654/2.2;
+    const artY=95+(-x*Math.sin(nod)+y*Math.cos(nod))*446/1.5;
+    assert.ok(Math.abs(artX-(fifth?510:550))<4 && Math.abs(artY-(fifth?162:184))<12,
+      'palm stays on the near cheek throughout the stroke');
+  }
+}
 applyAppearance({id:'mint',hat:false,bag:true});
 render({pose:'back'});
 assert.equal(draws.filter(d=>d[0]==='mint-items.webp').length,1);
