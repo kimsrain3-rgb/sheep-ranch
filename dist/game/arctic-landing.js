@@ -11,7 +11,8 @@ const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 function onSurface(x,z,r){return x>=r.left&&x<=r.right&&z>=r.front&&z<=r.back;}
 export function createArcticLanding(){
   return {phase:'approach',x:-2.55,z:.8,height:.797,clock:0,step:0,yaw:2.90,pitch:.18,
-    headingX:0,headingZ:1,walking:false,goal:null,view:new BarnInteriorView()};
+    headingX:0,headingZ:1,walking:false,goal:null,view:new BarnInteriorView(),
+    seal:{x:-.85,z:4.75,bearing:-2.1,stride:0,moving:false}};
 }
 export function arcticCamera(s,w,h){
   const v=s.view,free=s.phase==='walk'||s.phase==='toTram';
@@ -48,6 +49,7 @@ export function returnToArcticTram(s){
 }
 export function stepArctic(s,dt){
   s.clock+=dt;
+  stepSeal(s,dt);
   s.walking=false;
   if(s.phase==='disembark'){
     s.step=Math.min(2,s.step+dt);
@@ -77,6 +79,22 @@ export function stepArctic(s,dt){
     if(onSurface(x,z,DOCK)||onSurface(x,z,ICE)){s.x=x;s.z=z;s.walking=true;}
     else s.goal=null;
   }
+}
+// The pup can see the passenger on the dock, but stays on safe ice.
+function stepSeal(s,dt){
+  const pup=s.seal;
+  pup.moving=false;
+  if(!['disembark','walk','toTram'].includes(s.phase))return;
+  const dx=s.x-pup.x,dz=s.z-pup.z;
+  const angle=Math.atan2(dx,dz)-pup.bearing;
+  pup.bearing+=Math.atan2(Math.sin(angle),Math.cos(angle))*Math.min(1,dt*6);
+  const distance=Math.hypot(dx,dz);
+  if(distance<=1.15)return;
+  const travel=Math.min(distance-1.15,dt*3.35);
+  const x=clamp(pup.x+dx/distance*travel,ICE.left+.45,ICE.right-.45);
+  const z=clamp(pup.z+dz/distance*travel,ICE.front+.55,ICE.back-.55);
+  const moved=Math.hypot(x-pup.x,z-pup.z);
+  pup.x=x;pup.z=z;pup.stride+=moved*7;pup.moving=moved>.0001;
 }
 export function turnOnIce(s,dx,dy){
   if(s.phase!=='walk')return;

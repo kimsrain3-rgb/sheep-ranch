@@ -1,3 +1,4 @@
+import {drawHarpSeal} from './harp-seal.js';
 import {arcticCamera,APPROACH_START,DOCK,FLOOR,ICE} from '../game/arctic-landing.js';
 import {TRAM_STOP} from '../game/tram-station.js';
 import {drawVisitor,visitorPose} from '../visitor.js?v=limb-light-1';
@@ -93,8 +94,10 @@ export function drawArctic(canvas,s,elapsed){
     s.tramKey=key;
   }
   c.drawImage(s.tramImage,0,0,w,h);
-  if(outside){
-    const feet=project(ox+s.x,oz+s.z,s.height+.025);
-    if(feet)drawVisitor(c,feet,{time:s.clock,walking:s.walking,label:false,pose:visitorPose(s.headingX,s.headingZ,v.yaw)});
-  }
+  const feet=outside&&project(ox+s.x,oz+s.z,s.height+.025);
+  const pup=s.seal, paws=project(ox+pup.x,oz+pup.z,FLOOR);
+  const seal=()=>drawHarpSeal(c,paws,pup,v.yaw,s.clock);
+  if(paws&&(!feet||paws.depth>=feet.depth))seal();
+  if(feet)drawVisitor(c,feet,{time:s.clock,walking:s.walking,label:false,pose:visitorPose(s.headingX,s.headingZ,v.yaw)});
+  if(paws&&feet&&paws.depth<feet.depth)seal();
 }
