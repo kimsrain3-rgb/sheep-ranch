@@ -1,7 +1,7 @@
 import {createArcticLanding,returnToArcticTram,stepArctic,turnOnIce,tapOnIce,APPROACH_START} from './game/arctic-landing.js';
 import {drawArctic} from './render/arctic-landing.js';
-import {forestHeight,hillPick,denSites,nearbyDen} from './game/forest-hills.js';
-import {drawHills,addDenLayers} from './render/forest-hills.js?v=hill-draw-2';
+import {forestHeight,hillPick} from './game/forest-hills.js';
+import {drawHills} from './render/forest-hills.js?v=hills-no-dens-1';
 import {addGardenLayers} from './render/pond-garden.js?v=stream-banks-1';
 import {setupRanchMap,streamLookout} from './ranch-map.js?v=tram-station-1';
 import {TRAM_BOARDING_WALK,TRAM_BOARDING_HOLD,tramBoardingPose,stationWalkingHeight,TRAM_DESTINATIONS,TRAM_STATION,TRAM_STOP} from './game/tram-station.js';
@@ -77,22 +77,6 @@ const outdoorView=new MeadowView(),indoorView=new BarnInteriorView();
 const lodgeView=new LodgeInteriorView(),lookoutView=new BarnInteriorView(),farmView=new BarnInteriorView();
 lodgeView.zoom=1.25;lodgeView.pitch=.025;
 outdoorView.terrainHeight=forestHeight;
-const denKey='ranch-forest-dens-v1';
-function readDens(){
-  try{return new Set(JSON.parse(localStorage.getItem(denKey)||'[]').filter(i=>Number.isInteger(i)&&denSites[i]));}catch{return new Set();}
-}
-let dugDens=readDens();
-function availableDen(){
-  if(!started||view!==outdoorView)return -1;
-  const id=nearbyDen(player.x,player.z);
-  return dugDens.has(id)?-1:id;
-}
-$('dig-den').onclick=()=>{
-  const id=availableDen();if(id<0)return;
-  dugDens.add(id);
-  try{for(const other of readDens())dugDens.add(other);localStorage.setItem(denKey,JSON.stringify([...dugDens]));}catch{}
-  $('dig-den').hidden=true;notify('비탈에 여우굴을 팠어요.');
-};
 let view=outdoorView;
 const millView=new LodgeInteriorView();
 let millMode=null;
@@ -733,7 +717,6 @@ function drawOutdoorScenery(interiorKind,showVisitor=true){
       })
     });
   }
-  addDenLayers(layers,c,project,dugDens);
   addBirchLayers(layers,c,project,W,H);
   if(showGrove)addForestLayers(layers,c,project,W,H,t,view.yaw,forestPet);
   for(const a of meadowTrees)layers.push({
@@ -769,7 +752,6 @@ function drawOutdoorScenery(interiorKind,showVisitor=true){
   paintWorldLayers(interiorKind?layers.filter(layer=>layer.building!==interiorKind):layers);
 }
 function render(){
-  $('dig-den').hidden=availableDen()<0;
   if(farmVisit.inside){renderInsideFarmRoom();return;}
   if(lodgeVisit.inside){renderInsideLodge();return;}
   if(barnVisit.inside){renderInsideBarn();return;}
