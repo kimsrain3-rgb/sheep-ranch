@@ -12,7 +12,7 @@ assert.equal(currentAppearance().id,'mint');
 applyAppearance({id:'mint',hat:true,bag:true});
 const ctx=new Proxy({}, {get:(obj,key)=>obj[key]??(()=>{})});
 const draws=[],rotations=[];
-ctx.drawImage=(img,...rect)=>draws.push([img.src.split('/').pop(),...rect]);
+ctx.drawImage=(img,...rect)=>draws.push([new URL(img.src).pathname.split('/').pop(),...rect]);
 ctx.rotate=angle=>rotations.push(angle);
 function render(options){
   draws.length=0;rotations.length=0;

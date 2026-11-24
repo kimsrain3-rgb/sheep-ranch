@@ -10,7 +10,7 @@ const sleeves = [
 function loadArt(file) {
   if (typeof Image === 'undefined') return null;
   const img = new Image();
-  img.src = new URL(file, import.meta.url).href;
+  img.src = new URL(file + '?v=ink-2', import.meta.url).href;
   return img;
 }
 const art = loadArt('mint-avatar.webp');
