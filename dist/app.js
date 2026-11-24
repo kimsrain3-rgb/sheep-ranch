@@ -8,7 +8,7 @@ import {TRAM_BOARDING_WALK,TRAM_BOARDING_HOLD,tramBoardingPose,stationWalkingHei
 import {drawTramRide} from './render/tram-ride.js?v=window-framing-2';
 import {tramPlatformOrigin} from './render/tram-station.js';
 import {trailX,inGrove,clearTrunks,groveRoute} from './game/fir-grove.js?v=birch-edge-1';
-import {addBirchLayers,drawForestFloor,addForestLayers,groveVisible} from './render/fir-grove.js?v=low-pet-2';
+import {addBirchLayers,drawForestFloor,addForestLayers,groveVisible} from './render/fir-grove.js?v=deer-contact-1';
 import {frameLodgeStairs,followRoomVisitor,roomVisitorProjection} from './game/room-follow.js?v=coop-circle-1';
 import {groundThroughDoor} from './game/doorway.js';
 import {BuildingOcclusion,spriteBounds} from './render/occlusion.js?v=visible-picking-1';
@@ -650,8 +650,8 @@ function drawWorldLayer(layer){
   buildingOcclusion.draw(c,p.depth,spriteBounds(p,layer.cover),()=>layer.draw());
 }
 let forestPet=null;
-function kneelingForestPet(){
-  return forestPet?.small && t>=forestPet.start && t<forestPet.start+1.5 ? forestPet : null;
+function activeAnimalPet(){
+  return forestPet && t>=forestPet.start && t<forestPet.start+1.5 ? forestPet : null;
 }
 function outdoorVisitorFeet(){
   const deck=stationWalkingHeight(player.x,player.z);
@@ -702,7 +702,7 @@ function drawOutdoorScenery(interiorKind,showVisitor=true){
   if(railwayVisible)drawBuilding3D(c,'tram-track',project,view,W,H,{...railwayLighting,shadow:false});
   if(!interiorKind)drawMarker();
   const petFocus=!interiorKind&&interaction.active?.kind==='pet'&&interaction.active.phase==='playing'?interaction.active.animal:null;
-  const lowPet=interiorKind?null:kneelingForestPet();
+  const lowPet=interiorKind?null:activeAnimalPet();
   const layers=sheep.map(a=>({
     x:a.x,z:a.z,actor:true,focused:a===petFocus,cover:{halfWidth:1.9*a.size,above:3*a.size+(a.hop||0)*a.size+.5,below:.5*a.size},draw:()=>interiorKind?renderSheep(c,a,{project,time:t,width:W,height:H,player:lookoutView.target}):drawSheep(a)
   }));
@@ -781,8 +781,15 @@ function render(){
   c.save();
   drawOutdoorScenery();
   const visitor=outdoorVisitorFeet();
-  const lowPet=kneelingForestPet();
-  if(visitor)buildingOcclusion.draw(c,visitor.depth,spriteBounds(visitor,{halfWidth:5,above:4,below:1}),()=>drawInteraction(c,lowPet?{active:{kind:"pet",phase:"playing",animal:lowPet}}:interaction,player,project,t,visitor));
+  const lowPet=activeAnimalPet();
+  // The shared pet arm aims at the near edge of sheep fleece. For a deer's
+  // narrower torso, move that reference inward so the palm lands on its coat.
+  const petProject=lowPet?.deer?(x,z)=>{
+    const p=project(x,z);
+    if(!p||!visitor)return p;
+    return {...p,x:p.x+(p.x>=visitor.x?1:-1)*p.s*.53};
+  }:project;
+  if(visitor)buildingOcclusion.draw(c,visitor.depth,spriteBounds(visitor,{halfWidth:5,above:4,below:1}),()=>drawInteraction(c,lowPet?{active:{kind:"pet",phase:"playing",animal:lowPet}}:interaction,player,petProject,t,visitor));
   for(const p of particles){
     const v=project(p.x,p.z,p.y);
     if(v&&!buildingOcclusion.occluded(v.x,v.y,v.depth)){
@@ -1161,14 +1168,14 @@ function tapWorld(screenX,screenY){
   const wild=visibleWildlife.find(({wildlife:w,depth})=>x>=w.left&&x<=w.right&&y>=w.top&&y<=w.bottom&&!buildingOcclusion.occluded(x,y,depth));
   if(wild&&(!hit||wild.depth<project(hit.x,hit.z).depth)){
     interaction.cancel(view);
-    if(wild.rabbit||wild.fox){
-      if(seated||hammocking){notify('일어난 뒤 다가가 쓰다듬을 수 있어요.');return;}
-      const side=(player.x-wild.x)*Math.cos(view.yaw)-(player.z-wild.z)*Math.sin(view.yaw)<0?-1:1;
-      const reach=wild.rabbit?.55:.70;
-      keys.clear();
-      walkToOutdoor({x:wild.x+side*reach*Math.cos(view.yaw),z:wild.z-side*reach*Math.sin(view.yaw)});
-      forestPet={id:wild.wildlife.id,small:true,x:wild.x,z:wild.z,size:wild.rabbit?.33:.46,start:Infinity,walk:outdoorWalk};
-    }else forestPet={id:wild.wildlife.id,start:t};
+    if(seated||hammocking){notify('일어난 뒤 다가가 쓰다듬을 수 있어요.');return;}
+    const side=(player.x-wild.x)*Math.cos(view.yaw)-(player.z-wild.z)*Math.sin(view.yaw)<0?-1:1;
+    const deer=!wild.rabbit&&!wild.fox;
+    const reach=wild.rabbit?.55:wild.fox?.70:.85;
+    keys.clear();
+    walkToOutdoor({x:wild.x+side*reach*Math.cos(view.yaw),z:wild.z-side*reach*Math.sin(view.yaw)});
+    forestPet={id:wild.wildlife.id,deer,direction:wild.direction,x:wild.x,z:wild.z,
+      size:wild.rabbit?.33:wild.fox?.46:1,start:Infinity,walk:outdoorWalk};
     notify(wild.wildlife.name+' 쓰다듬기');
     return;
   }
@@ -1586,7 +1593,7 @@ function renderRoomOutlook(kind,elevation=0){
 }
 function drawRoomOccupants(guests){
   indoorPets=guests.filter(g=>g.animal).sort((a,b)=>(project(a.x,a.z)?.depth??Infinity)-(project(b.x,b.z)?.depth??Infinity));
-  const pet=forestPet?.room&&kneelingForestPet(), target=pet&&project(pet.x,pet.z);
+  const pet=forestPet?.room&&activeAnimalPet(), target=pet&&project(pet.x,pet.z);
   const visitor=roomVisitorProjection(view,player,W,H,lodgeVisit.inside?lodgeVisit.footLift:0);
   const layers=guests.map(guest=>({depth:project(guest.x,guest.z)?.depth??-1,draw:guest.draw}));
   layers.push({depth:visitor.depth,draw:()=>drawVisitor(c,visitor,{
