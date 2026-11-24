@@ -81,8 +81,14 @@ export function drawMintVisitor(c,p,{pose,walking,time,seated,feeding,reaching,p
   const armSet = sleeves[view];
   const handIndex = armSet.length===1 || view===7 ? 0 : 1;
   const layer = row => c.drawImage(art,view*160,row*232,160,232,0,0,160,232);
-  function drawBag(x,y) {
-    if (appearance.bag && items?.naturalWidth) c.drawImage(items,0,160,90,81,x-15,y-3,32,29);
+  function drawBag() {
+    if(!appearance.bag || !items?.naturalWidth)return;
+    const facing=Math.cos(view*Math.PI/4);
+    const shoulder=80-19*facing, hip=80+28*facing-side*9;
+    c.save();c.beginPath();c.moveTo(shoulder,107);
+    c.quadraticCurveTo((shoulder+hip)/2,128,hip,147);
+    c.strokeStyle='#78533b';c.lineWidth=3.4;c.lineCap='round';c.stroke();
+    c.drawImage(items,0,160,90,81,hip-16,143,32,29);c.restore();
   }
   function drawHat() {
     if (!appearance.hat || !items?.naturalWidth) return;
@@ -130,8 +136,7 @@ export function drawMintVisitor(c,p,{pose,walking,time,seated,feeding,reaching,p
   }
   if (holdingStill) {
     drawIdleTorso(5);
-    const [,,x,y] = armSet[handIndex];
-    drawBag(x,y);
+    drawBag();
   } else {
     for (let foot=0;foot<2;foot++) {
       const stride = foot ? wave : -wave;
@@ -151,6 +156,7 @@ export function drawMintVisitor(c,p,{pose,walking,time,seated,feeding,reaching,p
     else if (kneeling) {c.translate(80,155);c.scale(.96,.85);c.rotate(side*.12);c.translate(-80,-155);}
     c.translate(80,172); c.rotate(-wave*.014); c.translate(-80,-172);
     drawIdleTorso(0);
+    drawBag();
     armSet.forEach(([x,y,handX,handY],index)=>{
       const activeHand = index===handIndex;
       if (activeHand && petting) return; // The interaction draws the contacting arm.
@@ -163,7 +169,7 @@ export function drawMintVisitor(c,p,{pose,walking,time,seated,feeding,reaching,p
         if (feeding) {
           c.strokeStyle='#c5a34d'; c.lineWidth=2;
           for(let i=0;i<8;i++){c.beginPath();c.moveTo(handX,handY);c.lineTo(handX-19+i*4,handY-28-i%3*4);c.stroke();}
-        } else if (!milking) drawBag(handX,handY);
+        }
       }
       c.restore();
     });

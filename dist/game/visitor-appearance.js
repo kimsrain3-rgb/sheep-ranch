@@ -23,11 +23,15 @@ export function resolveAppearance(value) {
   const outfit = Object.hasOwn(outfitColors, value?.outfit) ? value.outfit : preset.outfit;
   const [,coat,shade,sleeve] = outfitColors[outfit];
   if (preset.id==='mint') return {...preset,...(value?.model==='3d'?{model:'3d'}:{}),hairColor:'#58483f',coat:outfitColors.mint[1],
-    shade:outfitColors.mint[2],sleeve:outfitColors.mint[3],hat:value?.hat===true,bag:value?.bag===true};
+    shade:outfitColors.mint[2],sleeve:outfitColors.mint[3],hat:value?.hat===true,bag:value?.bag!==false};
   return {id:preset.id,hair,outfit,hairColor:hairColors[hair][1],coat,shade,sleeve};
 }
 function readAppearance() {
-  try { return resolveAppearance(JSON.parse(localStorage.getItem(appearanceKey))); }
+  try {
+    const saved=JSON.parse(localStorage.getItem(appearanceKey));
+    if(saved?.id==='mint' && !saved.shoulderBagSetting)saved.bag=true;
+    return resolveAppearance(saved);
+  }
   catch { return resolveAppearance(); }
 }
 let active = readAppearance();
@@ -35,6 +39,6 @@ export function currentAppearance() { return active; }
 export function applyAppearance(value) {
   active = resolveAppearance(value);
   const {id,hair,outfit,hat,bag,model} = active;
-  try { localStorage.setItem(appearanceKey, JSON.stringify({id,hair,outfit,hat,bag,model})); return true; }
+  try { localStorage.setItem(appearanceKey, JSON.stringify({id,hair,outfit,hat,bag,model,...(id==='mint'?{shoulderBagSetting:true}:{})})); return true; }
   catch { return false; }
 }

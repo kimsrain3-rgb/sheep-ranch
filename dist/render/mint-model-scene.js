@@ -32,6 +32,19 @@ export async function createModelPainter() {
     const [name,property]=track.name.split('.');
     return {joint:model.getObjectByName(name)[property],value:track.createInterpolant().evaluate(1.1)};
   });
+  const chest=model.getObjectByName('Chest');
+  if(bag&&chest){
+    chest.add(bag);
+    bag.position.set(-.43,-.40,.21);
+    bag.rotation.set(0,-.22,-.06);
+    const strapPath=new THREE.CatmullRomCurve3([
+      new THREE.Vector3(-.19,-.13,.03),new THREE.Vector3(.25,.38,.16),
+      new THREE.Vector3(.72,.65,.09),new THREE.Vector3(.72,.65,-.25),
+      new THREE.Vector3(.26,.26,-.48),new THREE.Vector3(-.16,-.14,-.23)
+    ]);
+    bag.add(new THREE.Mesh(new THREE.TubeGeometry(strapPath,28,.026,6,false),
+      new THREE.MeshStandardMaterial({color:0x79563e,roughness:1})));
+  }
   const head=model.getObjectByName('Head');
   const eyes=['Ink_eye_L','Ink_eye_R'].map(name=>model.getObjectByName(name)).filter(Boolean);
   let active, previous, lastTime, sitProgress=0;
