@@ -2,6 +2,7 @@ import {drawLimb,drawHand} from './visitor-limbs.js';
 import {currentAppearance} from '../game/visitor-appearance.js';
 import {petArmPose} from './pet-pose.js?v=soft-elbow-5';
 import {drawMilkBottle} from './milk-pose.js?v=limb-light-1';
+import {mintModelReady} from './mint-model.js';
 import {drawMintPetSleeve} from './mint-visitor.js';
 export function drawInteraction(c,controller,player,project,time,pp=project(player.x,player.z)){
   const active=controller.active;
@@ -35,6 +36,7 @@ export function drawInteraction(c,controller,player,project,time,pp=project(play
   c.lineJoin='round';
   if(active.kind==='pet'){
     const look=currentAppearance();
+    if(look.model==='3d' && mintModelReady()){ c.restore(); return; }
     if(look.id!=='mint'||!drawMintPetSleeve(c,pp,ap,a,time)){
       const arm=petArmPose(pp,ap,a,time);
       drawLimb(c,[arm.shoulder,arm.elbow,arm.hand].map(p=>[p.x,p.y]),pp.s*.12,look.coat);

@@ -1,5 +1,6 @@
 import {presets,hairColors,outfitColors,resolveAppearance,currentAppearance,applyAppearance} from './game/visitor-appearance.js';
 import {drawVisitor} from './visitor.js?v=limb-light-1';
+import {ensureMintModel,mintModelReady} from './render/mint-model.js';
 import {onMintArtLoaded} from './render/mint-visitor.js';
 
 const byId=id=>document.getElementById(id);
@@ -33,6 +34,15 @@ function refresh(){
   byId('avatar-hair').closest('fieldset').hidden=mint;
   byId('avatar-outfit').closest('fieldset').hidden=mint;
   byId('mint-accessories').hidden=!mint;
+  byId('mint-model').hidden=!mint;
+  const wants3D=mint&&draft.model==='3d';
+  for(const radio of byId('mint-model').querySelectorAll('input')) radio.checked=radio.value===(wants3D?'3d':'2d');
+  byId('mint-model-status').textContent=wants3D&&!mintModelReady()?'3D 캐릭터를 불러오는 중…':'';
+  if(wants3D&&!mintModelReady()) ensureMintModel().then(ready=>{
+    if(!panel.open||draft.model!=='3d')return;
+    if(ready)refresh();
+    else byId('mint-model-status').textContent='이 기기에서는 손그림으로 표시돼요.';
+  });
   for(const key of ['hat','bag']) byId('mint-'+key).checked=!!draft[key];
   for(const {input,key,value,canvas} of controls){
     input.checked=draft[key]===value;
@@ -46,6 +56,9 @@ function refresh(){
 for(const key of ['hat','bag']){
   byId('mint-'+key).onchange=e=>{draft=resolveAppearance({...draft,[key]:e.target.checked});refresh();};
 }
+byId('mint-model').addEventListener('change',e=>{
+  draft=resolveAppearance({...draft,model:e.target.value}); refresh();
+});
 onMintArtLoaded(()=>{if(panel.open)refresh();});
 opener.addEventListener('click',()=>{
   draft=currentAppearance(); refresh(); panel.showModal();

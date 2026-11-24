@@ -1,0 +1,21 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {applyAppearance,resolveAppearance,appearanceKey} from '../dist/game/visitor-appearance.js';
+
+const buf=readFileSync(new URL('../dist/assets/mint-girl.glb',import.meta.url));
+assert.equal(buf.toString('ascii',0,4),'glTF');
+assert.equal(buf.readUInt32LE(8),buf.length);
+const gltf=JSON.parse(buf.toString('utf8',20,20+buf.readUInt32LE(12)));
+assert.equal(gltf.skins[0].joints.length,22);
+assert.deepEqual(gltf.animations.map(a=>a.name).sort(),['01 Walk','02 Sit and rise','03 Pet sheep']);
+const hat=gltf.nodes.find(n=>n.name==='Hat - tilt or remove');
+assert.ok(hat.translation[1]>3.6 && hat.translation[1]<4.1,'hat mounted at crown');
+assert.ok(gltf.nodes.some(n=>n.name==='Satchel - move by handle'));
+assert.ok(gltf.animations.every(a=>a.channels.some(c=>c.target.path==='rotation')));
+const store=new Map();
+globalThis.localStorage={setItem:(k,v)=>store.set(k,v)};
+assert.equal(resolveAppearance({id:'mint'}).model,undefined);
+assert.ok(applyAppearance({id:'mint',model:'3d',hat:true,bag:true}));
+assert.equal(resolveAppearance(JSON.parse(store.get(appearanceKey))).model,'3d');
+assert.equal(resolveAppearance({id:'straw',model:'3d'}).model,undefined);
+console.log('Mint Blender model, wearable anchors, three motion clips and appearance preferences passed.');

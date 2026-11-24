@@ -1,4 +1,5 @@
-import {petStand,petCameraYaw,petZoom,angleDelta} from './petting.js?v=solid-buildings-2';
+import {petStand,petCameraYaw,petZoom,angleDelta} from './petting.js?v=mint-3d-1';
+import {currentAppearance} from './visitor-appearance.js';
 import {
   CONFIG,distance,keepDry,actorRadius,buildingPathClear
 } from './config.js?v=solid-buildings-2';
@@ -34,7 +35,8 @@ export class Interactions {
       x:animal.x-1.15,z:animal.z-.35
     };
     if(kind==='pet'){
-      destination=petStand(animal,player);
+      const rigReach=animal.size<.5 ? .18 : .29;
+      destination=petStand(animal,player,currentAppearance().model==='3d' ? rigReach : .45);
       this.active.petYaw=petCameraYaw(animal,destination,view.yaw);
     }
     if(kind==='milk'){

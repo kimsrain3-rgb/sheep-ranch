@@ -1,7 +1,7 @@
 import {keepDry,distance} from './config.js?v=solid-buildings-2';
 export const angleDelta=(to,from)=>Math.atan2(Math.sin(to-from),Math.cos(to-from));
-export function petStand(animal,player){
-  const gap=.45+1.05*animal.size;
+export function petStand(animal,player,reach=.45){
+  const gap=reach+1.05*animal.size;
   const options=[-1,1].map(side=>{
     const raw={x:animal.x+side*gap,z:animal.z},dry={...raw};keepDry(dry);
     return {dry,score:distance(raw,dry)*100+distance(dry,player)};

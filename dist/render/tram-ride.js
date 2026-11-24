@@ -2,6 +2,7 @@ import {BarnInteriorView} from '../game/barn-camera.js';
 import {TRAM_STOP} from '../game/tram-station.js';
 import {drawVisitor,visitorPose} from '../visitor.js?v=limb-light-1';
 import {currentAppearance} from '../game/visitor-appearance.js';
+import {mintModelReady} from './mint-model.js';
 import {onMintArtLoaded} from './mint-visitor.js';
 import {drawTramCabin} from './buildings-three.js?v=tram-station-1';
 
@@ -82,7 +83,7 @@ function paintRegion(c,w,name,distance,heading){
 const passengerSeat={x:TRAM_STOP.x+.87,z:TRAM_STOP.z+.50,hipHeight:1.35};
 const coachView=new BarnInteriorView();
 
-let lastLook=null;
+let lastLook=null, lastModelReady=false;
 onMintArtLoaded(()=>{lastLook=null;});
 let lastWindowView=null;
 
@@ -129,8 +130,8 @@ export function drawTramRide(scenery,cabin,name,progress,yaw,pitch,windowView=fa
   // On tall screens leave the bottom action row below the shoes.
   if(!windowView)pitch+=h>w ? .22 : .12;
   const turned=coachView.yaw!==yaw||coachView.pitch!==pitch;
-  if(resized||turned||look!==lastLook||windowView!==lastWindowView){
-    lastLook=look;lastWindowView=windowView;
+  if(resized||turned||look!==lastLook||lastModelReady!==mintModelReady()||windowView!==lastWindowView){
+    lastLook=look;lastModelReady=mintModelReady();lastWindowView=windowView;
     coachView.yaw=yaw;coachView.pitch=pitch;
     coachView.eyeHeight=windowView ? 2.65 : 2.70;
     coachView.target.x=TRAM_STOP.x+eyeX;

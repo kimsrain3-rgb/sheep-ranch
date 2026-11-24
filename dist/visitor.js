@@ -2,6 +2,7 @@ import {drawLimb,drawHand,trouserColor} from './render/visitor-limbs.js';
 import { currentAppearance } from './game/visitor-appearance.js';
 import { drawVisitorHead, drawVisitorClothes } from './render/visitor-look.js';
 import {gaitLegs,armSwing} from './game/gait.js';
+import {drawMintModel} from './render/mint-model.js';
 import {drawMintVisitor} from './render/mint-visitor.js';
 import {drawKneelingVisitor} from './render/milk-pose.js?v=limb-light-1';
 // World heading is resolved relative to the orbit camera, including while standing.
@@ -11,6 +12,7 @@ export function visitorPose(dx=0,dz=1,yaw=0){
  return ['front','front-right','right','back-right','back','back-left','left','front-left'][sector];
 }
 export function drawVisitor(c,p,{time=0,walking=false,seated=false,feeding=false,reaching=false,petting=false,milking=false,lambSize=.33,pose='back',appearance=currentAppearance(),label=true}={}){
+ if(appearance.model==='3d' && drawMintModel(c,p,{time,walking,seated,feeding,reaching,petting,milking,lambSize,pose,appearance,label}))return;
  if(appearance.id==='mint' && drawMintVisitor(c,p,{time,walking,seated,feeding,reaching,petting,milking,lambSize,pose,appearance,label}))return;
  pose=pose.split('-')[0];
  if(milking||(petting&&lambSize<.5))return drawKneelingVisitor(c,p,{pose,lambSize,petting,appearance});
