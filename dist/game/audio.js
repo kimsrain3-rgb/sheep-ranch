@@ -1,5 +1,5 @@
-const MUSIC_VOLUME = 0.70;
-const SHEEP_CALL_GAIN = 0.588;
+const MUSIC_VOLUME = 1;
+const SHEEP_CALL_GAIN = 0.84;
 
 // Original uploaded recordings; gain offsets balance their measured loudness.
 export const SHEEP_CALLS=[{file:'sheep-voice1.mp3',gain:.72},{file:'sheep-voice2.mp3',gain:.5},{file:'sheep-voice3.mp3',gain:1}];
