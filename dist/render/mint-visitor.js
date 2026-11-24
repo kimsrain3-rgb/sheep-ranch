@@ -100,16 +100,27 @@ export function drawMintVisitor(c,p,{pose,walking,time,seated,feeding,reaching,p
     if(!idle || (!idle.turn && !idle.blink)){
       layer(5);drawHat();
     }else{
-      const sx=view*160, sy=5*232, neck=108;
-      c.drawImage(art,sx,sy+neck,160,232-neck,0,neck,160,232-neck);
+      const sy=5*232, neck=108;
+      const amount=Math.abs(idle.turn);
+      // The rear portrait has no eyes. Show the painted profile when looking
+      // over a shoulder, keeping the feet and lower body in the walking direction.
+      const steps=amount>.68&&view===4?2:amount>.32?1:0;
+      const headView=(view+Math.sign(idle.turn)*steps+8)%8;
+      const sx=headView*160;
+      c.drawImage(art,view*160,sy+neck,160,232-neck,0,neck,160,232-neck);
       c.save();
       const shear=-(idle?.turn||0)*.065;
       c.transform(1,0,shear,1,-shear*neck,0);
       c.drawImage(art,sx,sy,160,neck,0,0,160,neck);
       if(idle?.blink>.01){
-        for(const [x,y] of paintedEyes[view]){
+        for(const [x,y] of paintedEyes[headView]){
           // Use the neighbouring paper colour, then compress the original ink eye.
           c.drawImage(art,sx+x-3,sy+y+5,7,2,x-3,y-5,7,10);
+          if(idle.blink>.65){
+            c.strokeStyle='#614637';c.lineWidth=2.6;c.lineCap='round';
+            c.beginPath();c.moveTo(x-3.7,y);c.quadraticCurveTo(x,y+2.5,x+3.7,y);c.stroke();
+            continue;
+          }
           const height=10*(1-.87*idle.blink);
           c.drawImage(art,sx+x-3,sy+y-5,7,10,x-3,y-height/2,7,height);
         }

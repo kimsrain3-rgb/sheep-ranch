@@ -36,8 +36,10 @@ for(let index=0;index<8;index++){
 const glance=render({pose:'front',time:3.2});
 assert.equal(glance.length,2,'head moves separately from planted feet');
 const blink=render({pose:'front',time:2.6});
-assert.equal(blink.length,6,'both painted eyes close during a standing blink');
-assert.ok(blink.at(-1).at(-1)<2);
+assert.equal(blink.length,4,'cover both open eyes before drawing the two closed lids');
+const rearGlance=render({pose:'back',time:3.2});
+assert.equal(rearGlance[0][1],4*160);
+assert.equal(rearGlance[1][1],6*160,'the back-facing visitor turns far enough to show a profile');
 for(const action of [{seated:true},{milking:true},{petting:true,lambSize:.33}])assert.ok(render({pose:'right',...action}).length>=3);
 // The pet overlay must use the hand painted into the cuff, including when
 // kneeling. Its long axis points toward the wool and stays below the face.
