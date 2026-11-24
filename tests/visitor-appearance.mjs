@@ -74,6 +74,14 @@ drawTramRide(scenery,cabin,'북극',1,.36+Math.PI,.02);
 assert.equal(passengerAnchor,null,'visitor does not follow the screen when looking away');
 drawTramRide(scenery,cabin,'북극',1,.36,.02);
 assert.deepEqual(passengerAnchor,initialAnchor,'turning back finds the visitor on the same seat');
+// Sample the actual sky palettes on both legs, including the blend.
+for(const [seconds,ranch,arctic] of [[2,true,false],[6,true,false],[8,true,true],[10,false,true],[12,false,true],[8,true,true],[5,true,false]]){
+  gradients.length=0;
+  drawTramRide(scenery,cabin,'북극',seconds/16,.36,.02);
+  const skyColors=gradients.map(stops=>stops[0]);
+  assert.equal(skyColors.includes('#95c8d8'),ranch,'ranch at '+seconds+'s');
+  assert.equal(skyColors.includes('#78bacd'),arctic,'Arctic at '+seconds+'s');
+}
 delete globalThis.window;
 const reload=async tag=>(await import('../dist/game/visitor-appearance.js?'+tag)).currentAppearance();
 assert.deepEqual(await reload('returning'),currentAppearance());

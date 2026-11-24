@@ -147,9 +147,14 @@ export function drawTramRide(scenery,cabin,name,progress,yaw,pitch,windowView=fa
   const heading=panoramaWidth*(yaw-.36)/(2*Math.PI);
   const distance=travel*Math.cos(yaw);
   c.translate(0,-600*focal/h*Math.tan(pitch));
-  if(progress<.34)paintRegion(c,width,'목장',distance,heading);
-  if(progress>.12){
-    c.globalAlpha=Math.min(1,(progress-.12)/.22);
+  // On the 16-second Arctic run, leave six seconds for the meadow and
+  // four for the transition before the three-second platform approach.
+  const arctic=name==='북극';
+  const start=arctic?6/16:.12, end=arctic?10/16:.34;
+  if(progress<end)paintRegion(c,width,'목장',distance,heading);
+  if(progress>start){
+    const mix=Math.min(1,(progress-start)/(end-start));
+    c.globalAlpha=arctic?mix*mix*(3-2*mix):mix;
     paintRegion(c,width,name,distance,heading);c.globalAlpha=1;
   }
 }
