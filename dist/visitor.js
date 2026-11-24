@@ -1,3 +1,4 @@
+import {visitorIdle} from './game/visitor-idle.js';
 import {drawLimb,drawHand,trouserColor} from './render/visitor-limbs.js';
 import { currentAppearance } from './game/visitor-appearance.js';
 import { drawVisitorHead, drawVisitorClothes } from './render/visitor-look.js';
@@ -12,8 +13,9 @@ export function visitorPose(dx=0,dz=1,yaw=0){
  return ['front','front-right','right','back-right','back','back-left','left','front-left'][sector];
 }
 export function drawVisitor(c,p,{time=0,walking=false,seated=false,feeding=false,reaching=false,petting=false,milking=false,lambSize=.33,pose='back',appearance=currentAppearance(),label=true}={}){
- if(appearance.model==='3d' && drawMintModel(c,p,{time,walking,seated,feeding,reaching,petting,milking,lambSize,pose,appearance,label}))return;
- if(appearance.id==='mint' && drawMintVisitor(c,p,{time,walking,seated,feeding,reaching,petting,milking,lambSize,pose,appearance,label}))return;
+ const idle=!walking&&!seated&&!feeding&&!reaching&&!petting&&!milking?visitorIdle(time):null;
+ if(appearance.model==='3d' && drawMintModel(c,p,{time,walking,seated,feeding,reaching,petting,milking,lambSize,pose,appearance,label,idle}))return;
+ if(appearance.id==='mint' && drawMintVisitor(c,p,{time,walking,seated,feeding,reaching,petting,milking,lambSize,pose,appearance,label,idle}))return;
  pose=pose.split('-')[0];
  if(milking||(petting&&lambSize<.5))return drawKneelingVisitor(c,p,{pose,lambSize,petting,appearance});
  if(!p)return;c.save();c.translate(p.x,p.y);c.scale(p.s,p.s);
@@ -45,7 +47,10 @@ export function drawVisitor(c,p,{time=0,walking=false,seated=false,feeding=false
  drawLimb(c,feeding||reaching?[[armX,torso-.14],[.48,torso-.28],[.68,torso-.25]]:[[armX,torso-.16],[side?.14+swing*.8:.44,torso+.17-Math.abs(swing)],[side?.12+swing*1.8:.4,torso+.37]],.14,appearance.coat);
  drawHand(c,feeding||reaching?.7:side?.12+swing*1.8:.4,feeding||reaching?torso-.25:torso+.39);
  }
- drawVisitorHead(c,0,torso-.58,1,pose,appearance);
+ c.save();
+ if(idle){c.translate(idle.turn*.05,0);c.translate(0,torso-.34);c.rotate(idle.turn*.065);c.translate(0,-torso+.34);}
+ drawVisitorHead(c,0,torso-.58,1,pose,appearance,idle?.blink);
+ c.restore();
  if(feeding)for(let i=0;i<10;i++){c.strokeStyle=i%2?'#e0c575':'#ac8d3b';c.lineWidth=.022;c.beginPath();c.moveTo(.67,torso-.27);c.quadraticCurveTo(.65+i*.027,torso-.6,.54+i*.037,torso-.83+(i%3)*.07);c.stroke();}
  c.restore();if(label){rect(-.24,torso-1.25,.48,.26,.06,'#344a38c9');c.fillStyle='#fff8e6';c.textAlign='center';c.font='.16px sans-serif';c.fillText('나',0,torso-1.06);}c.restore();
 }

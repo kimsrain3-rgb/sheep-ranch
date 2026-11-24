@@ -18,6 +18,7 @@ function loadArt(file) {
 const art = loadArt('mint-avatar.webp');
 const items = loadArt('mint-items.webp');
 const petSleeves = loadArt('mint-petting-sleeves.png');
+const paintedEyes=[[[59,81],[110,81]],[[86,81],[122,79]],[[123,74]],[],[],[],[[40,70]],[[43,74],[79,76]]];
 const pixelScale=.0091;
 const crouchDrop=62;
 
@@ -69,7 +70,7 @@ export function onMintArtLoaded(redraw) {
     if (img && !img.complete) img.addEventListener('load',redraw,{once:true});
   }
 }
-export function drawMintVisitor(c,p,{pose,walking,time,seated,feeding,reaching,petting,milking,lambSize,appearance,label}) {
+export function drawMintVisitor(c,p,{pose,walking,time,seated,feeding,reaching,petting,milking,lambSize,appearance,label,idle}) {
   if (!p || !mintArtReady()) return false;
   const view = Math.max(0,directions.indexOf(pose));
   const side = Math.sin(view*Math.PI/4);
@@ -96,7 +97,25 @@ export function drawMintVisitor(c,p,{pose,walking,time,seated,feeding,reaching,p
   c.scale(pixelScale,pixelScale); c.translate(-80,-224);
   const drop = kneeling ? crouchDrop : seated ? 29 : -Math.abs(wave)*2.5;
   if (holdingStill) {
-    layer(5); drawHat();
+    if(!idle || (!idle.turn && !idle.blink)){
+      layer(5);drawHat();
+    }else{
+      const sx=view*160, sy=5*232, neck=108;
+      c.drawImage(art,sx,sy+neck,160,232-neck,0,neck,160,232-neck);
+      c.save();
+      const shear=-(idle?.turn||0)*.065;
+      c.transform(1,0,shear,1,-shear*neck,0);
+      c.drawImage(art,sx,sy,160,neck,0,0,160,neck);
+      if(idle?.blink>.01){
+        for(const [x,y] of paintedEyes[view]){
+          // Use the neighbouring paper colour, then compress the original ink eye.
+          c.drawImage(art,sx+x-3,sy+y+5,7,2,x-3,y-5,7,10);
+          const height=10*(1-.87*idle.blink);
+          c.drawImage(art,sx+x-3,sy+y-5,7,10,x-3,y-height/2,7,height);
+        }
+      }
+      drawHat();c.restore();
+    }
     const [,,x,y] = armSet[handIndex];
     drawBag(x,y);
   } else {
