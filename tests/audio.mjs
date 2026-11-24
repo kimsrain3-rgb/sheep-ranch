@@ -4,12 +4,12 @@ let count=0,plays=0,pauses=0,fail=false,release=null;
 globalThis.Audio=class{constructor(src){this.src=src;this.currentTime=0;count++;}play(){plays++;if(fail)return Promise.reject(Error('blocked'));if(release!==null)return new Promise(resolve=>{release=resolve;});return Promise.resolve();}pause(){pauses++;}};
 globalThis.AudioContext=class{resume(){this.state='running';return Promise.resolve();}suspend(){this.state='suspended';return Promise.resolve();}};
 const audio=new MeadowAudio();
-assert.equal(await audio.toggle(),true);assert.equal(audio.music.loop,true);assert.equal(audio.music.volume,.5);assert.ok(audio.music.src.endsWith('/assets/sounds/pastoral-loop.mp3'));
+assert.equal(await audio.toggle(),true);assert.equal(audio.music.loop,true);assert.equal(audio.music.volume,.70);assert.ok(audio.music.src.endsWith('/assets/sounds/pastoral-loop.mp3'));
 audio.music.currentTime=40;assert.equal(await audio.toggle(),false);assert.equal(audio.music.currentTime,40);assert.equal(audio.context.state,'suspended');assert.ok(pauses>0);
 assert.equal(await audio.toggle(),true);assert.equal(count,1);await audio.toggle();
 fail=true;await assert.rejects(audio.toggle());assert.equal(audio.enabled,false);assert.equal(audio.context.state,'running','music denial leaves available sheep audio running');
 fail=false;release=()=>{};const a=audio.toggle(),b=audio.toggle();release();await Promise.all([a,b]);assert.equal(count,1);assert.equal(audio.enabled,true);assert.equal(plays,4);
-console.log('Audio: one streamed looping MP3, quiet volume, pause/resume position, no duplicate playback and independent playback when music is blocked passed.');
+console.log('Audio: one streamed looping MP3, 70% music volume, pause/resume position, no duplicate playback and independent playback when music is blocked passed.');
 
 const before=plays;assert.equal(await audio.start(),true);assert.equal(await audio.start(),true);assert.equal(plays,before,"automatic start never toggles off or starts another track");
 
@@ -39,6 +39,7 @@ assert.deepEqual(sources.map(s=>s.buffer.clip),[1,2,1],'random selection skips p
 recorded.random=()=>.99;recorded.context.currentTime=9;
 assert.equal(recorded.baa({x:3,z:0},{x:0,z:0}),true);assert.equal(sources.at(-1).buffer.clip,3,'third recording is selectable');
 const closeGain=gains.at(-1).gain.events[1][1];assert.ok(panners.at(-1).pan.value>0);
+assert.ok(Math.abs(closeGain-.588/1.3)<1e-8,'reference sheep call at distance 3 uses the agreed ranch mix');
 sources.at(-1).onended();recorded.context.currentTime=12;
 recorded.baa({x:30,z:0},{x:0,z:0},Math.PI);assert.ok(panners.at(-1).pan.value<0);
 assert.ok(gains.at(-1).gain.events[1][1]<closeGain,'distant animals sound quieter');

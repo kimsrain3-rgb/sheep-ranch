@@ -1,3 +1,6 @@
+const MUSIC_VOLUME = 0.70;
+const SHEEP_CALL_GAIN = 0.588;
+
 // Original uploaded recordings; gain offsets balance their measured loudness.
 export const SHEEP_CALLS=[{file:'sheep-voice1.mp3',gain:.72},{file:'sheep-voice2.mp3',gain:.5},{file:'sheep-voice3.mp3',gain:1}];
 // Stream background music, decode short calls once, never synthesize replacement calls.
@@ -55,7 +58,7 @@ export class MeadowAudio {
     if(!this.music){
       this.music=new Audio(new URL('../assets/sounds/pastoral-loop.mp3',import.meta.url).href);
       this.music.loop=true;
-      this.music.volume=.5;
+      this.music.volume=MUSIC_VOLUME;
       this.music.preload='none';
       this.music.id='background-music';
       this.music.hidden=true;
@@ -113,7 +116,7 @@ export class MeadowAudio {
     const index=choices[Math.min(choices.length-1,Math.floor(this.random()*choices.length))],clip=this.calls[index];
     const source=c.createBufferSource(),gain=c.createGain(),pan=c.createStereoPanner?.();
     source.buffer=clip.buffer;
-    const volume=.42*clip.gain/(1+d*.1),duration=clip.buffer.duration;
+    const volume=SHEEP_CALL_GAIN*clip.gain/(1+d*.1),duration=clip.buffer.duration;
     gain.gain.setValueAtTime(0,now);gain.gain.linearRampToValueAtTime(volume,now+.015);
     gain.gain.setValueAtTime(volume,now+Math.max(.015,duration-.04));gain.gain.linearRampToValueAtTime(0,now+duration);
     source.connect(gain);

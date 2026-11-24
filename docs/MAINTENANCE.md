@@ -66,7 +66,7 @@ UI 수정 시에는 390×760과 320×568의 실제 iframe viewport 또는 휴대
 
 배경음악은 사용자가 제공한 MP3를 반복 재생한다.
 
-배경음악은 dist/assets/sounds/pastoral-loop.mp3이며 한 개의 오디오 요소로 스트리밍한다. 게임 내 배경음악의 기본 음량은 50%다.
+배경음악은 dist/assets/sounds/pastoral-loop.mp3이며 한 개의 오디오 요소로 스트리밍한다. 게임 내 배경음악의 기본 음량은 70%이며 양 울음의 기준 게인은 0.588이다.
 
 간소한 UI는 너비 700px 이하 **또는 높이 540px 이하**에서 사용합니다. `game/layout.js`의 COMPACT_UI_QUERY와 style.css의 미디어 쿼리를 함께 유지하세요. 폰 가로 회전은 너비가 커져도 높이가 낮으므로 PC 메뉴로 바뀌지 않습니다. tests/layout.mjs가 양쪽 기준과 대표 가로/세로 크기를 검증합니다.
 
@@ -479,3 +479,8 @@ main 775212b 기준. 숲 네 방향의 윤곽과 밀도를 다르게 하고 물�
 
 - white-pet, main 4d01c5d 기준. 갈색 얼굴을 가진 두 흰 성체의 원화에서 볼 좌표를 잡아 머리 회전, 좌우 반전과 쓰다듬기 동작을 반영한다. 민트 손그림으로 얼굴 쪽에서 접근할 때 그 위치에서 팔 한 뼘 거리에 선다.
 - dist/game/painted-sheep-contact.js, dist/game/interactions.js, dist/render/mint-visitor.js, dist/render/sheep.js 및 로딩 버전을 갱신했다. tests/mint-visitor.mjs에 두 얼굴, 양방향과 성체 크기별 접촉 검사를 추가했다.
+
+### 2026-11-25 — 시작 배경음악과 양 울음 음량
+
+- startup-volume, main e196dcf 기준. 첫 안내부터 재생하는 음악의 기본 음량을 50%에서 70%로, 양 울음의 기준 게인을 0.42에서 0.588로 높였다. 기존 거리 감쇠와 녹음별 보정은 유지한다.
+- dist/game/audio.js 및 dist/index.html 로딩 버전 갱신. tests/audio.mjs에서 시작 음량과 기준 거리에서의 울음 게인, 자동 재생 차단 뒤 첫 터치 재시도 및 거리 감쇠를 검사한다.
