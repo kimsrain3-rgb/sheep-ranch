@@ -2,12 +2,13 @@ import {createArcticLanding,returnToArcticTram,stepArctic,turnOnIce,tapOnIce,APP
 import {drawArctic} from './render/arctic-landing.js';
 import {forestHeight,hillPick} from './game/forest-hills.js';
 import {drawHills} from './render/forest-hills.js?v=hills-no-dens-1';
-import {addGardenLayers} from './render/pond-garden.js?v=stream-banks-1';
+import {addGardenLayers,gardenStones} from './render/pond-garden.js?v=walk-stones-1';
+import {steerWalk} from './game/walking-clearance.js';
 import {setupRanchMap,streamLookout} from './ranch-map.js?v=tram-station-1';
 import {TRAM_BOARDING_WALK,TRAM_BOARDING_HOLD,tramBoardingPose,stationWalkingHeight,TRAM_DESTINATIONS,TRAM_STATION,TRAM_STOP} from './game/tram-station.js';
 import {drawTramRide} from './render/tram-ride.js?v=window-framing-2';
 import {tramPlatformOrigin} from './render/tram-station.js';
-import {trailX,inGrove,clearTrunks,groveRoute} from './game/fir-grove.js?v=birch-edge-1';
+import {trailX,inGrove,clearTrunks,groveRoute,firs,birches,wildlifeAt} from './game/fir-grove.js?v=birch-edge-1';
 import {addBirchLayers,drawForestFloor,addForestLayers,groveVisible} from './render/fir-grove.js?v=deer-contact-1';
 import {frameLodgeStairs,followRoomVisitor,roomVisitorProjection} from './game/room-follow.js?v=coop-circle-1';
 import {groundThroughDoor} from './game/doorway.js';
@@ -286,6 +287,28 @@ stationBoard.addEventListener('keydown',event=>event.stopPropagation());
 let coopScreen=null,lodgeScreen=null,shedScreen=null;
 const grass=makeVegetation().filter(p=>!inGrove(p.x,p.z));
 const meadowTrees=trees.filter(p=>!inGrove(p.x,p.z));
+const walkingProps=[
+  ...meadowTrees.map(a=>({...a,r:.36+a.size*.17})),
+  ...[...firs,...birches].map(a=>({...a,r:.32+a.radius})),
+  ...gardenStones.map(a=>({...a,r:.32+a.size*.64})),
+  {...firTree,r:.65},{x:14,z:55,r:.85},
+  ...Array.from({length:4},(_,i)=>({x:20+i*1.2,z:45,r:.82}))
+];
+const walkSteering={};
+function nearbyWalkingBodies(){
+  const near=[];
+  function add(a,r){
+    if(Math.abs(a.x-player.x)<r+2.3 && Math.abs(a.z-player.z)<r+2.3)near.push({x:a.x,z:a.z,r});
+  }
+  for(const a of walkingProps)add(a,a.r);
+  for(const a of sheep)if(!a.hiddenInBarn && interaction.active?.animal!==a)add(a,.27+.79*a.size);
+  for(const a of companions.animals)if(!a.hiddenInCoop&&!a.hiddenInLodge&&forestPet?.companion!==a)add(a,a.type==='dog'?.79:.49);
+  if(!shepherd.insideLodge)add(shepherd,.59);
+  for(const [i,a] of wildlifeAt(t).entries())if(forestPet?.id!==i)add(a,a.rabbit?.45:a.fox?.64:.9);
+  for(const a of interaction.hayPiles)add(a,.65);
+  return near;
+}
+
 const particles=[];
 const buildingOcclusion=new BuildingOcclusion();
 const shedOccluder={kind:'shed',billboard:true,x:CONFIG.shed.x,z:CONFIG.shed.z,scale:1/8,polygons:[
@@ -356,6 +379,13 @@ function planOutdoorWalk(from,point){
   const goal={x:clamp(point.x,CONFIG.playerBounds.minX,CONFIG.playerBounds.maxX),z:clamp(point.z,CONFIG.playerBounds.minZ,CONFIG.playerBounds.maxZ)};
   keepDry(goal);
   clearTrunks(goal);
+  for(const obj of walkingProps){
+    const dx=goal.x-obj.x,dz=goal.z-obj.z,d=Math.hypot(dx,dz);
+    if(d<obj.r){
+      const angle=d?Math.atan2(dz,dx):Math.atan2(from.z-obj.z,from.x-obj.x);
+      goal.x=obj.x+Math.cos(angle)*(obj.r+.08);goal.z=obj.z+Math.sin(angle)*(obj.r+.08);
+    }
+  }
   const route=groveRoute(from,dryRoute(from,goal));
   return {goal,route};
 }
@@ -518,7 +548,17 @@ function update(dt){
       player.headingZ=z/d;
       player.facing=x>=0?1:-1;
       const move=Math.min(d,dt*3.2);
-      const next={x:player.x+x/d*move,z:player.z+z/d*move};
+      const outside=!farmVisit.inside&&!lodgeVisit.inside&&!barnVisit.inside;
+      const next=outside?steerWalk(player,{x:player.tx,z:player.tz},move,nearbyWalkingBodies(),p=>{
+        if(!bridgePathClear(player,p))return false;
+        const safe={...player,x:p.x,z:p.z};keepDry(safe);
+        return Math.hypot(p.x-safe.x,p.z-safe.z)<.001;
+      },walkSteering):{x:player.x+x/d*move,z:player.z+z/d*move};
+      if(outside){
+        const travel=Math.hypot(next.x-player.x,next.z-player.z);
+        player.walking=travel>.0001;
+        if(player.walking){player.headingX=(next.x-player.x)/travel;player.headingZ=(next.z-player.z)/travel;player.facing=player.headingX>=0?1:-1;}
+      }
       if(!farmVisit.inside&&!lodgeVisit.inside&&!barnVisit.inside&&waitingForDoor(next))player.walking=false;
       else if(lodgeVisit.inside)lodgeVisit.move(player,next,!!(dx||dz));
       else if(barnVisit.inside||farmVisit.inside||bridgePathClear(player,next)){
