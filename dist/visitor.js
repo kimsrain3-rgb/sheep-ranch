@@ -12,8 +12,8 @@ export function visitorPose(dx=0,dz=1,yaw=0){
  const sector=(Math.round(Math.atan2(side,-away)/(Math.PI/4))+8)%8;
  return ['front','front-right','right','back-right','back','back-left','left','front-left'][sector];
 }
-export function drawVisitor(c,p,{time=0,walking=false,seated=false,feeding=false,reaching=false,petting=false,milking=false,lambSize=.33,pose='back',appearance=currentAppearance(),label=true}={}){
- const idle=!walking&&!seated&&!feeding&&!reaching&&!petting&&!milking?visitorIdle(time):null;
+export function drawVisitor(c,p,{time=0,seatedIdleTime,walking=false,seated=false,feeding=false,reaching=false,petting=false,milking=false,lambSize=.33,pose='back',appearance=currentAppearance(),label=true}={}){
+ const idle=!walking&&(!seated||seatedIdleTime!==undefined)&&!feeding&&!reaching&&!petting&&!milking?visitorIdle(seated?seatedIdleTime:time):null;
  if(appearance.model==='3d' && drawMintModel(c,p,{time,walking,seated,feeding,reaching,petting,milking,lambSize,pose,appearance,label,idle}))return;
  if(appearance.id==='mint' && drawMintVisitor(c,p,{time,walking,seated,feeding,reaching,petting,milking,lambSize,pose,appearance,label,idle}))return;
  pose=pose.split('-')[0];

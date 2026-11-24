@@ -96,11 +96,11 @@ export function drawMintVisitor(c,p,{pose,walking,time,seated,feeding,reaching,p
   c.fillStyle='#2e482d30'; c.beginPath(); c.ellipse(0,.025,.46,.11,0,0,Math.PI*2); c.fill();
   c.scale(pixelScale,pixelScale); c.translate(-80,-224);
   const drop = kneeling ? crouchDrop : seated ? 29 : -Math.abs(wave)*2.5;
-  if (holdingStill) {
+  function drawIdleTorso(row){
     if(!idle || (!idle.turn && !idle.blink)){
-      layer(5);drawHat();
+      layer(row);drawHat();
     }else{
-      const sy=5*232, neck=108;
+      const sy=row*232, neck=108;
       const amount=Math.abs(idle.turn);
       // The rear portrait has no eyes. Show the painted profile when looking
       // over a shoulder, keeping the feet and lower body in the walking direction.
@@ -127,6 +127,9 @@ export function drawMintVisitor(c,p,{pose,walking,time,seated,feeding,reaching,p
       }
       drawHat();c.restore();
     }
+  }
+  if (holdingStill) {
+    drawIdleTorso(5);
     const [,,x,y] = armSet[handIndex];
     drawBag(x,y);
   } else {
@@ -147,7 +150,7 @@ export function drawMintVisitor(c,p,{pose,walking,time,seated,feeding,reaching,p
     if (petting) c.transform(...petTorso(side,kneeling));
     else if (kneeling) {c.translate(80,155);c.scale(.96,.85);c.rotate(side*.12);c.translate(-80,-155);}
     c.translate(80,172); c.rotate(-wave*.014); c.translate(-80,-172);
-    layer(0); drawHat();
+    drawIdleTorso(0);
     armSet.forEach(([x,y,handX,handY],index)=>{
       const activeHand = index===handIndex;
       if (activeHand && petting) return; // The interaction draws the contacting arm.
