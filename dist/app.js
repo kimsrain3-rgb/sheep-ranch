@@ -646,6 +646,10 @@ let forestPet=null;
 function kneelingForestPet(){
   return forestPet?.small && t>=forestPet.start && t<forestPet.start+1.5 ? forestPet : null;
 }
+function outdoorVisitorFeet(){
+  const deck=stationWalkingHeight(player.x,player.z);
+  return project(player.x,player.z,deck ? deck+.025 : undefined);
+}
 let visibleWildlife=[];
 function paintWorldLayers(layers){
   const visibleBuildings=new Set(layers.filter(layer=>layer.building).map(layer=>layer.building));
@@ -689,12 +693,15 @@ function drawOutdoorScenery(interiorKind,showVisitor=true){
   layers.push({x:CONFIG.coop.x,z:CONFIG.coop.entrance.z,building:'coop',draw:()=>{coopScreen=drawBuilding3D(c,'coop',project,view,W,H,{inside:companions.coopInside,total:companions.chickens.length,snow:atmosphere.kind==='snow',night:atmosphere.night,label:false});}});
   layers.push({x:CONFIG.lodge.x,z:CONFIG.lodge.entrance.z,building:'lodge',draw:()=>{lodgeScreen=drawBuilding3D(c,'lodge',project,view,W,H,{night:atmosphere.night,snow:atmosphere.kind==='snow',occupants:Number(shepherd.insideLodge)+companions.dogs.filter(a=>a.hiddenInLodge).length,label:false});}});
   if(showVisitor&&!interiorKind&&started&&!hammocking){
-    const deck=stationWalkingHeight(player.x,player.z);
-    // The resting shoe extends .025 below the visitor drawing origin.
-    const feet=project(player.x,player.z,deck ? deck+.025 : undefined);
+    const feet=outdoorVisitorFeet();
+    const petTarget=lowPet||petFocus;
+    const contactPoint=petTarget&&project(petTarget.x,petTarget.z);
+    const facing=contactPoint&&feet ? (contactPoint.x>=feet.x?'right':'left')
+      : interaction.active?.phase==='playing' ? visitorPose(interaction.active.animal.x-player.x,interaction.active.animal.z-player.z,view.yaw)
+      : visitorPose(player.headingX??0,player.headingZ??1,view.yaw);
     layers.push({
       x:player.x,z:player.z,projected:feet,focused:!!petFocus,cover:{halfWidth:2.8,above:3,below:.5},draw:()=>drawVisitor(c,feet,{
-        time:t,walking:player.walking,seated,feeding,petting:!!lowPet||interaction.active?.kind==='pet'&&interaction.active.phase==='playing',milking:interaction.active?.kind==='milk'&&interaction.active.phase==='playing',lambSize:lowPet?.size??interaction.active?.animal.size,pose:lowPet?((lowPet.x-player.x)*Math.cos(view.yaw)-(lowPet.z-player.z)*Math.sin(view.yaw)<0?'left':'right'):interaction.active?.phase==='playing'?visitorPose(interaction.active.animal.x-player.x,interaction.active.animal.z-player.z,view.yaw):visitorPose(player.headingX??0,player.headingZ??1,view.yaw)
+        time:t,walking:player.walking,seated,feeding,petting:!!petTarget,milking:interaction.active?.kind==='milk'&&interaction.active.phase==='playing',lambSize:petTarget?.size??interaction.active?.animal.size,pose:facing
       })
     });
   }
@@ -745,9 +752,9 @@ function render(){
   c.fillRect(0,0,W,H);
   c.save();
   drawOutdoorScenery();
-  const visitor=project(player.x,player.z);
+  const visitor=outdoorVisitorFeet();
   const lowPet=kneelingForestPet();
-  if(visitor)buildingOcclusion.draw(c,visitor.depth,spriteBounds(visitor,{halfWidth:5,above:4,below:1}),()=>drawInteraction(c,lowPet?{active:{kind:"pet",phase:"playing",animal:lowPet}}:interaction,player,project,t));
+  if(visitor)buildingOcclusion.draw(c,visitor.depth,spriteBounds(visitor,{halfWidth:5,above:4,below:1}),()=>drawInteraction(c,lowPet?{active:{kind:"pet",phase:"playing",animal:lowPet}}:interaction,player,project,t,visitor));
   for(const p of particles){
     const v=project(p.x,p.z,p.y);
     if(v&&!buildingOcclusion.occluded(v.x,v.y,v.depth)){

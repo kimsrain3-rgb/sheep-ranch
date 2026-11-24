@@ -2,8 +2,9 @@ import {drawLimb,drawHand} from './visitor-limbs.js';
 import {currentAppearance} from '../game/visitor-appearance.js';
 import {petArmPose} from './pet-pose.js?v=soft-elbow-5';
 import {drawMilkBottle} from './milk-pose.js?v=limb-light-1';
-export function drawInteraction(c,controller,player,project,time){
-  const active=controller.active,pp=project(player.x,player.z);
+import {drawMintPetSleeve} from './mint-visitor.js';
+export function drawInteraction(c,controller,player,project,time,pp=project(player.x,player.z)){
+  const active=controller.active;
   if(!pp)return;
   if(controller.carrying){
     c.save();
@@ -33,9 +34,12 @@ export function drawInteraction(c,controller,player,project,time){
   c.lineCap='round';
   c.lineJoin='round';
   if(active.kind==='pet'){
-    const arm=petArmPose(pp,ap,a,time);
-    drawLimb(c,[arm.shoulder,arm.elbow,arm.hand].map(p=>[p.x,p.y]),pp.s*.12,currentAppearance().coat);
-    drawHand(c,arm.hand.x,arm.hand.y,pp.s*.09,pp.s*.065,arm.wristAngle);
+    const look=currentAppearance();
+    if(look.id!=='mint'||!drawMintPetSleeve(c,pp,ap,a,time)){
+      const arm=petArmPose(pp,ap,a,time);
+      drawLimb(c,[arm.shoulder,arm.elbow,arm.hand].map(p=>[p.x,p.y]),pp.s*.12,look.coat);
+      drawHand(c,arm.hand.x,arm.hand.y,pp.s*.09,pp.s*.065,arm.wristAngle);
+    }
   }
   else if(active.kind==='milk'){
     drawMilkBottle(c,pp,{pose:side>0?'right':'left',lambSize:a.size});

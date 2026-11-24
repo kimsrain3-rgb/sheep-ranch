@@ -15,6 +15,51 @@ function loadArt(file) {
 }
 const art = loadArt('mint-avatar.webp');
 const items = loadArt('mint-items.webp');
+const petSleeves = loadArt('mint-petting-sleeves.png');
+const pixelScale=.0091;
+const crouchDrop=62;
+
+// Transform the painted shoulder and the torso around the same point at the hip.
+function petTorso(side,small) {
+  const tilt=side*(small?.20:.10);
+  const sx=small?.96:1, sy=small?.85:1;
+  const a=sx*Math.cos(tilt), b=sy*Math.sin(tilt), c=-sx*Math.sin(tilt), d=sy*Math.cos(tilt);
+  const pivot=small?155:172;
+  return [a,b,c,d,80+side*4-a*80-c*pivot,pivot-b*80-d*pivot];
+}
+
+// In the sleeve sheet the painted shoulder is (32,8) and palm is (32,55).
+// Use one continuous piece of artwork for the sleeve, cuff and hand.
+export function drawMintPetSleeve(ctx,feet,animalPoint,animal,time) {
+  if(!mintArtReady())return false;
+  const side=animalPoint.x>=feet.x?1:-1, view=side>0?2:6;
+  const small=animal.size<.5;
+  const [sx,sy,hx,hy]=sleeves[view][0];
+  const [a,b,c,d,e,f]=petTorso(side,small);
+  const shoulderX=feet.x+(a*sx+c*sy+e-80)*pixelScale*feet.s;
+  const shoulderY=feet.y+(b*sx+d*sy+f+(small?crouchDrop:0)-224)*pixelScale*feet.s;
+  const stroke=Math.sin(time*3.4);
+  const animalScale=animalPoint.s*animal.size;
+  const dx=animalPoint.x-side*animalScale*.89+side*stroke*.04*feet.s-shoulderX;
+  // Stroke the near flank below the chin even when the sheep is taller.
+  const dy=Math.max(.16*feet.s,animalPoint.y-animalScale*.86-shoulderY)+stroke*.075*feet.s;
+  const distance=Math.max(.001,Math.hypot(dx,dy));
+  const pixels=pixelScale*feet.s, span=hy-sy;
+  const reach=Math.min(distance/pixels,span*1.22);
+  ctx.save();
+  ctx.translate(shoulderX,shoulderY);
+  ctx.transform(dy/distance*pixels,-dx/distance*pixels,dx/distance*pixels,dy/distance*pixels,0,0);
+  ctx.scale(1,reach/span);
+  if(petSleeves?.naturalWidth){
+    ctx.drawImage(petSleeves,side>0?0:64,0,64,72,-32,-8,64,72);
+  }else{
+    // The original sleeve is available while the small bent-pose sheet loads.
+    ctx.transform(1,0,-(hx-sx)/span,1,0,0);
+    ctx.drawImage(art,view*160+54,3*232+102,55,66,54-sx,102-sy,55,66);
+  }
+  ctx.restore();
+  return true;
+}
 export function mintArtReady() { return !!art?.naturalWidth; }
 export function onMintArtLoaded(redraw) {
   for (const img of [art,items]) {
@@ -45,8 +90,8 @@ export function drawMintVisitor(c,p,{pose,walking,time,seated,feeding,reaching,p
   c.save();
   c.translate(p.x,p.y); c.scale(p.s,p.s);
   c.fillStyle='#2e482d30'; c.beginPath(); c.ellipse(0,.025,.46,.11,0,0,Math.PI*2); c.fill();
-  c.scale(.0091,.0091); c.translate(-80,-224);
-  const drop = kneeling ? 62 : seated ? 29 : -Math.abs(wave)*2.5;
+  c.scale(pixelScale,pixelScale); c.translate(-80,-224);
+  const drop = kneeling ? crouchDrop : seated ? 29 : -Math.abs(wave)*2.5;
   if (holdingStill) {
     layer(5); drawHat();
     const [,,x,y] = armSet[handIndex];
@@ -66,7 +111,8 @@ export function drawMintVisitor(c,p,{pose,walking,time,seated,feeding,reaching,p
       c.translate(-pivotX,-173); layer(1+foot); c.restore();
     }
     c.save(); c.translate(0,drop);
-    if (kneeling) {c.translate(80,155);c.scale(.96,.85);c.rotate(side*.12);c.translate(-80,-155);}
+    if (petting) c.transform(...petTorso(side,kneeling));
+    else if (kneeling) {c.translate(80,155);c.scale(.96,.85);c.rotate(side*.12);c.translate(-80,-155);}
     c.translate(80,172); c.rotate(-wave*.014); c.translate(-80,-172);
     layer(0); drawHat();
     armSet.forEach(([x,y,handX,handY],index)=>{

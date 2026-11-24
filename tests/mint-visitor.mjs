@@ -34,6 +34,24 @@ for(let index=0;index<8;index++){
   }
 }
 for(const action of [{seated:true},{milking:true},{petting:true,lambSize:.33}])assert.ok(render({pose:'right',...action}).length>=3);
+// The pet overlay must use the hand painted into the cuff, including when
+// kneeling. Its long axis points toward the wool and stays below the face.
+const {drawInteraction}=await import('../dist/render/interactions.js');
+for(const size of [.33,1.1])for(const side of [-1,1]){
+  const feet={x:200,y:240,s:80};
+  const animal={x:side,z:0,size};
+  const target={...feet,x:feet.x+side*(.45+1.05*size)*feet.s};
+  for(const time of [0,.46,1.38]){
+    let axis;
+    draws.length=0;
+    ctx.transform=(a,b,c,d)=>{axis={x:c,y:d};};
+    drawInteraction(ctx,{active:{kind:'pet',phase:'playing',animal}},feet,()=>target,time,feet);
+    assert.equal(draws.length,1);
+    assert.equal(draws[0][0],'mint-petting-sleeves.png');
+    assert.equal(draws[0][1],side>0?0:64);
+    assert.ok(axis.x*side>0 && axis.y>0);
+  }
+}
 applyAppearance({id:'mint',hat:false,bag:true});
 render({pose:'back'});
 assert.equal(draws.filter(d=>d[0]==='mint-items.webp').length,1);
