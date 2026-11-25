@@ -40,6 +40,12 @@ function clusterDetour(from,goal,obstacles) {
 export function visitorStep(from, goal, stride, obstacles, allowed, steering = {}) {
   if (steering.route && Math.hypot(goal.x-steering.goal.x,goal.z-steering.goal.z)>.4) steering.route=null;
   while(steering.route?.length && Math.hypot(from.x-steering.route[0].x,from.z-steering.route[0].z)<.10)steering.route.shift();
+  if (steering.route?.length) {
+    const waypoint=steering.route[0];
+    if (obstacles.some(o=>Math.hypot(o.x-waypoint.x,o.z-waypoint.z)<o.radius+.015)) {
+      steering.route=null;steering.retry=0;
+    }
+  }
   const destination=goal;
   if (steering.route?.length) goal=steering.route[0];
   const dx = goal.x - from.x, dz = goal.z - from.z;
