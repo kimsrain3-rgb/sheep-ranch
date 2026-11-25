@@ -3,7 +3,7 @@ import {createArcticLanding,returnToArcticTram,stepArctic,turnOnIce,tapOnIce,APP
 import {drawArctic} from './render/arctic-landing.js';
 import {forestHeight,hillPick,denSites,nearbyDen} from './game/forest-hills.js';
 import {drawHills,addDenLayers} from './render/forest-hills.js?v=hill-draw-2';
-import {addGardenLayers} from './render/pond-garden.js?v=stream-banks-1';
+import {addGardenLayers,bankRocks} from './render/pond-garden.js?v=solid-rocks-1';
 import {setupRanchMap,streamLookout} from './ranch-map.js?v=tram-station-1';
 import {TRAM_BOARDING_WALK,TRAM_BOARDING_HOLD,tramBoardingPose,stationWalkingHeight,TRAM_DESTINATIONS,TRAM_STATION,TRAM_STOP} from './game/tram-station.js';
 import {drawTramRide} from './render/tram-ride.js?v=window-framing-2';
@@ -304,12 +304,19 @@ let coopScreen=null,lodgeScreen=null,shedScreen=null;
 const grass=makeVegetation().filter(p=>!inGrove(p.x,p.z));
 const meadowTrees=trees.filter(p=>!inGrove(p.x,p.z));
 const pastureTrunks = [...meadowTrees.map(tree => ({
-  x:tree.x, z:tree.z, radius:.4 + tree.size * .09
+  // The round crown extends 17 + 23 sprite units on a 45-unit scale.
+  x:tree.x, z:tree.z, radius:.4 + tree.size * (17 + 23) / 45
 })), {...firTree, radius:.85}, ...[...firs,...birches].map(tree => ({
   x:tree.x, z:tree.z, radius:tree.radius+.24
 }))];
+const hayBales = Array.from({length:4}, (_,i) => ({x:20+i*1.2,z:45,radius:.95}));
+const pastureSolids = [...pastureTrunks, ...hayBales, {x:14,z:55,radius:.9},
+  ...bankRocks.map(rock => ({x:rock.x,z:rock.z,radius:.4+rock.size*.73}))];
 function visitorObstacles() {
-  return pastureTrunks.concat(sheep.filter(a => !a.hiddenInBarn && a !== interaction.active?.animal)
+  const moving = companions.animals.filter(a => !a.hiddenInCoop && !a.hiddenInLodge)
+    .map(a => ({x:a.x,z:a.z,radius:a.type === "dog" ? .95 : .7}));
+  if (!shepherd.insideLodge) moving.push({x:shepherd.x,z:shepherd.z,radius:.85});
+  return pastureSolids.concat(moving,sheep.filter(a => !a.hiddenInBarn && a !== interaction.active?.animal)
     .map(a => ({x:a.x, z:a.z, radius:.4 + 1.35*a.size})));
 }
 const particles=[];
@@ -382,7 +389,7 @@ function planOutdoorWalk(from,point){
   const goal={x:clamp(point.x,CONFIG.playerBounds.minX,CONFIG.playerBounds.maxX),z:clamp(point.z,CONFIG.playerBounds.minZ,CONFIG.playerBounds.maxZ)};
   keepDry(goal);
   clearTrunks(goal);
-  for (const obstacle of pastureTrunks) {
+  for (const obstacle of pastureSolids) {
     const dx = goal.x-obstacle.x, dz = goal.z-obstacle.z, d = Math.hypot(dx,dz);
     if (d < obstacle.radius) {
       const angle = d ? Math.atan2(dz,dx) : Math.atan2(from.z-goal.z,from.x-goal.x);
@@ -753,9 +760,9 @@ function drawOutdoorScenery(interiorKind,showVisitor=true){
   layers.push({
     x:14,z:55,cover:{halfWidth:2.8,above:5.2,below:.5},draw:()=>drawWindmill(c,project(14,55),t)
   });
-  for(let i=0;i<4;i++)layers.push({
-    x:20+i*1.2,z:45,draw:()=>{
-      const p=project(20+i*1.2,45);if(p)ellipse(p.x,p.y-p.s*.4,p.s*.55,p.s*.5,'#d2bb74');
+  for(const bale of hayBales)layers.push({
+    x:bale.x,z:bale.z,draw:()=>{
+      const p=project(bale.x,bale.z);if(p)ellipse(p.x,p.y-p.s*.4,p.s*.55,p.s*.5,'#d2bb74');
     }
   });
   if(!shepherd.insideLodge)layers.push({x:shepherd.x,z:shepherd.z,actor:true,cover:{halfWidth:1.2,above:3.2,below:.4},draw:()=>drawShepherdBoy(c,project(shepherd.x,shepherd.z),shepherd,view.yaw)});
