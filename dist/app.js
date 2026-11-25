@@ -1,4 +1,4 @@
-import {visitorStep} from './game/visitor-avoidance.js';
+import {visitorStep} from './game/visitor-avoidance.js?v=smooth-1';
 import {createArcticLanding,returnToArcticTram,stepArctic,turnOnIce,tapOnIce,APPROACH_START} from './game/arctic-landing.js';
 import {drawArctic} from './render/arctic-landing.js';
 import {forestHeight,hillPick,denSites,nearbyDen} from './game/forest-hills.js';
@@ -312,12 +312,13 @@ const pastureTrunks = [...meadowTrees.map(tree => ({
 const hayBales = Array.from({length:4}, (_,i) => ({x:20+i*1.2,z:45,radius:.95}));
 const pastureSolids = [...pastureTrunks, ...hayBales, {x:14,z:55,radius:.9},
   ...bankRocks.map(rock => ({x:rock.x,z:rock.z,radius:.4+rock.size*.73}))];
-function visitorObstacles() {
+const visitorSteering = {};
+function visitorObstacles(yielding) {
   const moving = companions.animals.filter(a => !a.hiddenInCoop && !a.hiddenInLodge)
-    .map(a => ({x:a.x,z:a.z,radius:a.type === "dog" ? .95 : .7}));
-  if (!shepherd.insideLodge) moving.push({x:shepherd.x,z:shepherd.z,radius:.85});
+    .map(a => ({following:yielding.has(a),x:a.x,z:a.z,radius:a.type === "dog" ? .95 : .7}));
+  if (!shepherd.insideLodge) moving.push({following:yielding.has(shepherd),x:shepherd.x,z:shepherd.z,radius:.85});
   return pastureSolids.concat(moving,sheep.filter(a => !a.hiddenInBarn && a !== interaction.active?.animal)
-    .map(a => ({x:a.x, z:a.z, radius:.4 + 1.35*a.size})));
+    .map(a => ({following:yielding.has(a),x:a.x, z:a.z, radius:.4 + 1.35*a.size})));
 }
 // On a narrow deck there may be no lateral gap. Let actors already ahead
 // clear the exit while the visitor waits on their original walking line.
@@ -328,7 +329,7 @@ function bridgeTraffic(player, goal, stride, dt) {
     const direction=Math.sign(end.u-start.u);
     if (!direction || Math.abs(end.u-start.u)<.08 ||
         Math.abs(start.u)>bridge.halfLength+3 || Math.abs(start.v)>bridge.halfWidth+.65 ||
-        Math.abs(start.u)>bridge.halfLength && start.u*direction>0) continue;
+        Math.abs(start.u)>bridge.halfLength+2.5 && start.u*direction>0) continue;
     const length=Math.hypot(end.u-start.u,end.v-start.v);
     if (Math.abs(end.u-start.u)<length*.55) continue;
     let clearance=Infinity;
@@ -337,11 +338,11 @@ function bridgeTraffic(player, goal, stride, dt) {
           actor===interaction.active?.animal || actor===shepherd && shepherd.talk) continue;
       const at=bridgeLocal(actor,bridge), ahead=(at.u-start.u)*direction;
       if (ahead<-.05 || ahead>6 || Math.abs(at.v)>bridge.halfWidth+.3 ||
-          Math.abs(at.u)>bridge.halfLength+3.5) continue;
+          Math.abs(at.u)>bridge.halfLength+5.5) continue;
       const gap=actor.size ? .4+1.35*actor.size : actor.type==='dog' ? .95 : .85;
       const separation=Math.hypot(actor.x-player.x,actor.z-player.z);
       clearance=Math.min(clearance,Math.max(0,separation-gap-.18));
-      const step=Math.min(dt*2.7,bridge.halfLength+4-direction*at.u);
+      const step=Math.min(dt*2.7,bridge.halfLength+6-direction*at.u);
       if (step<=0) continue;
       const point=bridgePoint(at.u+direction*step,at.v,bridge);
       const safe={...point};keepDry(safe);
@@ -576,6 +577,7 @@ function update(dt){
   $('station-board-open').hidden=!byStation||stationBoard.open||!!outdoorWalk?.boardFor;
   $('station-ride-open').hidden=$('station-board-open').hidden||!selectedDestination;
   let traffic;
+  if (!player.walking) visitorSteering.angle=undefined;
   player.walking=false;
   if(started&&!seated&&!hammocking&&interaction.active?.phase!=='playing'&&(dx||dz)){
     const wx=dx*Math.cos(view.yaw)+dz*Math.sin(view.yaw),wz=-dx*Math.sin(view.yaw)+dz*Math.cos(view.yaw);
@@ -597,12 +599,12 @@ function update(dt){
       if (!farmVisit.inside && !lodgeVisit.inside && !barnVisit.inside) {
         const goal={x:player.tx,z:player.tz};
         traffic=bridgeTraffic(player,goal,move,dt);
-        next = traffic.stride<.001 ? player : visitorStep(player, goal, traffic.stride, visitorObstacles(), point => {
+        next = traffic.stride<.001 ? player : visitorStep(player, goal, traffic.stride, visitorObstacles(new Set(traffic.moves.map(m => m.actor))), point => {
           if (!bridgePathClear(player,point)) return false;
           const safe = {...point,buildingAccess:player.buildingAccess};
           keepDry(safe);clearTrunks(safe);
           return Math.hypot(safe.x-point.x,safe.z-point.z)<.001;
-        });
+        },visitorSteering);
         const stepX=next.x-player.x, stepZ=next.z-player.z, length=Math.hypot(stepX,stepZ);
         if (length) {
           player.headingX=stepX/length;player.headingZ=stepZ/length;

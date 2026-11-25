@@ -1,5 +1,47 @@
 // Keep a short look-ahead so a sheep crossing the path after a tap is also seen.
-export function visitorStep(from, goal, stride, obstacles, allowed) {
+function clusterDetour(from,goal,obstacles) {
+  const local=obstacles.filter(o=>!o.following && Math.hypot(o.x-from.x,o.z-from.z)<o.radius+5);
+  if (local.length<2 || local.length>12) return null;
+  const nodes=[from,goal], count=12;
+  for (const o of local) {
+    const radius=(o.radius+.12)/Math.cos(Math.PI/count);
+    for (let i=0;i<count;i++) {
+      const angle=i*2*Math.PI/count;
+      const p={x:o.x+Math.cos(angle)*radius,z:o.z+Math.sin(angle)*radius};
+      if (local.every(c=>Math.hypot(p.x-c.x,p.z-c.z)>c.radius+.05)) nodes.push(p);
+    }
+  }
+  function visible(a,b) {
+    const dx=b.x-a.x,dz=b.z-a.z,dd=dx*dx+dz*dz;
+    if (!dd) return false;
+    return local.every(o=>{
+      const u=Math.min(1,Math.max(0,((o.x-a.x)*dx+(o.z-a.z)*dz)/dd));
+      return Math.hypot(a.x+u*dx-o.x,a.z+u*dz-o.z)>=o.radius+.015;
+    });
+  }
+  const cost=nodes.map(()=>Infinity), parent=[], done=new Set();cost[0]=0;
+  for (;;) {
+    let best=-1;
+    for(let i=0;i<nodes.length;i++)
+      if(!done.has(i)&&Number.isFinite(cost[i])&&(best<0||cost[i]<cost[best]))best=i;
+    if(best<0)return null;
+    if(best===1)break;
+    done.add(best);
+    for(let i=1;i<nodes.length;i++){
+      if(done.has(i))continue;
+      const d=cost[best]+Math.hypot(nodes[i].x-nodes[best].x,nodes[i].z-nodes[best].z);
+      if(d<cost[i]&&visible(nodes[best],nodes[i])){cost[i]=d;parent[i]=best;}
+    }
+  }
+  const route=[];
+  for(let i=parent[1];i>0;i=parent[i])route.unshift(nodes[i]);
+  return route.length ? route : null;
+}
+export function visitorStep(from, goal, stride, obstacles, allowed, steering = {}) {
+  if (steering.route && Math.hypot(goal.x-steering.goal.x,goal.z-steering.goal.z)>.4) steering.route=null;
+  while(steering.route?.length && Math.hypot(from.x-steering.route[0].x,from.z-steering.route[0].z)<.10)steering.route.shift();
+  const destination=goal;
+  if (steering.route?.length) goal=steering.route[0];
   const dx = goal.x - from.x, dz = goal.z - from.z;
   const distance = Math.hypot(dx, dz);
   if (!distance) return from;
@@ -14,18 +56,48 @@ export function visitorStep(from, goal, stride, obstacles, allowed) {
       const x = o.x - from.x, z = o.z - from.z;
       const projection = x * ux + z * uz;
       if (projection <= 0) return true;
-      const nearest = Math.min(ahead, projection);
+      // A yielding actor is already walking ahead. Check the actual step
+      // against its current body without steering around its future path.
+      const nearest = Math.min(o.following ? stride : ahead, projection);
       return Math.hypot(x - ux * nearest, z - uz * nearest) >= o.radius;
     });
   }
-  for (let turn = 0; turn <= 8; turn++) {
-    for (const side of turn ? [1, -1] : [1]) {
-      const angle = heading + side * turn * Math.PI / 16;
-      const ux = Math.cos(angle), uz = Math.sin(angle);
-      if (!clear(ux, uz)) continue;
-      const next = {x: from.x + ux * stride, z: from.z + uz * stride};
-      if (allowed(next)) return next;
+  function candidate(angle) {
+    const ux = Math.cos(angle), uz = Math.sin(angle);
+    if (!clear(ux, uz)) return null;
+    const next = {x:from.x+ux*stride, z:from.z+uz*stride};
+    return allowed(next) ? next : null;
+  }
+  steering.retry=Math.max(0,(steering.retry||0)-stride);
+  if (!steering.route?.length && !steering.retry && !nearby.some(o=>o.following) && !clear(dx/distance,dz/distance)) {
+    steering.retry=.9;
+    steering.route=clusterDetour(from,destination,obstacles);
+    steering.goal={...destination};
+    if(steering.route) return visitorStep(from,destination,stride,obstacles,allowed,steering);
+  }
+  stride=Math.min(stride,distance);
+  const previous = steering.angle;
+  const relative = Number.isFinite(previous) ? previous-heading : 0;
+  const side = Math.sin(relative) < -.02 ? -1 : 1;
+  for (let turn=0; turn<=8; turn++) {
+    for (const sign of turn ? [side,-side] : [1]) {
+      const angle=heading+sign*turn*Math.PI/16;
+      let next=candidate(angle);
+      if (!next) continue;
+      // Ease out of a detour as space opens. Every blended step is checked
+      // against the same bodies and railings as the original candidate.
+      if (Number.isFinite(previous) && distance>.9) {
+        const delta=Math.atan2(Math.sin(angle-previous),Math.cos(angle-previous));
+        if (Math.abs(delta)>.015 && Math.abs(delta)<Math.PI/2) {
+          const smooth=previous+delta*(1-Math.exp(-stride/.38));
+          const eased=candidate(smooth);
+          if (eased) {steering.angle=smooth;return eased;}
+        }
+      }
+      steering.angle=angle;
+      return next;
     }
   }
+  steering.route=null;
   return from;
 }
