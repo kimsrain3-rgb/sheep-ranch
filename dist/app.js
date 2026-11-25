@@ -1,3 +1,4 @@
+import {visitorStep} from './game/visitor-avoidance.js';
 import {createArcticLanding,returnToArcticTram,stepArctic,turnOnIce,tapOnIce,APPROACH_START} from './game/arctic-landing.js';
 import {drawArctic} from './render/arctic-landing.js';
 import {forestHeight,hillPick,denSites,nearbyDen} from './game/forest-hills.js';
@@ -7,7 +8,7 @@ import {setupRanchMap,streamLookout} from './ranch-map.js?v=tram-station-1';
 import {TRAM_BOARDING_WALK,TRAM_BOARDING_HOLD,tramBoardingPose,stationWalkingHeight,TRAM_DESTINATIONS,TRAM_STATION,TRAM_STOP} from './game/tram-station.js';
 import {drawTramRide} from './render/tram-ride.js?v=window-framing-2';
 import {tramPlatformOrigin} from './render/tram-station.js';
-import {trailX,inGrove,clearTrunks,groveRoute} from './game/fir-grove.js?v=birch-edge-1';
+import {trailX,inGrove,clearTrunks,groveRoute,firs,birches} from './game/fir-grove.js?v=birch-edge-1';
 import {addBirchLayers,drawForestFloor,addForestLayers,groveVisible} from './render/fir-grove.js?v=low-pet-2';
 import {frameLodgeStairs,followRoomVisitor,roomVisitorProjection} from './game/room-follow.js?v=coop-circle-1';
 import {groundThroughDoor} from './game/doorway.js';
@@ -302,6 +303,15 @@ stationBoard.addEventListener('keydown',event=>event.stopPropagation());
 let coopScreen=null,lodgeScreen=null,shedScreen=null;
 const grass=makeVegetation().filter(p=>!inGrove(p.x,p.z));
 const meadowTrees=trees.filter(p=>!inGrove(p.x,p.z));
+const pastureTrunks = [...meadowTrees.map(tree => ({
+  x:tree.x, z:tree.z, radius:.4 + tree.size * .09
+})), {...firTree, radius:.85}, ...[...firs,...birches].map(tree => ({
+  x:tree.x, z:tree.z, radius:tree.radius+.24
+}))];
+function visitorObstacles() {
+  return pastureTrunks.concat(sheep.filter(a => !a.hiddenInBarn && a !== interaction.active?.animal)
+    .map(a => ({x:a.x, z:a.z, radius:.4 + 1.35*a.size})));
+}
 const particles=[];
 const buildingOcclusion=new BuildingOcclusion();
 const shedOccluder={kind:'shed',billboard:true,x:CONFIG.shed.x,z:CONFIG.shed.z,scale:1/8,polygons:[
@@ -372,6 +382,14 @@ function planOutdoorWalk(from,point){
   const goal={x:clamp(point.x,CONFIG.playerBounds.minX,CONFIG.playerBounds.maxX),z:clamp(point.z,CONFIG.playerBounds.minZ,CONFIG.playerBounds.maxZ)};
   keepDry(goal);
   clearTrunks(goal);
+  for (const obstacle of pastureTrunks) {
+    const dx = goal.x-obstacle.x, dz = goal.z-obstacle.z, d = Math.hypot(dx,dz);
+    if (d < obstacle.radius) {
+      const angle = d ? Math.atan2(dz,dx) : Math.atan2(from.z-goal.z,from.x-goal.x);
+      goal.x = obstacle.x + Math.cos(angle)*(obstacle.radius+.1);
+      goal.z = obstacle.z + Math.sin(angle)*(obstacle.radius+.1);
+    }
+  }
   const route=groveRoute(from,dryRoute(from,goal));
   return {goal,route};
 }
@@ -534,7 +552,20 @@ function update(dt){
       player.headingZ=z/d;
       player.facing=x>=0?1:-1;
       const move=Math.min(d,dt*3.2);
-      const next={x:player.x+x/d*move,z:player.z+z/d*move};
+      let next={x:player.x+x/d*move,z:player.z+z/d*move};
+      if (!farmVisit.inside && !lodgeVisit.inside && !barnVisit.inside) {
+        next = visitorStep(player, {x:player.tx,z:player.tz}, move, visitorObstacles(), point => {
+          if (!bridgePathClear(player,point)) return false;
+          const safe = {...point,buildingAccess:player.buildingAccess};
+          keepDry(safe);clearTrunks(safe);
+          return Math.hypot(safe.x-point.x,safe.z-point.z)<.001;
+        });
+        const stepX=next.x-player.x, stepZ=next.z-player.z, length=Math.hypot(stepX,stepZ);
+        if (length) {
+          player.headingX=stepX/length;player.headingZ=stepZ/length;
+          player.facing=stepX>=0?1:-1;
+        } else player.walking=false;
+      }
       if(!farmVisit.inside&&!lodgeVisit.inside&&!barnVisit.inside&&waitingForDoor(next))player.walking=false;
       else if(lodgeVisit.inside)lodgeVisit.move(player,next,!!(dx||dz));
       else if(barnVisit.inside||farmVisit.inside||bridgePathClear(player,next)){
