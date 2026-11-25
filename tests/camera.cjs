@@ -279,6 +279,21 @@ assert.equal(shown.at(-1),'북극');
 assert.equal(openDoor,false);assert.equal(el('arctic-shore').hidden,true);
 console.log('Tram ride: platform approach, replacement walk, arrival, return and repeat boarding passed.');
 
+// A stationary flock at midspan leaves no room to detour between the rails.
+read(`flock.tick=shelter.tick=bond.tick=lambPlay.tick=companions.tick=shepherd.tick=()=>{};
+sheep.forEach(a=>a.hiddenInBarn=true);companions.animals.forEach(a=>{a.hiddenInLodge=true;});
+for(const direction of [-1,1]){
+  cancelOutdoorWalk();const bridge=BRIDGES[0];
+  Object.assign(sheep[1],bridgePoint(0),{hiddenInBarn:false,size:1});
+  Object.assign(companions.dogs[0],bridgePoint(.2,-.2),{hiddenInLodge:false});
+  Object.assign(shepherd,bridgePoint(-.3,.2),{insideLodge:false,talk:null});
+  Object.assign(player,bridgePoint(-direction*6.2));walkToOutdoor(bridgePoint(direction*6.2));
+  for(let frame=0;frame<220 && outdoorWalk;frame++){
+    update(.05);const at=bridgeLocal(player,bridge);
+    if(Math.abs(at.u)<bridge.halfLength && Math.abs(at.v)>bridge.halfWidth)throw Error('left deck');
+  }
+  if(Math.abs(bridgeLocal(player,bridge).u-direction*6.2)>.09)throw Error('blocked bridge');
+}`);
 console.log('App bridge: continuous dry crossing, raised feet, destination arrival and replacement-action cancellation passed.');
 console.log('Hammock: continuous normal-speed walk, rest only on arrival, stand in place, cancellation and replacement actions.');
 console.log('Pinch expands zoom; pinch release and drag never walk; zoomed tap reaches correct world location; cancellation clears pointers.');

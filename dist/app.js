@@ -37,7 +37,7 @@ import { Companions } from './game/companions.js?v=solid-buildings-2';
 import { MeadowAudio } from './game/audio.js?v=popup-sound-2';
 import {dryRoute} from './game/navigation.js?v=windmill-1';
 import {drawBridgeDeck,drawBridgeRail,pickBridge} from './render/bridge.js?v=lake-bridge-1';
-import { CONFIG,pondPoint,keepDry,bridgePathClear,bridgeHeight,bridgePoint,BRIDGES } from './game/config.js?v=hammock-p10';
+import { CONFIG,pondPoint,keepDry,bridgePathClear,bridgeHeight,bridgePoint,bridgeLocal,BRIDGES } from './game/config.js?v=hammock-p10';
 import { drawSheep as renderSheep } from './render/sheep.js?v=head-posture-1';
 import { drawCompanion } from './render/companions.js?v=night-barn';
 import { drawOwl,owlPosition } from './render/owl.js?v=1';
@@ -319,6 +319,39 @@ function visitorObstacles() {
   return pastureSolids.concat(moving,sheep.filter(a => !a.hiddenInBarn && a !== interaction.active?.animal)
     .map(a => ({x:a.x, z:a.z, radius:.4 + 1.35*a.size})));
 }
+// On a narrow deck there may be no lateral gap. Let actors already ahead
+// clear the exit while the visitor waits on their original walking line.
+function bridgeTraffic(player, goal, stride, dt) {
+  const moves=[];
+  for (const bridge of BRIDGES) {
+    const start=bridgeLocal(player,bridge), end=bridgeLocal(goal,bridge);
+    const direction=Math.sign(end.u-start.u);
+    if (!direction || Math.abs(end.u-start.u)<.08 ||
+        Math.abs(start.u)>bridge.halfLength+3 || Math.abs(start.v)>bridge.halfWidth+.65 ||
+        Math.abs(start.u)>bridge.halfLength && start.u*direction>0) continue;
+    const length=Math.hypot(end.u-start.u,end.v-start.v);
+    if (Math.abs(end.u-start.u)<length*.55) continue;
+    let clearance=Infinity;
+    for (const actor of [...sheep,...companions.animals,shepherd]) {
+      if (actor.hiddenInBarn || actor.hiddenInCoop || actor.hiddenInLodge || actor.insideLodge ||
+          actor===interaction.active?.animal || actor===shepherd && shepherd.talk) continue;
+      const at=bridgeLocal(actor,bridge), ahead=(at.u-start.u)*direction;
+      if (ahead<-.05 || ahead>6 || Math.abs(at.v)>bridge.halfWidth+.3 ||
+          Math.abs(at.u)>bridge.halfLength+3.5) continue;
+      const gap=actor.size ? .4+1.35*actor.size : actor.type==='dog' ? .95 : .85;
+      const separation=Math.hypot(actor.x-player.x,actor.z-player.z);
+      clearance=Math.min(clearance,Math.max(0,separation-gap-.18));
+      const step=Math.min(dt*2.7,bridge.halfLength+4-direction*at.u);
+      if (step<=0) continue;
+      const point=bridgePoint(at.u+direction*step,at.v,bridge);
+      const safe={...point};keepDry(safe);
+      if (bridgePathClear(actor,point) && Math.hypot(safe.x-point.x,safe.z-point.z)<.001)
+        moves.push({actor,point});
+    }
+    return {moves,stride:Math.min(stride,clearance)};
+  }
+  return {moves,stride};
+}
 const particles=[];
 const buildingOcclusion=new BuildingOcclusion();
 const shedOccluder={kind:'shed',billboard:true,x:CONFIG.shed.x,z:CONFIG.shed.z,scale:1/8,polygons:[
@@ -542,6 +575,7 @@ function update(dt){
   const byStation=atStationBoard()||nearBoardingDoor();
   $('station-board-open').hidden=!byStation||stationBoard.open||!!outdoorWalk?.boardFor;
   $('station-ride-open').hidden=$('station-board-open').hidden||!selectedDestination;
+  let traffic;
   player.walking=false;
   if(started&&!seated&&!hammocking&&interaction.active?.phase!=='playing'&&(dx||dz)){
     const wx=dx*Math.cos(view.yaw)+dz*Math.sin(view.yaw),wz=-dx*Math.sin(view.yaw)+dz*Math.cos(view.yaw);
@@ -561,7 +595,9 @@ function update(dt){
       const move=Math.min(d,dt*3.2);
       let next={x:player.x+x/d*move,z:player.z+z/d*move};
       if (!farmVisit.inside && !lodgeVisit.inside && !barnVisit.inside) {
-        next = visitorStep(player, {x:player.tx,z:player.tz}, move, visitorObstacles(), point => {
+        const goal={x:player.tx,z:player.tz};
+        traffic=bridgeTraffic(player,goal,move,dt);
+        next = traffic.stride<.001 ? player : visitorStep(player, goal, traffic.stride, visitorObstacles(), point => {
           if (!bridgePathClear(player,point)) return false;
           const safe = {...point,buildingAccess:player.buildingAccess};
           keepDry(safe);clearTrunks(safe);
@@ -647,6 +683,9 @@ function update(dt){
   companions.tick(dt,{
     player:worldPlayer,sheep,yaw:outdoorView.yaw,sheltering:shelter.active,shepherd
   });
+  for (const {actor,point} of traffic?.moves || []) {
+    actor.x=point.x;actor.z=point.z;actor.walking=true;
+  }
   updateCareUI();
   for(const p of particles){
     p.life-=dt;
