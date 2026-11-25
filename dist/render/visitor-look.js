@@ -1,5 +1,5 @@
 // Origin is the middle of the head. Side views face right in local coordinates.
-export function drawVisitorHead(c, x, y, scale, pose, look) {
+export function drawVisitorHead(c, x, y, scale, pose, look, blink=0) {
   c.save(); c.translate(x,y); c.scale(scale,scale);
   const oval = (x,y,rx,ry,color) => {
     c.beginPath(); c.ellipse(x,y,rx,ry,0,0,2*Math.PI); c.fillStyle=color; c.fill();
@@ -22,11 +22,11 @@ export function drawVisitorHead(c, x, y, scale, pose, look) {
   if(!back) {
     if(side) {
       oval(.12,.03,.17,.25,skin); oval(.28,.04,.075,.065,'#d9ad88');
-      oval(.19,-.03,.026,.033,'#3e4134'); oval(-.01,.04,.055,.08,'#cc9c79');
+      oval(.19,-.03,.026,.033*(1-.88*blink),'#3e4134'); oval(-.01,.04,.055,.08,'#cc9c79');
     } else {
       for(const x of [-.25,.25]) oval(x,.03,.055,.09,'#d0a47f');
       oval(0,.03,.24,.26,skin);
-      for(const x of [-.09,.09]) oval(x,-.02,.027,.035,'#3e4134');
+      for(const x of [-.09,.09]) oval(x,-.02,.027,.035*(1-.88*blink),'#3e4134');
       stroke([[-.07,.16],[0,.19],[.07,.16]],'#946c50',.018);
     }
   } else oval(.23,.04,.06,.085,'#d8b699');

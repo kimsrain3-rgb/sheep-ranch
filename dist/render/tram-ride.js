@@ -85,9 +85,9 @@ const coachView=new BarnInteriorView();
 
 let lastLook=null, lastModelReady=false;
 onMintArtLoaded(()=>{lastLook=null;});
-let lastWindowView=null;
+let lastWindowView=null, shell=null, lastTick=-1;
 
-function drawPassenger(context,w,h,look){
+function drawPassenger(context,w,h,look,seatedIdleTime){
   const {x,z,hipHeight}=passengerSeat;
   const hip=coachView.project(x,z,hipHeight,w,h);
   if(!hip)return;
@@ -103,11 +103,11 @@ function drawPassenger(context,w,h,look){
   if(hip.x+scale<0||hip.x-scale>w)return;
   context.save();
   context.transform(scale,0,-upX,-upY,hip.x,hip.y);
-  drawVisitor(context,{x:0,y:.5,s:1},{seated:true,pose:visitorPose(0,-1,bearing),appearance:look});
+  drawVisitor(context,{x:0,y:.5,s:1},{seated:true,seatedIdleTime,pose:visitorPose(0,-1,bearing),appearance:look});
   context.restore();
 }
 
-export function drawTramRide(scenery,cabin,name,progress,yaw,pitch,windowView=false){
+export function drawTramRide(scenery,cabin,name,progress,yaw,pitch,windowView=false,clock=performance.now()/1000){
   const w=scenery.clientWidth,h=scenery.clientHeight;
   if(!w||!h)return;
   const ratio=Math.min(window.devicePixelRatio||1,1.5);
@@ -130,7 +130,10 @@ export function drawTramRide(scenery,cabin,name,progress,yaw,pitch,windowView=fa
   // On tall screens leave the bottom action row below the shoes.
   if(!windowView)pitch+=h>w ? .22 : .12;
   const turned=coachView.yaw!==yaw||coachView.pitch!==pitch;
-  if(resized||turned||look!==lastLook||lastModelReady!==mintModelReady()||windowView!==lastWindowView){
+  const changed=resized||turned||look!==lastLook||lastModelReady!==mintModelReady()||windowView!==lastWindowView;
+  const tick=Math.floor(clock*24);
+  if(changed||(!windowView&&tick!==lastTick)){
+    lastTick=tick;
     lastLook=look;lastModelReady=mintModelReady();lastWindowView=windowView;
     coachView.yaw=yaw;coachView.pitch=pitch;
     coachView.eyeHeight=windowView ? 2.65 : 2.70;
@@ -140,9 +143,19 @@ export function drawTramRide(scenery,cabin,name,progress,yaw,pitch,windowView=fa
     interior.setTransform(pw/w,0,0,ph/h,0,0);
     interior.clearRect(0,0,w,h);
     coachView.orbitFocal=focal;
-    drawTramCabin(interior,coachView,w,h);
-    drawPassenger(interior,w,h,look);
-    scenery.dataset.arrived='';
+    if(changed){
+      shell??=cabin.cloneNode?.(false);
+      if(shell){
+        shell.width=pw;shell.height=ph;
+        const background=shell.getContext('2d');
+        background.setTransform(pw/w,0,0,ph/h,0,0);
+        drawTramCabin(background,coachView,w,h);
+      }
+      scenery.dataset.arrived='';
+    }
+    if(shell)interior.drawImage(shell,0,0,w,h);
+    else drawTramCabin(interior,coachView,w,h);
+    drawPassenger(interior,w,h,look,tick/24);
   }
   if(progress===1 && scenery.dataset.arrived===name)return;
   scenery.dataset.arrived=progress===1?name:'';

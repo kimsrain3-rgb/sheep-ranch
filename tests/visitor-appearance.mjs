@@ -65,6 +65,9 @@ for(const preset of presets.filter(p=>p.id!=='mint')){
 }
 const initialAnchor=passengerAnchor;
 passengerAnchor=null;
+drawTramRide(scenery,cabin,'북극',1,.36,.02,false,20);
+assert.deepEqual(passengerAnchor,initialAnchor,'stationary passenger is repainted at the same seat after arrival');
+passengerAnchor=null;
 drawTramRide(scenery,cabin,'북극',1,.36,.02,true);
 assert.equal(passengerAnchor,null,'the close window view has a clear sightline even after arrival');
 drawTramRide(scenery,cabin,'북극',1,.36,.02,false);

@@ -32,8 +32,23 @@ export async function createModelPainter() {
     const [name,property]=track.name.split('.');
     return {joint:model.getObjectByName(name)[property],value:track.createInterpolant().evaluate(1.1)};
   });
+  const chest=model.getObjectByName('Chest');
+  if(bag&&chest){
+    chest.add(bag);
+    bag.position.set(-.43,-.40,.21);
+    bag.rotation.set(0,-.22,-.06);
+    const strapPath=new THREE.CatmullRomCurve3([
+      new THREE.Vector3(-.19,-.13,.03),new THREE.Vector3(.25,.38,.16),
+      new THREE.Vector3(.72,.65,.09),new THREE.Vector3(.72,.65,-.25),
+      new THREE.Vector3(.26,.26,-.48),new THREE.Vector3(-.16,-.14,-.23)
+    ]);
+    bag.add(new THREE.Mesh(new THREE.TubeGeometry(strapPath,28,.026,6,false),
+      new THREE.MeshStandardMaterial({color:0x79563e,roughness:1})));
+  }
+  const head=model.getObjectByName('Head');
+  const eyes=['Ink_eye_L','Ink_eye_R'].map(name=>model.getObjectByName(name)).filter(Boolean);
   let active, previous, lastTime, sitProgress=0;
-  return function paint(ctx,p,{pose,walking,seated,petting,milking,feeding,reaching,time,lambSize,appearance,label}) {
+  return function paint(ctx,p,{pose,walking,seated,petting,milking,feeding,reaching,time,lambSize,appearance,label,idle}) {
     const stroking=petting||milking||feeding||reaching;
     const low=(petting&&lambSize<.5)||milking;
     const action=seated?sit:stroking?pet:walking?walk:sit;
@@ -51,7 +66,8 @@ export async function createModelPainter() {
     else if(walking) seconds=(time*WALK_CYCLES_PER_SECOND%1)*walk.getClip().duration;
     else if(time>0 && label && sitProgress>0) seconds=(74-22*sitProgress)/24;
     const sample=Math.floor(seconds*24)/24;
-    const key=[pose,action.getClip().name,sample,low,appearance.hat,appearance.bag].join('/');
+    const turn=Math.round((idle?.turn||0)*24)/24, blink=Math.round((idle?.blink||0)*8)/8;
+    const key=[turn,blink,pose,action.getClip().name,sample,low,appearance.hat,appearance.bag].join('/');
     if(previous!==key) {
       if(active!==action) { active?.stop(); action.reset().play(); active=action; }
       action.time=sample;
@@ -65,7 +81,12 @@ export async function createModelPainter() {
       if(hat)hat.visible=!!appearance.hat;
       if(bag)bag.visible=!!appearance.bag;
       model.rotation.y=headings.indexOf(pose)*Math.PI/4;
+      const headPose=head?.quaternion.clone(), eyeHeights=eyes.map(eye=>eye.scale.y);
+      if(head)head.rotateY(turn*.46);
+      eyes.forEach(eye=>{eye.scale.y*=1-.89*blink;});
       gpu.render(scene,camera);
+      if(head)head.quaternion.copy(headPose);
+      eyes.forEach((eye,i)=>{eye.scale.y=eyeHeights[i];});
       if(originals)seatedLegs.forEach(({joint},i)=>joint.copy(originals[i]));
       ink.clearRect(0,0,frame.width,frame.height);
       ink.drawImage(gpu.domElement,0,0);

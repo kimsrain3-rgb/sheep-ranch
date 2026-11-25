@@ -127,6 +127,8 @@ function paint(kind,id) {
   sprites.set(kind+id,canvas);return canvas;
 }
 
+export const gardenStones=ornaments.filter(item=>item.kind==='stone');
+
 export function addGardenLayers(c,project,layers,w,h) {
   for(const item of ornaments){
     const p=project(item.x,item.z,.03);

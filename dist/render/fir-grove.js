@@ -184,9 +184,9 @@ export function addForestLayers(layers,c,project,w,h,time,yaw,pet=null){
   for(const [id,moving] of wildlifeAt(time).entries()){
     const elapsed=pet?.id===id ? time-pet.start : Infinity;
     const touching=elapsed>=0 && elapsed<1.5;
-    const waiting=pet?.small && pet.id===id && (pet.start===Infinity || elapsed<2);
+    const waiting=pet?.id===id && (pet.start===Infinity || elapsed<2);
     const blend=waiting?Math.max(0,Math.min(1,(elapsed-1.5)*2)):1;
-    const a=waiting?{...moving,x:pet.x+(moving.x-pet.x)*blend,z:pet.z+(moving.z-pet.z)*blend,hop:0,stride:0,frame:0}:touching?{...moving,hop:0,stride:0,frame:0}:moving;
+    const a=waiting?{...moving,direction:pet.deer&&elapsed<1.5?pet.direction:moving.direction,x:pet.x+(moving.x-pet.x)*blend,z:pet.z+(moving.z-pet.z)*blend,hop:0,stride:0,frame:0}:touching?{...moving,hop:0,stride:0,frame:0}:moving;
     const p=project(a.x,a.z,0);if(!p||p.x<-p.s||p.x>w+p.s||p.y<0||p.y>h+p.s*2)continue;
     const height=a.rabbit?.64:a.fox?.95:1.92;
     const half=a.rabbit?.35:a.fox?.75:.88;
@@ -199,7 +199,6 @@ export function addForestLayers(layers,c,project,w,h,time,yaw,pet=null){
         c.save();
         const size=Math.max(14,Math.min(34,p.s*.55));
         c.font=size+'px sans-serif';c.textAlign='center';
-        if(!pet.small)c.fillText('✋',p.x+Math.sin(elapsed*12)*size*.32,foot-height*p.s*.70);
         c.fillStyle='#ed8391';c.globalAlpha=1-elapsed/1.5;
         c.fillText('♥',p.x,foot-height*p.s-elapsed*size*.7);
         c.restore();
