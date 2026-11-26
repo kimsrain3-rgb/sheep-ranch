@@ -18,6 +18,7 @@ function loadArt(file) {
 const art = loadArt('mint-avatar.webp');
 const items = loadArt('mint-items.webp');
 const petSleeves = loadArt('mint-petting-sleeves.png');
+const paintedEyes=[[[59,81],[110,81]],[[86,81],[122,79]],[[123,74]],[],[],[],[[40,70]],[[43,74],[79,76]]];
 const pixelScale=.0091;
 const crouchDrop=62;
 
@@ -69,7 +70,7 @@ export function onMintArtLoaded(redraw) {
     if (img && !img.complete) img.addEventListener('load',redraw,{once:true});
   }
 }
-export function drawMintVisitor(c,p,{pose,walking,time,seated,feeding,reaching,petting,milking,lambSize,appearance,label}) {
+export function drawMintVisitor(c,p,{pose,walking,time,seated,feeding,reaching,petting,milking,lambSize,appearance,label,idle}) {
   if (!p || !mintArtReady()) return false;
   const view = Math.max(0,directions.indexOf(pose));
   const side = Math.sin(view*Math.PI/4);
@@ -95,8 +96,40 @@ export function drawMintVisitor(c,p,{pose,walking,time,seated,feeding,reaching,p
   c.fillStyle='#2e482d30'; c.beginPath(); c.ellipse(0,.025,.46,.11,0,0,Math.PI*2); c.fill();
   c.scale(pixelScale,pixelScale); c.translate(-80,-224);
   const drop = kneeling ? crouchDrop : seated ? 29 : -Math.abs(wave)*2.5;
+  function drawIdleTorso(row){
+    if(!idle || (!idle.turn && !idle.blink)){
+      layer(row);drawHat();
+    }else{
+      const sy=row*232, neck=108;
+      const amount=Math.abs(idle.turn);
+      // The rear portrait has no eyes. Show the painted profile when looking
+      // over a shoulder, keeping the feet and lower body in the walking direction.
+      const steps=amount>.68&&view===4?2:amount>.32?1:0;
+      const headView=(view+Math.sign(idle.turn)*steps+8)%8;
+      const sx=headView*160;
+      c.drawImage(art,view*160,sy+neck,160,232-neck,0,neck,160,232-neck);
+      c.save();
+      const shear=-(idle?.turn||0)*.065;
+      c.transform(1,0,shear,1,-shear*neck,0);
+      c.drawImage(art,sx,sy,160,neck,0,0,160,neck);
+      if(idle?.blink>.01){
+        for(const [x,y] of paintedEyes[headView]){
+          // Use the neighbouring paper colour, then compress the original ink eye.
+          c.drawImage(art,sx+x-3,sy+y+5,7,2,x-3,y-5,7,10);
+          if(idle.blink>.65){
+            c.strokeStyle='#614637';c.lineWidth=2.6;c.lineCap='round';
+            c.beginPath();c.moveTo(x-3.7,y);c.quadraticCurveTo(x,y+2.5,x+3.7,y);c.stroke();
+            continue;
+          }
+          const height=10*(1-.87*idle.blink);
+          c.drawImage(art,sx+x-3,sy+y-5,7,10,x-3,y-height/2,7,height);
+        }
+      }
+      drawHat();c.restore();
+    }
+  }
   if (holdingStill) {
-    layer(5); drawHat();
+    drawIdleTorso(5);
     const [,,x,y] = armSet[handIndex];
     drawBag(x,y);
   } else {
@@ -117,7 +150,7 @@ export function drawMintVisitor(c,p,{pose,walking,time,seated,feeding,reaching,p
     if (petting) c.transform(...petTorso(side,kneeling));
     else if (kneeling) {c.translate(80,155);c.scale(.96,.85);c.rotate(side*.12);c.translate(-80,-155);}
     c.translate(80,172); c.rotate(-wave*.014); c.translate(-80,-172);
-    layer(0); drawHat();
+    drawIdleTorso(0);
     armSet.forEach(([x,y,handX,handY],index)=>{
       const activeHand = index===handIndex;
       if (activeHand && petting) return; // The interaction draws the contacting arm.
