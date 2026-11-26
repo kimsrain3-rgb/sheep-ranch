@@ -1,5 +1,5 @@
 import {isWater} from '../game/config.js';
-import {birchCenter,birchDepth,birches,firs,trailX,generator,wildlifeAt} from '../game/fir-grove.js?v=forest-no-dens-1';
+import {birchCenter,birchDepth,birches,firs,trailX,generator,wildlifeAt} from '../game/fir-grove.js?v=fox-walk-1';
 import {clipPondPolygon} from './pond.js?v=water-join-1';
 
 const TAU=Math.PI*2;
@@ -133,18 +133,20 @@ let foxSheet;
 function drawFox(c,p,a,yaw){
   if(!foxSheet){
     foxSheet = new Image();
-    foxSheet.src = new URL('../assets/forest-fox.webp', import.meta.url).href;
+    foxSheet.src = new URL('../assets/forest-fox-walk.webp', import.meta.url).href;
   }
   if(!foxSheet.complete || !foxSheet.naturalWidth)return;
-  const frameWidth = foxSheet.naturalWidth / 6;
-  const frameHeight = foxSheet.naturalHeight / 6;
+  const frameWidth = foxSheet.naturalWidth / 4;
+  const frameHeight = foxSheet.naturalHeight / 5;
   const width = 1.5 * p.s, height = width * frameHeight / frameWidth;
   const screenVelocity = Math.cos(yaw)*a.velocityX - Math.sin(yaw)*a.velocityZ;
+  const forward = Math.sin(yaw)*a.velocityX + Math.cos(yaw)*a.velocityZ;
+  const row = Math.round(Math.atan2(Math.abs(screenVelocity),-forward)/(Math.PI/4));
   c.save();
   c.translate(p.x,p.y);
-  c.scale(screenVelocity>0 ? -1 : 1,1);
-  c.drawImage(foxSheet,(a.frame%6)*frameWidth,Math.floor(a.frame/6)*frameHeight,
-    frameWidth,frameHeight,-width/2,-height*.94,width,height);
+  c.scale(screenVelocity>0 && row>0 && row<4 ? -1 : 1,1);
+  c.drawImage(foxSheet,a.frame*frameWidth,row*frameHeight,
+    frameWidth,frameHeight,-width/2,-height*(184/192),width,height);
   c.restore();
 }
 function drawAnimal(c,p,a,yaw,project){
@@ -193,7 +195,7 @@ export function addForestLayers(layers,c,project,w,h,time,yaw,pet=null){
     const blend=waiting?Math.max(0,Math.min(1,(elapsed-1.5)*2)):1;
     const a=waiting?{...moving,x:pet.x+(moving.x-pet.x)*blend,z:pet.z+(moving.z-pet.z)*blend,hop:0,stride:0,frame:0}:touching?{...moving,hop:0,stride:0,frame:0}:moving;
     const p=project(a.x,a.z,0);if(!p||p.x<-p.s||p.x>w+p.s||p.y<0||p.y>h+p.s*2)continue;
-    const height=a.rabbit?.64:a.fox?.95:1.92;
+    const height=a.rabbit?.64:a.fox?1.35:1.92;
     const half=a.rabbit?.35:a.fox?.75:.88;
     const foot=p.y-(a.rabbit?a.hop:0)*p.s;
     const pad=Math.max(3,Math.min(10,12-p.s*half));

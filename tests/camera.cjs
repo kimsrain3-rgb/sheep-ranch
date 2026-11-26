@@ -14,6 +14,27 @@ ctx.gtag=(command,name)=>{if(command==='event')analyticsEvents.push(name);};
 vm.runInContext(source,ctx);vm.runInContext('start(); start()',ctx);
 assert.deepEqual(analyticsEvents,['ranch_enter']);
 const read=expression=>vm.runInContext(expression,ctx),event=(k,id,x,y)=>listeners.get(k)({pointerId:id,button:0,clientX:x,clientY:y});
+// Walk the map route from first entry and from the corner east of the coop.
+for(const start of [read('({x:player.x,z:player.z})'),{x:-4.25,z:34}]){
+  ctx.routeStart=start;
+  const arrived=read(`(()=>{
+    const position={...routeStart}, steering={};
+    const {route}=planOutdoorWalk(position,{x:-23,z:108});
+    for(const target of route){
+      let steps=0;
+      while(Math.hypot(target.x-position.x,target.z-position.z)>.08){
+        if(++steps>3000)return false;
+        const next=visitorStep(position,target,.1,pastureSolids,p=>{
+          const legal={...p};keepDry(legal);clearTrunks(legal);
+          return bridgePathClear(position,p)&&Math.hypot(p.x-legal.x,p.z-legal.z)<.001;
+        },steering);
+        Object.assign(position,next);
+      }
+    }
+    return Math.hypot(position.x+23,position.z-108)<.09;
+  })()`);
+  assert.ok(arrived,'birch destination is reachable past the coop and tree');
+}
 // The visitor's feet and the round canopy must both fit on a trunk-centre tap.
 assert.ok(read(`meadowTrees.every(tree => {
   const obstacle=pastureTrunks.find(o => o.x===tree.x && o.z===tree.z);

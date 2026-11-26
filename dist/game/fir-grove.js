@@ -123,7 +123,7 @@ export function wildlifeAt(t){
     z,
     velocityX: .735 * Math.cos(angle),
     velocityZ: -.4725 * Math.sin(angle),
-    frame: Math.floor(t * 10) % 36
+    frame: Math.floor(t * 6) % 4
   });
   return animals;
 }
