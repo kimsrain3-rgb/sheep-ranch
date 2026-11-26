@@ -49,6 +49,12 @@ import { drawPasture,trees,drawWindmill,drawFirTree,firTree } from './pasture.js
 const canvas=document.querySelector('#world'),c=canvas.getContext('2d');
 const $=id=>document.getElementById(id);
 let W,H,dpr,started=false,feeding=false,seated=false,hammocking=false,walkingToHammock=false,sunset=false,selected=null,feedCount=0,friends=new Set(),t=0,last=0,toastUntil=0,paused=false;
+const recordedMilestones = new Set();
+function recordMilestone(name) {
+  if (recordedMilestones.has(name)) return;
+  recordedMilestones.add(name);
+  globalThis.gtag?.('event', name);
+}
 let seed=1731;
 const rnd=()=>((seed=seed*16807%2147483647)-1)/2147483646,clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const player={
@@ -595,6 +601,7 @@ function update(dt){
       if(farmVisit.inside||barnVisit.inside||lodgeVisit.inside){
         player.headingX=x/d;player.headingZ=z/d;player.facing=x>=0?1:-1;
       }
+      const previousX = player.x, previousZ = player.z;
       const move=Math.min(d,dt*3.2);
       let next={x:player.x+x/d*move,z:player.z+z/d*move};
       if (!farmVisit.inside && !lodgeVisit.inside && !barnVisit.inside) {
@@ -627,6 +634,7 @@ function update(dt){
         player.x=next.x;player.z=next.z;
         if(!barnVisit.inside&&!lodgeVisit.inside&&!farmVisit.inside){keepDry(player);clearTrunks(player);}
       }
+      if (started && (player.x !== previousX || player.z !== previousZ)) recordMilestone('ranch_first_move');
     }
     else marker=null;
   }
@@ -680,6 +688,9 @@ function update(dt){
   interaction.tick(dt,{
     player,view,width:W,height:H,onMessage:notify,onMilk:onFed
   });
+  if (started && interaction.active?.kind === 'pet' && interaction.active.phase === 'playing') {
+    recordMilestone('ranch_first_sheep_pet');
+  }
   shelter.tick(dt,{flock,dogs:companions.dogs,yaw:view.yaw});
   flock.tick(dt,{
     player:worldPlayer,feeding:feeding&&!barnVisit.inside&&!lodgeVisit.inside&&!farmVisit.inside,yaw:outdoorView.yaw,hayPiles:interaction.hayPiles,
@@ -1055,6 +1066,7 @@ function start(){
   if(!isCompactViewport(W,H))notify('좌우로 밀어 360° 회전 · 두 손가락으로 확대 · 짧게 눌러 걷기');
   else $('toast').style.opacity=0;
   notify('양을 누르면 가까이서 쓰다듬어요. 우유와 건초는 메뉴에 있어요.');
+  recordMilestone('ranch_enter');
 }
 const introKey='meadow.skipIntro.v1';
 function rememberIntro(skip){

@@ -9,7 +9,10 @@ Object.assign(ctx,await import('../dist/render/pond-garden.js'));
 for(const module of modules)Object.assign(ctx,module);Object.assign(ctx,await import('../dist/pasture.js'),await import('../dist/render/fir-grove.js'));Object.assign(ctx,await import('../dist/render/details.js'));Object.assign(ctx,await import('../dist/render/bridge.js'));Object.assign(ctx,await import('../dist/render/occlusion.js'));
 Object.assign(ctx,await import('../dist/render/tram-station.js'));
 const source=fs.readFileSync('dist/orbit.js','utf8').replace('export class','class')+'\n'+fs.readFileSync('dist/app.js','utf8').replace(/^import[\s\S]*?;\n/gm,'');
-vm.runInContext(source,ctx);vm.runInContext('start()',ctx);
+const analyticsEvents=[];
+ctx.gtag=(command,name)=>{if(command==='event')analyticsEvents.push(name);};
+vm.runInContext(source,ctx);vm.runInContext('start(); start()',ctx);
+assert.deepEqual(analyticsEvents,['ranch_enter']);
 const read=expression=>vm.runInContext(expression,ctx),event=(k,id,x,y)=>listeners.get(k)({pointerId:id,button:0,clientX:x,clientY:y});
 // Walk the map route from first entry and from the corner east of the coop.
 for(const start of [read('({x:player.x,z:player.z})'),{x:-4.25,z:34}]){
@@ -54,6 +57,7 @@ assert.equal(read('hammocking'),false);
 assert.equal(read('walkingToHammock'),true);
 read('update(.05)');
 assert.equal(read('player.walking'),true);
+assert.deepEqual(analyticsEvents,['ranch_enter','ranch_first_move']);
 assert.ok(Math.hypot(read('player.x')-20,read('player.z')-30)<=.160001);
 assert.equal(read('hammocking'),false,'still walking when far from hammock');
 // Allow the longer walk from the far pasture to P10 at normal speed.
@@ -309,6 +313,19 @@ for(const start of [6.2,1.1]) for(const direction of [-1,1]){
   }
   if(Math.abs(bridgeLocal(player,bridge).u-direction*6.2)>.09)throw Error('blocked bridge');
 }`);
+// Reaching the sheep starts petting. An interrupted approach never counts.
+assert.deepEqual(analyticsEvents,['ranch_enter','ranch_first_move']);
+read(`const petSubject=sheep[1];
+  Object.assign(player,{x:0,z:0,tx:0,tz:0});
+  Object.assign(petSubject,{x:2,z:0,hiddenInBarn:false});
+  interaction.request('pet',petSubject,player,view);update(.016);
+  interaction.cancel(view);`);
+assert.deepEqual(analyticsEvents,['ranch_enter','ranch_first_move']);
+read(`interaction.request('pet',petSubject,player,view);
+  for(let i=0;i<400 && interaction.active?.phase==='approach';i++)update(.05);
+  update(.016);update(.016);`);
+assert.equal(read('interaction.active?.phase'),'playing');
+assert.deepEqual(analyticsEvents,['ranch_enter','ranch_first_move','ranch_first_sheep_pet']);
 console.log('App bridge: continuous dry crossing, raised feet, destination arrival and replacement-action cancellation passed.');
 console.log('Hammock: continuous normal-speed walk, rest only on arrival, stand in place, cancellation and replacement actions.');
 console.log('Pinch expands zoom; pinch release and drag never walk; zoomed tap reaches correct world location; cancellation clears pointers.');
