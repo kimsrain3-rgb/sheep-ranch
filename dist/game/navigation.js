@@ -37,3 +37,51 @@ export function dryRoute(from,to){
   if(Math.hypot(start.x-from.x,start.z-from.z)>.01)result.unshift(start);
   return result;
 }
+
+// A dry path can still put a corner inside a tree beside a building.
+// Search around their combined footprints before handing targets to steering.
+export function visitorRoute(from,goal,solids,original){
+  const radius=actorRadius(from), access=doorAt(goal,CONFIG)||buildingAccess(from);
+  const segmentClear=(a,b)=>{
+    const dx=b.x-a.x,dz=b.z-a.z,length=dx*dx+dz*dz;
+    for(const o of solids){
+      const r=o.radius+.12;
+      if(o.x<Math.min(a.x,b.x)-r||o.x>Math.max(a.x,b.x)+r||
+         o.z<Math.min(a.z,b.z)-r||o.z>Math.max(a.z,b.z)+r)continue;
+      const t=length?Math.max(0,Math.min(1,((o.x-a.x)*dx+(o.z-a.z)*dz)/length)):0;
+      if(Math.hypot(a.x+t*dx-o.x,a.z+t*dz-o.z)<Math.min(r,Math.hypot(a.x-o.x,a.z-o.z))-.00001)return false;
+      if(Math.hypot(b.x-o.x,b.z-o.z)<o.radius)return false;
+    }
+    return clear(a,b,radius,access);
+  };
+  if(original.every((p,i)=>segmentClear(i?original[i-1]:from,p)))return original;
+  const bounds=CONFIG.playerBounds,step=2;
+  const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
+  const start={x:from.x,z:from.z,cost:0,score:distance(from,goal)};
+  const open=[start],best=new Map();
+  while(open.length && best.size<4500){
+    let index=0;
+    for(let i=1;i<open.length;i++)if(open[i].score<open[index].score)index=i;
+    const here=open.splice(index,1)[0];
+    if(here.key && best.get(here.key)!==here.cost)continue;
+    if(segmentClear(here,goal)){
+      const route=[goal];
+      for(let p=here;p.parent;p=p.parent)route.unshift({x:p.x,z:p.z});
+      const result=[];let anchor=from;
+      for(let i=0;i<route.length;i++){
+        if(i+1<route.length && segmentClear(anchor,route[i+1]))continue;
+        result.push(route[i]);anchor=route[i];
+      }
+      return result;
+    }
+    for(const dx of [-step,0,step])for(const dz of [-step,0,step]){
+      if(!dx&&!dz)continue;
+      const x=Math.round(here.x/step)*step+dx,z=Math.round(here.z/step)*step+dz;
+      if(x<bounds.minX||x>bounds.maxX||z<bounds.minZ||z>bounds.maxZ)continue;
+      const key=x+','+z,p={x,z},cost=here.cost+distance(here,p);
+      if(cost>=(best.get(key)??Infinity)||!segmentClear(here,p))continue;
+      best.set(key,cost);open.push({...p,key,cost,score:cost+distance(p,goal),parent:here});
+    }
+  }
+  return original;
+}

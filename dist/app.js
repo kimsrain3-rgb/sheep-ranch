@@ -35,7 +35,7 @@ import { Flock } from './game/flock.js?v=head-posture-1';
 import { Interactions } from './game/interactions.js?v=solid-buildings-2';
 import { Companions } from './game/companions.js?v=solid-buildings-2';
 import { MeadowAudio } from './game/audio.js?v=popup-sound-2';
-import {dryRoute} from './game/navigation.js?v=windmill-1';
+import {dryRoute,visitorRoute} from './game/navigation.js?v=birch-route-1';
 import {drawBridgeDeck,drawBridgeRail,pickBridge} from './render/bridge.js?v=lake-bridge-1';
 import { CONFIG,pondPoint,keepDry,bridgePathClear,bridgeHeight,bridgePoint,bridgeLocal,BRIDGES } from './game/config.js?v=hammock-p10';
 import { drawSheep as renderSheep } from './render/sheep.js?v=head-posture-1';
@@ -416,7 +416,7 @@ function planOutdoorWalk(from,point){
       goal.z = obstacle.z + Math.sin(angle)*(obstacle.radius+.1);
     }
   }
-  const route=groveRoute(from,dryRoute(from,goal));
+  const route=visitorRoute(from,goal,pastureSolids,groveRoute(from,dryRoute(from,goal)));
   return {goal,route};
 }
 function walkToOutdoor(point,plan=planOutdoorWalk(player,point)){
@@ -455,11 +455,27 @@ function cancelOutdoorWalk(){
   if(!outdoorWalk)return;
   outdoorWalk=null;player.tx=player.x;player.tz=player.z;marker=null;
 }
-function advanceOutdoorWalk(){
+function advanceOutdoorWalk(dt=0){
   if(!outdoorWalk)return;
   const walk=outdoorWalk;
   if(barnVisit.inside||lodgeVisit.inside||farmVisit.inside||Math.hypot(player.tx-walk.target.x,player.tz-walk.target.z)>.001){outdoorWalk=null;return;}
-  if(Math.hypot(player.x-player.tx,player.z-player.tz)>.08)return;
+  const remaining=Math.hypot(player.x-player.tx,player.z-player.tz);
+  if(remaining>.08){
+    if(walk.bestDistance===undefined || remaining<walk.bestDistance-.18){
+      walk.bestDistance=remaining;walk.blockedTime=0;
+    }else walk.blockedTime=(walk.blockedTime||0)+dt;
+    if(walk.blockedTime>1.5 && !BRIDGES.some(b=>{const {u,v}=bridgeLocal(player,b);return Math.abs(u)<=b.halfLength && Math.abs(v)<=b.halfWidth;})){
+      const nearby=visitorObstacles(new Set()).filter(o=>!o.actor ||
+        (Math.hypot(o.x-player.x,o.z-player.z)<12 && Math.hypot(o.x-walk.goal.x,o.z-walk.goal.z)>o.radius+.2));
+      const route=visitorRoute(player,walk.goal,nearby,[walk.target,...walk.route]);
+      walk.target=route.shift();walk.route=route;
+      player.tx=walk.target.x;player.tz=walk.target.z;
+      visitorSteering.route=null;visitorSteering.retry=0;visitorSteering.angle=undefined;
+      walk.bestDistance=undefined;walk.blockedTime=0;
+    }
+    return;
+  }
+  walk.bestDistance=undefined;walk.blockedTime=0;
   if(walk.route.length){walk.target=walk.route.shift();player.tx=walk.target.x;player.tz=walk.target.z;}
   else{
     outdoorWalk=null;marker=null;
@@ -557,7 +573,7 @@ function update(dt){
   let dx=Number(keys.has('d')||keys.has('arrowright'))-Number(keys.has('a')||keys.has('arrowleft')),dz=Number(keys.has('w')||keys.has('arrowup'))-Number(keys.has('s')||keys.has('arrowdown'));
   if(!barnVisit.inside&&!lodgeVisit.inside&&!farmVisit.inside)player.buildingAccess=barnVisit.trip==='enter'?'barn':lodgeVisit.trip==='enter'?'lodge':farmVisit.trip==='enter'?farmVisit.kind:interaction.supplyTrip?'shed':null;
   updateEntranceDoors(dt);
-  advanceOutdoorWalk();
+  advanceOutdoorWalk(dt);
   const byStation=atStationBoard()||nearBoardingDoor();
   $('station-board-open').hidden=!byStation||stationBoard.open||!!outdoorWalk?.boardFor;
   $('station-ride-open').hidden=$('station-board-open').hidden||!selectedDestination;
