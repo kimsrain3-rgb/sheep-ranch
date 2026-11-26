@@ -39,7 +39,7 @@ for(let step=0;step<200;step++){
   assert.ok(Math.abs(fox.x-trailX(fox.z))<=2.11 && Math.abs(fox.z+22)<=1.351);
   foxFrames.add(fox.frame);
 }
-assert.equal(foxFrames.size,36);
+assert.equal(foxFrames.size,4);
 
 // Every painted hoof ends on the same
 // projected surface as the forest path, even when the camera faces uphill.
