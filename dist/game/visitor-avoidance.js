@@ -107,3 +107,63 @@ export function visitorStep(from, goal, stride, obstacles, allowed, steering = {
   steering.route=null;
   return from;
 }
+
+// In a single-file passage, keep one yielding direction until the visitor passes.
+// Outside that encounter the normal flock and walking controllers retain control.
+export function passageTraffic(player,goal,stride,dt,bodies,memory,legal){
+  const dx=goal.x-player.x,dz=goal.z-player.z,length=Math.hypot(dx,dz);
+  const moves=[];
+  if(!length)return {moves,stride};
+  const ux=dx/length,uz=dz/length;
+  let clearance=stride;
+  const retained=new Set();
+  function fits(from,to,margin,ignored){
+    if(!legal(from,to,ignored?.actor))return false;
+    return bodies.every(o=>{
+      if(o===ignored)return true;
+      const limit=Math.max(.12,o.radius+margin);
+      const before=Math.hypot(from.x-o.x,from.z-o.z);
+      return Math.hypot(to.x-o.x,to.z-o.z)>=Math.min(before,limit)-1e-6;
+    });
+  }
+  const actors=bodies.filter(b=>b.actor).sort((a,b)=>(a.x-b.x)*ux+(a.z-b.z)*uz);
+  const queue=[];
+  for(const b of actors){
+    const a=b.actor;
+    if(!a||a.lock||a.talk||a.state==='nursing'||a.state==='sleep')continue;
+    const x=b.x-player.x,z=b.z-player.z,along=x*ux+z*uz,side=z*ux-x*uz;
+    const pushed=queue.some(front=>Math.hypot(front.x-b.x,front.z-b.z)<front.radius+b.radius+.65);
+    if(along<-.3||Math.abs(side)>b.radius+.5||(!pushed&&along>Math.min(length+b.radius+.5,b.radius+2.8)))continue;
+    let direction=memory.get(a);
+    if(direction && direction.ux*ux+direction.uz*uz<.65)direction=null;
+    if(!direction){
+      if(Math.abs(side)>=b.radius||along<=0)continue;
+      const open=[-1,1].some(sign=>{
+        const offset=sign*(b.radius+.32);
+        const to={x:b.x-uz*offset,z:b.z+ux*offset};
+        return fits(player,to,0,b);
+      });
+      if(open&&!pushed)continue;
+      const sign=side>=0?1:-1;
+      direction={ux,uz,sign};
+    }
+    retained.add(a);memory.set(a,direction);queue.push(b);
+    const gap=Math.hypot(x,z)-b.radius;
+    if(along>=0&&Math.abs(side)<b.radius+.15)clearance=Math.min(clearance,Math.max(0,gap-.08));
+    b.following=true;
+    const step=Math.min(dt*2.5,.16);
+    let point={x:b.x,z:b.z};
+    for(const angle of [direction.sign*.87,0,-direction.sign*.87]){
+      const c=Math.cos(angle),s=Math.sin(angle);
+      const candidate={x:b.x+(direction.ux*c-direction.uz*s)*step,z:b.z+(direction.uz*c+direction.ux*s)*step};
+      if(fits(b,candidate,b.radius-.8,b)){
+        point=candidate;
+        if(angle)direction.sign=Math.sign(angle);
+        break;
+      }
+    }
+    moves.push({actor:a,point,walking:point.x!==b.x||point.z!==b.z});
+  }
+  for(const a of memory.keys())if(!retained.has(a))memory.delete(a);
+  return {moves,stride:clearance};
+}

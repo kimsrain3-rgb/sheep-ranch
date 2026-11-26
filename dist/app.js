@@ -1,4 +1,4 @@
-import {visitorStep} from './game/visitor-avoidance.js?v=smooth-1';
+import {visitorStep,passageTraffic} from './game/visitor-avoidance.js?v=narrow-yield-1';
 import {createArcticLanding,returnToArcticTram,stepArctic,turnOnIce,tapOnIce,APPROACH_START} from './game/arctic-landing.js';
 import {drawArctic} from './render/arctic-landing.js';
 import {forestHeight,hillPick,denSites,nearbyDen} from './game/forest-hills.js';
@@ -313,12 +313,13 @@ const hayBales = Array.from({length:4}, (_,i) => ({x:20+i*1.2,z:45,radius:.95}))
 const pastureSolids = [...pastureTrunks, ...hayBales, {x:14,z:55,radius:.9},
   ...bankRocks.map(rock => ({x:rock.x,z:rock.z,radius:.4+rock.size*.73}))];
 const visitorSteering = {};
+const passageMemory=new Map();
 function visitorObstacles(yielding) {
   const moving = companions.animals.filter(a => !a.hiddenInCoop && !a.hiddenInLodge)
-    .map(a => ({following:yielding.has(a),x:a.x,z:a.z,radius:a.type === "dog" ? .95 : .7}));
-  if (!shepherd.insideLodge) moving.push({following:yielding.has(shepherd),x:shepherd.x,z:shepherd.z,radius:.85});
+    .map(a => ({actor:a,following:yielding.has(a),x:a.x,z:a.z,radius:a.type === "dog" ? .95 : .7}));
+  if (!shepherd.insideLodge) moving.push({actor:shepherd,following:yielding.has(shepherd),x:shepherd.x,z:shepherd.z,radius:.85});
   return pastureSolids.concat(moving,sheep.filter(a => !a.hiddenInBarn && a !== interaction.active?.animal)
-    .map(a => ({following:yielding.has(a),x:a.x, z:a.z, radius:.4 + 1.35*a.size})));
+    .map(a => ({actor:a,following:yielding.has(a),x:a.x, z:a.z, radius:.4 + 1.35*a.size})));
 }
 // On a narrow deck there may be no lateral gap. Let actors already ahead
 // clear the exit while the visitor waits on their original walking line.
@@ -349,7 +350,7 @@ function bridgeTraffic(player, goal, stride, dt) {
       if (bridgePathClear(actor,point) && Math.hypot(safe.x-point.x,safe.z-point.z)<.001)
         moves.push({actor,point});
     }
-    return {moves,stride:Math.min(stride,clearance)};
+    return {bridge:true,moves,stride:Math.min(stride,clearance)};
   }
   return {moves,stride};
 }
@@ -591,15 +592,24 @@ function update(dt){
     let x=player.tx-player.x,z=player.tz-player.z,d=Math.hypot(x,z);
     if(d>.08){
       player.walking=true;
-      player.headingX=x/d;
-      player.headingZ=z/d;
-      player.facing=x>=0?1:-1;
+      if(farmVisit.inside||barnVisit.inside||lodgeVisit.inside){
+        player.headingX=x/d;player.headingZ=z/d;player.facing=x>=0?1:-1;
+      }
       const move=Math.min(d,dt*3.2);
       let next={x:player.x+x/d*move,z:player.z+z/d*move};
       if (!farmVisit.inside && !lodgeVisit.inside && !barnVisit.inside) {
         const goal={x:player.tx,z:player.tz};
         traffic=bridgeTraffic(player,goal,move,dt);
-        next = traffic.stride<.001 ? player : visitorStep(player, goal, traffic.stride, visitorObstacles(new Set(traffic.moves.map(m => m.actor))), point => {
+        const bodies=visitorObstacles(new Set(traffic.moves.map(m=>m.actor)));
+        if(!traffic.bridge){
+          traffic=passageTraffic(player,goal,move,dt,bodies,passageMemory,(from,to,actor)=>{
+            if(!bridgePathClear(from,to))return false;
+            const safe={...(actor||player),x:to.x,z:to.z};
+            keepDry(safe);
+            return Math.hypot(safe.x-to.x,safe.z-to.z)<.001;
+          });
+        }else passageMemory.clear();
+        next = traffic.stride<.001 ? player : visitorStep(player, goal, traffic.stride, bodies, point => {
           if (!bridgePathClear(player,point)) return false;
           const safe = {...point,buildingAccess:player.buildingAccess};
           keepDry(safe);clearTrunks(safe);
@@ -685,8 +695,8 @@ function update(dt){
   companions.tick(dt,{
     player:worldPlayer,sheep,yaw:outdoorView.yaw,sheltering:shelter.active,shepherd
   });
-  for (const {actor,point} of traffic?.moves || []) {
-    actor.x=point.x;actor.z=point.z;actor.walking=true;
+  for (const {actor,point,walking=true} of traffic?.moves || []) {
+    actor.x=point.x;actor.z=point.z;actor.walking=walking;
   }
   updateCareUI();
   for(const p of particles){
