@@ -1,3 +1,4 @@
+import {drawGroundShadow} from './render/ground-shadow.js';
 import {visitorStep,passageTraffic} from './game/visitor-avoidance.js?v=narrow-yield-1';
 import {createArcticLanding,returnToArcticTram,stepArctic,turnOnIce,tapOnIce,APPROACH_START} from './game/arctic-landing.js';
 import {drawArctic} from './render/arctic-landing.js';
@@ -9,7 +10,7 @@ import {TRAM_BOARDING_WALK,TRAM_BOARDING_HOLD,tramBoardingPose,stationWalkingHei
 import {drawTramRide} from './render/tram-ride.js?v=window-framing-2';
 import {tramPlatformOrigin} from './render/tram-station.js';
 import {trailX,inGrove,clearTrunks,groveRoute,firs,birches} from './game/fir-grove.js?v=fox-walk-1';
-import {addBirchLayers,drawForestFloor,addForestLayers,groveVisible} from './render/fir-grove.js?v=fox-walk-1';
+import {addBirchLayers,drawForestFloor,addForestLayers,groveVisible} from './render/fir-grove.js?v=ground-shadows-1';
 import {frameLodgeStairs,followRoomVisitor,roomVisitorProjection} from './game/room-follow.js?v=coop-circle-1';
 import {groundThroughDoor} from './game/doorway.js';
 import {BuildingOcclusion,spriteBounds} from './render/occlusion.js?v=visible-picking-1';
@@ -36,16 +37,16 @@ import { Interactions } from './game/interactions.js?v=pet-clearance-1';
 import { Companions } from './game/companions.js?v=solid-buildings-2';
 import { MeadowAudio } from './game/audio.js?v=popup-sound-2';
 import {dryRoute,visitorRoute} from './game/navigation.js?v=birch-route-1';
-import {drawBridgeDeck,drawBridgeRail,pickBridge} from './render/bridge.js?v=lake-bridge-1';
+import {drawBridgeDeck,drawBridgeRail,pickBridge} from './render/bridge.js?v=ground-shadows-1';
 import { CONFIG,pondPoint,keepDry,bridgePathClear,bridgeHeight,bridgePoint,bridgeLocal,BRIDGES } from './game/config.js?v=hammock-p10';
 import { drawSheep as renderSheep } from './render/sheep.js?v=head-posture-1';
 import { drawCompanion } from './render/companions.js?v=night-barn';
 import { drawOwl,owlPosition } from './render/owl.js?v=1';
-import { makeVegetation,drawVegetation,drawHayPile,drawRipples } from './render/details.js?v=solid-buildings-2';
+import { makeVegetation,drawVegetation,drawHayPile,drawRipples } from './render/details.js?v=ground-shadows-1';
 import { drawInteraction } from './render/interactions.js?v=limb-light-1';
 import { MeadowView } from './orbit.js?v=zoom500';
 import { drawVisitor,drawHammock,visitorPose } from './visitor.js?v=limb-light-1';
-import { drawPasture,trees,drawWindmill,drawFirTree,firTree } from './pasture.js?v=meadow-ground-1';
+import { drawPasture,trees,drawWindmill,drawFirTree,firTree } from './pasture.js?v=ground-shadows-1';
 const canvas=document.querySelector('#world'),c=canvas.getContext('2d');
 const $=id=>document.getElementById(id);
 let W,H,dpr,started=false,feeding=false,seated=false,hammocking=false,walkingToHammock=false,sunset=false,selected=null,feedCount=0,friends=new Set(),t=0,last=0,toastUntil=0,paused=false;
@@ -554,7 +555,7 @@ function tree(x,y,s){
   c.translate(x,y);
   c.scale(s,s);
   c.fillStyle='#777458';
-  c.fillRect(-3,-37,6,42);
+  c.fillRect(-3,-37,6,37);
   for(let i=0;i<7;i++)ellipse(Math.sin(i*2.4)*17,-40+Math.cos(i*2.4)*13,23,20,i%2?'#6f8a67':'#789574');
   c.restore();
 }
@@ -778,10 +779,14 @@ function paintWorldLayers(layers){
   layers.forEach(layer=>layer.depth=layer.projected?.depth??project(layer.x??0,layer.z,layer.height)?.depth??-1);
   layers.sort((a,b)=>b.depth-a.depth);
   visibleWildlife=layers.filter(layer=>layer.wildlife&&layer.depth>0).reverse();
+  // Paint the floor vegetation and its shadows beneath every upright object.
+  const basis=view.basis(W,H);
+  for(const layer of layers)if(layer.groundCover&&layer.depth>0)layer.draw();
+  for(const layer of layers)if(layer.shadowRadius)drawGroundShadow(c,layer,project,basis,W,H);
   // Paint solid buildings first. Every subsequent world sprite uses their
   // actual nearest surface depth, rather than the building entrance's depth.
   for(const layer of layers)if(layer.building)buildingOcclusion.drawBuilding(c,layer.building,()=>layer.draw());
-  for(const layer of layers)if(!layer.building&&layer.depth>0)drawWorldLayer(layer);
+  for(const layer of layers)if(!layer.building&&!layer.groundCover&&layer.depth>0)drawWorldLayer(layer);
 }
 function drawOutdoorScenery(interiorKind,showVisitor=true){
   const showGrove=groveVisible(project,W,H);
@@ -825,7 +830,7 @@ function drawOutdoorScenery(interiorKind,showVisitor=true){
   addBirchLayers(layers,c,project,W,H);
   if(showGrove)addForestLayers(layers,c,project,W,H,t,view.yaw,forestPet);
   for(const a of meadowTrees)layers.push({
-    x:a.x,z:a.z,cover:{halfWidth:a.size*1.3,above:a.size*1.8,below:.4},draw:()=>{
+    x:a.x,z:a.z,shadowRadius:a.size*.95,cover:{halfWidth:a.size*1.3,above:a.size*1.8,below:.4},draw:()=>{
       const p=project(a.x,a.z);if(p&&p.x>-300&&p.x<W+300)tree(p.x,p.y,p.s*a.size/45);
     }
   });
@@ -836,10 +841,10 @@ function drawOutdoorScenery(interiorKind,showVisitor=true){
     }
   });
   layers.push({
-    x:14,z:55,cover:{halfWidth:2.8,above:5.2,below:.5},draw:()=>drawWindmill(c,project(14,55),t)
+    x:14,z:55,shadowRadius:1.15,cover:{halfWidth:2.8,above:5.2,below:.5},draw:()=>drawWindmill(c,project(14,55),t)
   });
   for(const bale of hayBales)layers.push({
-    x:bale.x,z:bale.z,draw:()=>{
+    x:bale.x,z:bale.z,shadowRadius:.65,draw:()=>{
       const p=project(bale.x,bale.z);if(p)ellipse(p.x,p.y-p.s*.4,p.s*.55,p.s*.5,'#d2bb74');
     }
   });
@@ -850,7 +855,7 @@ function drawOutdoorScenery(interiorKind,showVisitor=true){
   if(atmosphere.night){
     const owlTree=trees.reduce((best,a)=>Math.hypot(a.x-CONFIG.barn.x,a.z-CONFIG.barn.entrance.z)<Math.hypot(best.x-CONFIG.barn.x,best.z-CONFIG.barn.entrance.z)?a:best,trees[0]);
     const owl=owlPosition(t,CONFIG.barn,owlTree);
-    layers.push({x:owl.x,z:owl.z,height:owl.y,cover:{halfWidth:1.8,above:1.8,below:.8},draw:()=>drawOwl(c,project(owl.x,owl.z,owl.y),t,owl.flying)});
+    layers.push({x:owl.x,z:owl.z,height:owl.y,shadowRadius:.65,shadowOpacity:.45,cover:{halfWidth:1.8,above:1.8,below:.8},draw:()=>drawOwl(c,project(owl.x,owl.z,owl.y),t,owl.flying)});
   }
   addGardenLayers(c,project,layers,W,H);
   addBridgeRails(layers);

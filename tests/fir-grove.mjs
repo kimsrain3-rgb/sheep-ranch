@@ -71,3 +71,19 @@ for(const yaw of [0,Math.PI/2,Math.PI]){
     feet.forEach(([x,y],i)=>assert.ok(Math.hypot(x-points[i].x,y-points[i].y)<.001));
   }
 }
+
+// Hopping changes the rabbit's body height and the strength of its shadow,
+// while all three species keep the patch anchored to the moving ground point.
+const ground=(x,z,y)=>({x:350+x,y:300+z-(y??0)*20,s:20});
+for(const time of [.2,.65,3,8]){
+  const layers=[];
+  addForestLayers(layers,{},ground,960,640,time,0);
+  const actors=layers.filter(layer=>layer.wildlife);
+  assert.deepEqual(new Set(actors.map(a=>a.wildlife.name)),new Set(['토끼','사슴','여우']));
+  for(const actor of actors){
+    assert.deepEqual(actor.projected,ground(actor.x,actor.z,0));
+    assert.ok(actor.shadowRadius>0);
+    assert.ok(actor.shadowOpacity>0 && actor.shadowOpacity<=1);
+    if(actor.rabbit && actor.hop>0)assert.ok(actor.shadowOpacity<1);
+  }
+}

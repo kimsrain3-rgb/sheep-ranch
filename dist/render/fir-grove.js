@@ -60,6 +60,7 @@ function paintFir(id){
 function paintFern(id){
   const canvas=document.createElement('canvas');canvas.width=140;canvas.height=76;
   const c=canvas.getContext('2d'),rand=generator(8731+id*461);
+  oval(c,70,72,48,4,0,'#32432c30');
   // Low sprays give the fern bank a continuous silhouette at walking height.
   for(let i=0;i<26;i++){
     const dx=(rand()-.5)*125,dy=-10-rand()*41,x=70+dx,y=73+dy;
@@ -161,7 +162,6 @@ function drawAnimal(c,p,a,yaw,project){
     oval(c,.215,-.36,.018,.018,0,'#3d372d');
   }else{
     const coat='#9e7652';
-    oval(c,0,0,.49,.065,0,'rgba(56,47,29,.16)');
     for(let i=0;i<4;i++){
       const x=(i<2?-.43:.38)+(i%2)*.1,step=a.stride*(i%2?.22:-.22);
       const offset=(x+step*.7)*width;
@@ -182,7 +182,7 @@ export function addForestLayers(layers,c,project,w,h,time,yaw,pet=null){
   for(const tree of firs){
     const p=project(tree.x,tree.z,0);
     if(!p||p.x+p.s*tree.width/2<0||p.x-p.s*tree.width/2>w||p.y<0||p.y-p.s*tree.height>h)continue;
-    layers.push({...tree,projected:p,cover:{halfWidth:tree.width/2,above:tree.height,below:.2},draw:()=>{
+    layers.push({...tree,projected:p,shadowRadius:tree.width*.42,cover:{halfWidth:tree.width/2,above:tree.height,below:.2},draw:()=>{
       const art=treeArt[tree.variant]??=paintFir(tree.variant);
       c.drawImage(art,p.x-tree.width*p.s/2,p.y-tree.height*p.s,tree.width*p.s,tree.height*p.s);
     }});
@@ -200,7 +200,8 @@ export function addForestLayers(layers,c,project,w,h,time,yaw,pet=null){
     const foot=p.y-(a.rabbit?a.hop:0)*p.s;
     const pad=Math.max(3,Math.min(10,12-p.s*half));
     const wildlife={id,name:a.rabbit?'토끼':a.fox?'여우':'사슴',left:p.x-half*p.s-pad,right:p.x+half*p.s+pad,top:foot-height*p.s-pad,bottom:foot+pad};
-    layers.push({...a,wildlife,projected:p,cover:{halfWidth:1.2,above:2.7,below:.2},draw:()=>{
+    layers.push({...a,wildlife,projected:p,shadowRadius:half*(a.rabbit?1.12:1),
+      shadowOpacity:a.rabbit?1-a.hop*1.5:1,cover:{halfWidth:1.2,above:2.7,below:.2},draw:()=>{
       drawAnimal(c,p,a,yaw,project);
       if(touching){
         c.save();
@@ -245,6 +246,7 @@ function paintUnderstory(id){
   canvas.width=140;canvas.height=76;
   const c=canvas.getContext('2d'),rand=generator(12017+id*187);
   const bush=id<8;
+  oval(c,70,72,bush?44:50,4,0,'#32432c30');
   for(let i=0;i<(bush?34:20);i++){
     const x=14+112*rand(),y=10+rand()*28+Math.abs(x-70)*.28;
     const root=bush?70:x+rand()*12-6;
@@ -347,7 +349,7 @@ function addGrassCarpet(layers,c,project,w,h){
       if(!p)continue;
       const width=patch.width*p.s,height=width*.28;
       if(p.x+width/2<0||p.x-width/2>w||p.y+height*.35<0||p.y-height*.65>h)continue;
-      layers.push({x:patch.x,z:patch.z,projected:p,cover:{halfWidth:patch.width/2,above:.55,below:.4},draw:()=>{
+      layers.push({x:patch.x,z:patch.z,projected:p,groundCover:true,cover:{halfWidth:patch.width/2,above:.55,below:.4},draw:()=>{
         const art=grassArt[patch.variant]??=paintGrassPatch(patch.variant);
         c.drawImage(art,p.x-width/2,p.y-height*.65,width,height);
       }});
@@ -366,7 +368,7 @@ export function addBirchLayers(layers,c,project,w,h){
     const root=394,extra=(root-lowestBranch)*.5;
     const height=(canvas.height+extra)*scale;
     if(p.y-height>h)continue;
-    layers.push({...tree,projected:p,cover:{halfWidth:tree.width/2,above:height/p.s,below:.2},draw:()=>{
+    layers.push({...tree,projected:p,shadowRadius:tree.width*.42,cover:{halfWidth:tree.width/2,above:height/p.s,below:.2},draw:()=>{
       const x=p.x-width/2,top=p.y-height;
       // Keep leaves and root vegetation at their painted scale.
       c.drawImage(canvas,0,0,canvas.width,lowestBranch,x,top,width,lowestBranch*scale);

@@ -65,6 +65,11 @@ export function drawPasture(c,W,H,t,sunset,view,project,ellipse,path,weather={})
  function fence(x,z,nx,nz){
   const a=project(x,z),b=project(x,z,1.1),next=project(nx,nz,.75),rail=project(x,z,.75);
   if(!a||!b||!next||!rail)return;
+  const shadow=project(x-.5,z-.36),nextShadow=project(nx-.5,nz-.36);
+  if(shadow&&nextShadow){
+    c.strokeStyle='#394b343d';c.lineWidth=Math.max(.6,a.s*.07);c.beginPath();
+    c.moveTo(a.x,a.y);c.lineTo(shadow.x,shadow.y);c.lineTo(nextShadow.x,nextShadow.y);c.stroke();
+  }
   c.strokeStyle='#ded9b9';c.lineWidth=Math.max(1,a.s*.06);c.beginPath();c.moveTo(a.x,a.y);c.lineTo(b.x,b.y);c.moveTo(rail.x,rail.y);c.lineTo(next.x,next.y);c.stroke();
  }
  for(let x=bounds.minX;x<bounds.maxX;x+=8)for(const z of [bounds.minZ,bounds.maxZ])fence(x,z,Math.min(x+8,bounds.maxX),z);

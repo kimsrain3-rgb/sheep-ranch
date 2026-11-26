@@ -43,6 +43,8 @@ export function drawHayPile(c,p,pile){
   c.translate(p.x,p.y);
   c.scale(p.s,p.s);
   const r=.35+pile.portions*.04;
+  c.fillStyle='#34452d42';
+  c.beginPath();c.ellipse(0,.02,r*1.2,.21,0,0,Math.PI*2);c.fill();
   c.fillStyle='#b49d57';
   c.beginPath();
   c.ellipse(0,0,r,.17,0,0,Math.PI*2);

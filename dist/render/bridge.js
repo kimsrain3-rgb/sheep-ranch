@@ -7,6 +7,16 @@ function polygon(c,project,points,color){
 }
 export function drawBridgeDeck(c,project){
   for(const bridge of BRIDGES){
+    const footprint=[];
+    for(const side of [-1,1]){
+      for(let i=0;i<=8;i++){
+        const u=side*bridge.halfLength*(1-i/4);
+        const [x,z]=point(bridge,u,side*bridge.halfWidth);
+        const rise=arch(u,bridge);
+        footprint.push([x-.55*rise,z-.35*rise,0]);
+      }
+    }
+    polygon(c,project,footprint,'#394b3440');
     const pieces=[];
     for(const side of [-1,1])for(let i=0;i<26;i++){
       const u=-bridge.halfLength+i/26*bridge.halfLength*2,next=u+bridge.halfLength*2/26,v=side*bridge.halfWidth;
