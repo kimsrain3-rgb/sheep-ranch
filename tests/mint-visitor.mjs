@@ -41,6 +41,12 @@ const seatedOpen=render({pose:'front',seated:true,seatedIdleTime:0});
 const seatedBlink=render({pose:'front',seated:true,seatedIdleTime:1.15});
 assert.deepEqual(seatedBlink.slice(0,2),seatedOpen.slice(0,2),'passenger legs stay seated');
 assert.ok(seatedBlink.length>seatedOpen.length,'passenger eyelids are drawn');
+for(const seated of [false,true]){
+  const calls=render({pose:'front',time:10.2,seated,seatedIdleTime:10.2});
+  const row=(seated?0:5)*232;
+  assert.ok(calls.some(d=>d[1]===7*160&&d[2]===row&&d[4]===103),'left head ends at its own neckline');
+  assert.ok(calls.some(d=>d[1]===0&&d[2]===row+111),'front body begins at the collar');
+}
 const rearGlance=render({pose:'back',time:3.2});
 assert.equal(rearGlance[0][1],4*160);
 assert.equal(rearGlance[1][1],6*160,'the back-facing visitor turns far enough to show a profile');

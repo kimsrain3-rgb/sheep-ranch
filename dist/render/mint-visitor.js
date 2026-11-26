@@ -100,18 +100,24 @@ export function drawMintVisitor(c,p,{pose,walking,time,seated,feeding,reaching,p
     if(!idle || (!idle.turn && !idle.blink)){
       layer(row);drawHat();
     }else{
-      const sy=row*232, neck=108;
+      const sy=row*232;
       const amount=Math.abs(idle.turn);
       // The rear portrait has no eyes. Show the painted profile when looking
       // over a shoulder, keeping the feet and lower body in the walking direction.
       const steps=amount>.68&&view===4?2:amount>.32?1:0;
       const headView=(view+Math.sign(idle.turn)*steps+8)%8;
+      // The painted front-left chin meets its collar eight pixels higher
+      // and eleven pixels farther left than the front portrait.
+      const frontLeft=view===0 && headView===7;
+      const neck=frontLeft?111:108;
+      const sourceNeck=frontLeft?103:neck;
       const sx=headView*160;
       c.drawImage(art,view*160,sy+neck,160,232-neck,0,neck,160,232-neck);
       c.save();
+      if(frontLeft)c.translate(11,neck-sourceNeck);
       const shear=-(idle?.turn||0)*.065;
-      c.transform(1,0,shear,1,-shear*neck,0);
-      c.drawImage(art,sx,sy,160,neck,0,0,160,neck);
+      c.transform(1,0,shear,1,-shear*sourceNeck,0);
+      c.drawImage(art,sx,sy,160,sourceNeck,0,0,160,sourceNeck);
       if(idle?.blink>.01){
         for(const [x,y] of paintedEyes[headView]){
           // Use the neighbouring paper colour, then compress the original ink eye.
