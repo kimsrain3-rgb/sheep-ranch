@@ -32,7 +32,7 @@ import {drawWeather,drawFriendBadge} from './render/weather.js?v=night-barn';
 import {setupMeadowPanel} from './meadow-panel.js?v=chosen-time-2';
 import { isCompactViewport } from './game/layout.js';
 import { Flock } from './game/flock.js?v=head-posture-1';
-import { Interactions } from './game/interactions.js?v=solid-buildings-2';
+import { Interactions } from './game/interactions.js?v=pet-clearance-1';
 import { Companions } from './game/companions.js?v=solid-buildings-2';
 import { MeadowAudio } from './game/audio.js?v=popup-sound-2';
 import {dryRoute,visitorRoute} from './game/navigation.js?v=birch-route-1';
@@ -425,6 +425,24 @@ function planOutdoorWalk(from,point){
   const route=visitorRoute(from,goal,pastureSolids,groveRoute(from,dryRoute(from,goal)));
   return {goal,route};
 }
+function planPetApproach(active){
+  const animal=active.animal, stand=active.preferredStand;
+  const dx=stand.x-animal.x,dz=stand.z-animal.z;
+  const bodies=visitorObstacles(new Set()).filter(o=>!o.actor ||
+    Math.hypot(o.x-animal.x,o.z-animal.z)<12 || Math.hypot(o.x-player.x,o.z-player.z)<8);
+  // Reserve the sheep's own body when a detour goes to its other side.
+  bodies.push({x:animal.x,z:animal.z,radius:Math.min(Math.hypot(dx,dz)-.25,.75*animal.size)});
+  for(const angle of [0,.65,-.65,1.25,-1.25,Math.PI]){
+    const x=animal.x+dx*Math.cos(angle)-dz*Math.sin(angle);
+    const z=animal.z+dx*Math.sin(angle)+dz*Math.cos(angle);
+    const point={x,z},safe={x,z};keepDry(safe);
+    if(Math.hypot(x-safe.x,z-safe.z)>.01 || bodies.some(o=>Math.hypot(x-o.x,z-o.z)<o.radius+.18))continue;
+    const route=visitorRoute(player,point,bodies,dryRoute(player,point));
+    const last=route.at(-1);
+    if(last && Math.hypot(last.x-x,last.z-z)<.02)return {point,route};
+  }
+  return null;
+}
 function walkToOutdoor(point,plan=planOutdoorWalk(player,point)){
   const {goal,route}=plan,target=route.shift();
   outdoorWalk={goal,route,target};
@@ -686,7 +704,7 @@ function update(dt){
   const worldPlayer=farmVisit.inside?farmVisit.outside:barnVisit.inside?barnVisit.outside:lodgeVisit.inside?lodgeVisit.outside:player;
   // All painted scenery and world objects share one camera transform.
   interaction.tick(dt,{
-    player,view,width:W,height:H,onMessage:notify,onMilk:onFed
+    player,view,planPetApproach,width:W,height:H,onMessage:notify,onMilk:onFed
   });
   if (started && interaction.active?.kind === 'pet' && interaction.active.phase === 'playing') {
     recordMilestone('ranch_first_sheep_pet');

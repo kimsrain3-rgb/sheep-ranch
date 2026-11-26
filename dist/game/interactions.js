@@ -45,8 +45,8 @@ export class Interactions {
       if(look.id==='mint' && look.model!=='3d' && hasPaintedCheek(animal) && side===animal.dir){
         // Place the visitor one sleeve away from this drawing's cheek.
         const cheek=paintedCheek(animal,0,-.14);
-        const gap=(Math.abs(cheek.x)+.08)*animal.size+.42;
-        const ratio=Math.min(1,gap/(Math.hypot(dx,dz)||1));
+        const gap=(Math.abs(cheek.x)+.08)*animal.size+.84;
+        const ratio=gap/(Math.hypot(dx,dz)||1);
         destination={x:animal.x+dx*ratio,z:animal.z+dz*ratio};
       }
     }
@@ -58,6 +58,7 @@ export class Interactions {
       destination.x=chosen.x;destination.z=chosen.z;
     }
     keepDry(destination);
+    if(kind==='pet')this.active.preferredStand={...destination};
     this.active.route=dryRoute(player,destination);
     const first=this.active.route[0];player.tx=first.x;player.tz=first.z;
     return {
@@ -111,7 +112,7 @@ export class Interactions {
     return true;
   }
   tick(dt,{
-    player,view,width=0,height=0,onMessage=()=>{
+    player,view,planPetApproach,width=0,height=0,onMessage=()=>{
     },onMilk=()=>{
     }
   }){
@@ -155,7 +156,21 @@ export class Interactions {
       view.yaw+=angleDelta(active.petYaw,view.yaw)*blend;
     }
     if(active.phase==='approach'){
-      while(active.route?.length&&distance(player,active.route[0])<.085)active.route.shift();
+      if(active.kind==='pet' && planPetApproach && active.preferredStand){
+        const remaining=distance(player,active.route[0]||active.preferredStand);
+        if(active.bestRemaining===undefined || remaining<active.bestRemaining-.12){
+          active.bestRemaining=remaining;active.blockedTime=0;
+        }else active.blockedTime+=dt;
+        if(!active.planned || active.blockedTime>.65){
+          const plan=planPetApproach(active);
+          active.planned=true;active.blockedTime=0;active.bestRemaining=remaining;
+          if(plan){
+            active.route=plan.route;
+            active.petYaw=petCameraYaw(active.animal,plan.point,view.yaw);
+          }
+        }
+      }
+      while(active.route?.length&&distance(player,active.route[0])<.085){active.route.shift();active.bestRemaining=undefined;}
       const next=active.route?.[0];if(next){player.tx=next.x;player.tz=next.z;}
       const aligned=active.kind!=='pet'||Math.abs(angleDelta(active.petYaw,view.yaw))<.015;
       if(Math.hypot(player.x-player.tx,player.z-player.tz)<.085&&aligned){
