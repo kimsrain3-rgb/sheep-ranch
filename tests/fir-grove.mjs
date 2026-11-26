@@ -40,3 +40,28 @@ for(let step=0;step<200;step++){
   foxFrames.add(fox.frame);
 }
 assert.equal(foxFrames.size,36);
+
+// The deer walks along a hillside. Every painted hoof ends on the same
+// projected surface as the forest path, even when the camera faces uphill.
+const {addForestLayers}=await import('../dist/render/fir-grove.js');
+const {forestHeight}=await import('../dist/game/forest-hills.js');
+for(const yaw of [0,Math.PI/2,Math.PI]){
+  for(const time of [0,.25,2]){
+    const deer=wildlifeAt(time)[1],scale=65,points=[],feet=[];
+    const project=(x,z)=>{
+      const p={x:400+scale*((x-deer.x)*Math.cos(yaw)-(z-deer.z)*Math.sin(yaw)),
+        y:500-scale*forestHeight(x,z),s:scale};
+      points.push(p);return p;
+    };
+    let ox,oy,sx,sy,last;
+    const ctx={save(){},restore(){},translate(x,y){ox=x;oy=y;},scale(x,y){sx=x;sy=y;},
+      beginPath(){},moveTo(){},lineTo(x,y){last=[ox+x*sx,oy+y*sy];},
+      stroke(){if(this.strokeStyle==='#6e5946')feet.push(last);},ellipse(){},fill(){}};
+    const layers=[];
+    addForestLayers(layers,ctx,project,800,700,time,yaw);
+    points.length=0;
+    layers.find(l=>l.wildlife?.name==='사슴').draw();
+    assert.equal(feet.length,4);assert.equal(points.length,4);
+    feet.forEach(([x,y],i)=>assert.ok(Math.hypot(x-points[i].x,y-points[i].y)<.001));
+  }
+}

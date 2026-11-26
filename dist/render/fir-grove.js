@@ -149,10 +149,11 @@ function drawFox(c,p,a,yaw){
     frameWidth,frameHeight,-width/2,-height*.94,width,height);
   c.restore();
 }
-function drawAnimal(c,p,a,yaw){
+function drawAnimal(c,p,a,yaw,project){
   if(a.fox){drawFox(c,p,a,yaw);return;}
   const side=Math.cos(yaw)*a.direction;
-  c.save();c.translate(p.x,p.y-a.hop*p.s);c.scale(p.s*(side<0?-1:1)*(.68+.32*Math.abs(side)),p.s);
+  const width=(side<0?-1:1)*(.68+.32*Math.abs(side));
+  c.save();c.translate(p.x,p.y-(a.rabbit?a.hop:0)*p.s);c.scale(p.s*width,p.s);
   if(a.rabbit){
     oval(c,-.04,-.22,.26,.17,-.18,'#a4967a');oval(c,.17,-.34,.14,.135,0,'#aa9b80');
     oval(c,.13,-.5,.042,.13,-.36,'#84785f');oval(c,.22,-.49,.037,.14,.15,'#ac9b7e');
@@ -160,9 +161,15 @@ function drawAnimal(c,p,a,yaw){
     oval(c,.215,-.36,.018,.018,0,'#3d372d');
   }else{
     const coat='#9e7652';
+    oval(c,0,0,.49,.065,0,'rgba(56,47,29,.16)');
     for(let i=0;i<4;i++){
       const x=(i<2?-.43:.38)+(i%2)*.1,step=a.stride*(i%2?.22:-.22);
-      stroke(c,x,-.9,x+step,-.39,.084,i%2?coat:'#785f48');stroke(c,x+step,-.39,x+step*.7,.008,.06,'#6e5946');
+      const offset=(x+step*.7)*width;
+      const ground=project(a.x+Math.cos(yaw)*offset,a.z-Math.sin(yaw)*offset,0);
+      const hoofX=ground?(ground.x-p.x)/(p.s*width):x+step*.7;
+      const hoofY=ground?(ground.y-p.y)/p.s:0;
+      stroke(c,x,-.9,x+step,-.39+hoofY*.4,.084,i%2?coat:'#785f48');
+      stroke(c,x+step,-.39+hoofY*.4,hoofX,hoofY,.06,'#6e5946');
     }
     oval(c,-.03,-.97,.61,.27,.02,coat);oval(c,.43,-1.22,.15,.43,.41,coat);
     oval(c,.64,-1.55,.22,.135,.2,coat);oval(c,.51,-1.73,.066,.17,-.5,coat);oval(c,.68,-1.74,.06,.16,.32,coat);
@@ -190,11 +197,11 @@ export function addForestLayers(layers,c,project,w,h,time,yaw,pet=null){
     const p=project(a.x,a.z,0);if(!p||p.x<-p.s||p.x>w+p.s||p.y<0||p.y>h+p.s*2)continue;
     const height=a.rabbit?.64:a.fox?.95:1.92;
     const half=a.rabbit?.35:a.fox?.75:.88;
-    const foot=p.y-(a.hop||0)*p.s;
+    const foot=p.y-(a.rabbit?a.hop:0)*p.s;
     const pad=Math.max(3,Math.min(10,12-p.s*half));
     const wildlife={id,name:a.rabbit?'토끼':a.fox?'여우':'사슴',left:p.x-half*p.s-pad,right:p.x+half*p.s+pad,top:foot-height*p.s-pad,bottom:foot+pad};
     layers.push({...a,wildlife,projected:p,cover:{halfWidth:1.2,above:2.7,below:.2},draw:()=>{
-      drawAnimal(c,p,a,yaw);
+      drawAnimal(c,p,a,yaw,project);
       if(touching){
         c.save();
         const size=Math.max(14,Math.min(34,p.s*.55));
