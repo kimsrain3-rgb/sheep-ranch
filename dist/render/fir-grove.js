@@ -1,6 +1,6 @@
 import {isWater} from '../game/config.js';
 import {denSites} from '../game/forest-hills.js';
-import {birchCenter,birchDepth,birches,firs,trailX,generator,wildlifeAt} from '../game/fir-grove.js?v=birch-edge-1';
+import {birchCenter,birchDepth,birches,firs,trailX,generator,wildlifeAt} from '../game/fir-grove.js?v=deer-clearing-2';
 import {clipPondPolygon} from './pond.js?v=water-join-1';
 
 const atDen=(x,z,padding)=>denSites.some(p=>Math.abs(x-p.x)<padding&&Math.abs(z-p.z)<padding);

@@ -109,7 +109,7 @@ export function groveRoute(from,points){
 }
 // Animals cross the path, pause in cover, and return along the same clearing.
 export function wildlifeAt(t){
-  const animals = [-64,-32,4].map((z,i)=>{
+  const animals = [-64,-52,4].map((z,i)=>{
     const phase=(t/(i===1?9:12)+i*.36)%(2*Math.PI),offset=2.45*Math.sin(phase);
     const speed=Math.abs(Math.cos(phase)),rabbit=i!==1;
     const beat=t*(rabbit?5.8:3.9)+i;

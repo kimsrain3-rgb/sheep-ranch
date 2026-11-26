@@ -41,10 +41,16 @@ for(let step=0;step<200;step++){
 }
 assert.equal(foxFrames.size,36);
 
-// The deer walks along a hillside. Every painted hoof ends on the same
+// Every painted hoof ends on the same
 // projected surface as the forest path, even when the camera faces uphill.
 const {addForestLayers}=await import('../dist/render/fir-grove.js');
 const {forestHeight}=await import('../dist/game/forest-hills.js');
+// Keep the whole patrol on the clearing floor, including the hoof footprint.
+for(let time=0;time<58;time+=.2){
+  const deer=wildlifeAt(time)[1];
+  for(const dx of [-.8,.8])for(const dz of [-.8,.8])
+    assert.ok(forestHeight(deer.x+dx,deer.z+dz)<.03);
+}
 for(const yaw of [0,Math.PI/2,Math.PI]){
   for(const time of [0,.25,2]){
     const deer=wildlifeAt(time)[1],scale=65,points=[],feet=[];
