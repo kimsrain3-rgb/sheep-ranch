@@ -1,5 +1,5 @@
 import {clipPondPolygon} from './pond.js';
-import {hills,forestHeight,denSites} from '../game/forest-hills.js';
+import {hills,forestHeight} from '../game/forest-hills.js';
 
 const meshes=[];
 for(const [x,z,rx,rz,rise] of hills){
@@ -39,14 +39,4 @@ export function drawHills(c,view,w,h,weather){
     c.fillStyle='rgb('+palette.map(v=>Math.round(v+shade*32)).join(',')+')';
     c.strokeStyle=c.fillStyle;c.lineWidth=.7;c.beginPath();points.forEach((p,i)=>i?c.lineTo(p.x,p.y):c.moveTo(p.x,p.y));c.closePath();c.fill();c.stroke();
   }
-}
-export function addDenLayers(layers,c,project,dug){
-  denSites.forEach(({x,z},id)=>{
-    const p=project(x,z,0);if(!p||p.s<2)return;
-    layers.push({x,z,projected:p,cover:{halfWidth:1.15,above:.8,below:.1},draw:()=>{
-      const oval=(rx,ry,dy,color)=>{c.fillStyle=color;c.beginPath();c.ellipse(p.x,p.y+dy*p.s,rx*p.s,ry*p.s,0,0,Math.PI*2);c.fill();};
-      oval(1.08,.32,0,'#886443');
-      if(dug.has(id)){oval(.88,.52,-.29,'#926940');oval(.68,.42,-.26,'#372b20');oval(.44,.28,-.22,'#211c17');}
-    }});
-  });
 }

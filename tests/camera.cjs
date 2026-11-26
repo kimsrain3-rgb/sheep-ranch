@@ -16,13 +16,6 @@ assert.ok(read(`meadowTrees.every(tree => {
   const obstacle=pastureTrunks.find(o => o.x===tree.x && o.z===tree.z);
   return obstacle.radius >= tree.size*40/45 + .399;
 })`),'round meadow trees reserve the painted crown plus visitor clearance');
-// Dig once at a hillside, and recover the same den after loading storage.
-const store=new Map();ctx.localStorage={getItem:k=>store.get(k),setItem:(k,v)=>store.set(k,v)};
-read('Object.assign(player,denSites[0])');
-assert.equal(read('availableDen()'),0);
-el('dig-den').onclick();
-assert.equal(read('availableDen()'),-1);
-assert.ok(read('readDens().has(0)'));
 read('player.x=player.z=0');
 const initial=read('view.zoom');event('pointerdown',1,140,400);event('pointerdown',2,240,400);event('pointermove',2,300,400);
 assert.ok(read('view.zoom')>initial);assert.equal(read('following'),false);assert.equal(read('player.tx'),0);

@@ -1,9 +1,7 @@
 import {isWater} from '../game/config.js';
-import {denSites} from '../game/forest-hills.js';
-import {birchCenter,birchDepth,birches,firs,trailX,generator,wildlifeAt} from '../game/fir-grove.js?v=deer-clearing-2';
+import {birchCenter,birchDepth,birches,firs,trailX,generator,wildlifeAt} from '../game/fir-grove.js?v=forest-no-dens-1';
 import {clipPondPolygon} from './pond.js?v=water-join-1';
 
-const atDen=(x,z,padding)=>denSites.some(p=>Math.abs(x-p.x)<padding&&Math.abs(z-p.z)<padding);
 const TAU=Math.PI*2;
 function oval(c,x,y,rx,ry,angle,color){
   c.fillStyle=color;c.beginPath();c.ellipse(x,y,rx,ry,angle,0,TAU);c.fill();
@@ -264,10 +262,8 @@ function paintUnderstory(id){
   }
   return canvas;
 }
-for(const plant of [...ferns,...birchPlants])plant.atDen=atDen(plant.x,plant.z,1.15);
 function addUnderstory(layers,c,project,w,h,plants){
   for(const fern of plants){
-    if(fern.atDen)continue;
     const p=project(fern.x,fern.z,0);
     if(!p||p.s<3||p.x<-p.s*2||p.x>w+p.s*2||p.y<0||p.y>h+p.s*2)continue;
     const width=p.s*fern.width*1.5;
@@ -323,7 +319,7 @@ for(let z=77;z<211;z+=1.8){
     patches.push({x,z:pz,
       width:(3.8+grassRandom()*.9)*(.42+.58*density),variant:Math.floor(grassRandom()*8)});
   }
-  grassRows.push(patches.filter(p=>!atDen(p.x,p.z,1.45)));
+  grassRows.push(patches);
 }
 function paintGrassPatch(variant){
   const art=document.createElement('canvas');

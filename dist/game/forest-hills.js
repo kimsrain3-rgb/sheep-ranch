@@ -38,7 +38,3 @@ export function hillPick(view,x,y,w,h){
   }
   return hit;
 }
-export const denSites=hills.map(([x,z,,rz],i)=>({x:i===0?x-2:x,z:z-rz*.58}));
-export function nearbyDen(x,z){
-  return denSites.findIndex(p=>Math.hypot(x-p.x,z-p.z)<4.5);
-}

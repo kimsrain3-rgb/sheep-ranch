@@ -1,5 +1,4 @@
 import {isWater} from './config.js';
-import {denSites} from './forest-hills.js';
 // The plan’s four pin centres, read against P09 and the player boundary.
 export const forestPins=[
   {id:'P14',x:51,z:-82},{id:'P12',x:68,z:-56},
@@ -62,8 +61,7 @@ for(let cell=0;cell<21;cell++){
 for(const [cx,cz] of [[-39,89],[1,85],[17,115],[19,157],[10,190],[-22,202],[-48,157]]){
   for(let i=0;i<3;i++){
     const x=cx+(edgeRandom()-.5)*7,z=cz+(edgeRandom()-.5)*7;
-    if(isWater({x,z},2)||birches.some(t=>Math.hypot(t.x-x,t.z-z)<2)||
-      denSites.some(p=>Math.hypot(p.x-x,p.z-z)<2))continue;
+    if(isWater({x,z},2)||birches.some(t=>Math.hypot(t.x-x,t.z-z)<2))continue;
     const height=4+edgeRandom()*4;
     birches.push({x,z,height,width:height*.45,radius:.12+height*.012,variant:Math.floor(edgeRandom()*9)});
   }
