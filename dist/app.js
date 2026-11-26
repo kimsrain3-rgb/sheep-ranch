@@ -752,8 +752,7 @@ function paintWorldLayers(layers){
   // Paint solid buildings first. Every subsequent world sprite uses their
   // actual nearest surface depth, rather than the building entrance's depth.
   for(const layer of layers)if(layer.building)buildingOcclusion.drawBuilding(c,layer.building,()=>layer.draw());
-  for(const layer of layers)if(!layer.building&&!layer.focused&&layer.depth>0)drawWorldLayer(layer);
-  for(const layer of layers)if(!layer.building&&layer.focused&&layer.depth>0)drawWorldLayer(layer);
+  for(const layer of layers)if(!layer.building&&layer.depth>0)drawWorldLayer(layer);
 }
 function drawOutdoorScenery(interiorKind,showVisitor=true){
   const showGrove=groveVisible(project,W,H);
@@ -765,7 +764,7 @@ function drawOutdoorScenery(interiorKind,showVisitor=true){
   const petFocus=!interiorKind&&interaction.active?.kind==='pet'&&interaction.active.phase==='playing'?interaction.active.animal:null;
   const lowPet=interiorKind?null:kneelingForestPet();
   const layers=sheep.map(a=>({
-    x:a.x,z:a.z,actor:true,focused:a===petFocus,cover:{halfWidth:1.9*a.size,above:3*a.size+(a.hop||0)*a.size+.5,below:.5*a.size},draw:()=>interiorKind?renderSheep(c,a,{project,time:t,width:W,height:H,player:lookoutView.target}):drawSheep(a)
+    x:a.x,z:a.z,actor:true,cover:{halfWidth:1.9*a.size,above:3*a.size+(a.hop||0)*a.size+.5,below:.5*a.size},draw:()=>interiorKind?renderSheep(c,a,{project,time:t,width:W,height:H,player:lookoutView.target}):drawSheep(a)
   }));
   layers.push(windmillLayer());
   if(railwayVisible){
@@ -789,7 +788,7 @@ function drawOutdoorScenery(interiorKind,showVisitor=true){
       : interaction.active?.phase==='playing' ? visitorPose(interaction.active.animal.x-player.x,interaction.active.animal.z-player.z,view.yaw)
       : visitorPose(player.headingX??0,player.headingZ??1,view.yaw);
     layers.push({
-      x:player.x,z:player.z,projected:feet,focused:!!petFocus,cover:{halfWidth:2.8,above:3,below:.5},draw:()=>drawVisitor(c,feet,{
+      x:player.x,z:player.z,projected:feet,cover:{halfWidth:2.8,above:3,below:.5},draw:()=>drawVisitor(c,feet,{
         time:t,walking:player.walking,seated,feeding,petting:!!petTarget,milking:interaction.active?.kind==='milk'&&interaction.active.phase==='playing',lambSize:petTarget?.size??interaction.active?.animal.size,pose:facing
       })
     });
@@ -826,6 +825,15 @@ function drawOutdoorScenery(interiorKind,showVisitor=true){
   }
   addGardenLayers(c,project,layers,W,H);
   addBridgeRails(layers);
+  if(!interiorKind && showVisitor && started && (lowPet||interaction.active||interaction.carrying)){
+    const feet=outdoorVisitorFeet();
+    const controller=lowPet?{active:{kind:'pet',phase:'playing',animal:lowPet}}:interaction;
+    const contact=controller.active?.phase==='playing'&&controller.active.animal;
+    const target=contact&&project(contact.x,contact.z);
+    // Draw the touching hand after both bodies, but behind closer scenery.
+    if(feet)layers.push({projected:{...feet,depth:Math.min(feet.depth,target?target.depth:feet.depth)},
+      cover:{halfWidth:5,above:4,below:1},draw:()=>drawInteraction(c,controller,player,project,t,feet)});
+  }
   paintWorldLayers(interiorKind?layers.filter(layer=>layer.building!==interiorKind):layers);
 }
 function render(){
@@ -839,9 +847,6 @@ function render(){
   c.fillRect(0,0,W,H);
   c.save();
   drawOutdoorScenery();
-  const visitor=outdoorVisitorFeet();
-  const lowPet=kneelingForestPet();
-  if(visitor)buildingOcclusion.draw(c,visitor.depth,spriteBounds(visitor,{halfWidth:5,above:4,below:1}),()=>drawInteraction(c,lowPet?{active:{kind:"pet",phase:"playing",animal:lowPet}}:interaction,player,project,t,visitor));
   for(const p of particles){
     const v=project(p.x,p.z,p.y);
     if(v&&!buildingOcclusion.occluded(v.x,v.y,v.depth)){
