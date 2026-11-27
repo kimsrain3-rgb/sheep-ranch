@@ -9,15 +9,15 @@ const sleeves = [
   [[74,111,86,158]], [[94,111,113,156]], [[59,111,46,157],[110,110,123,157]],
   [[66,110,46,156]], [[83,110,76,157]], [[99,110,97,157],[54,113,40,152]]
 ];
-function loadArt(file) {
+function loadArt(file, version = 'ink-2') {
   if (typeof Image === 'undefined') return null;
   const img = new Image();
-  img.src = new URL(file + '?v=ink-2', import.meta.url).href;
+  img.src = new URL(file + '?v=' + version, import.meta.url).href;
   return img;
 }
 const art = loadArt('mint-avatar.webp');
 const items = loadArt('mint-items.webp');
-const petSleeves = loadArt('mint-petting-sleeves.png');
+const petSleeves = loadArt('mint-petting-sleeves.png', 'hand-edge-1');
 const paintedEyes=[[[59,81],[110,81]],[[86,81],[122,79]],[[123,74]],[],[],[],[[40,70]],[[43,74],[79,76]]];
 const pixelScale=.0091;
 const crouchDrop=62;
