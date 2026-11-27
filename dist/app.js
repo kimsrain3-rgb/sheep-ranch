@@ -10,7 +10,7 @@ import {TRAM_BOARDING_WALK,TRAM_BOARDING_HOLD,tramBoardingPose,stationWalkingHei
 import {drawTramRide} from './render/tram-ride.js?v=window-framing-2';
 import {tramPlatformOrigin} from './render/tram-station.js';
 import {trailX,inGrove,clearTrunks,groveRoute,firs,birches} from './game/fir-grove.js?v=fox-walk-1';
-import {addBirchLayers,drawForestFloor,addForestLayers,groveVisible} from './render/fir-grove.js?v=fox-color-45';
+import {addBirchLayers,drawForestFloor,addForestLayers,groveVisible} from './render/fir-grove.js?v=fox-color-75';
 import {frameLodgeStairs,followRoomVisitor,roomVisitorProjection} from './game/room-follow.js?v=coop-circle-1';
 import {groundThroughDoor} from './game/doorway.js';
 import {BuildingOcclusion,spriteBounds} from './render/occlusion.js?v=visible-picking-1';

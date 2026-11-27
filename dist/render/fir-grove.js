@@ -148,7 +148,7 @@ function drawFox(c,p,a,yaw){
     const rgb=pixels.data;
     for(let i=0;i<rgb.length;i+=4){
       const gray=.2126*rgb[i]+.7152*rgb[i+1]+.0722*rgb[i+2];
-      for(let k=i;k<i+3;k++)rgb[k]=gray+.45*(rgb[k]-gray);
+      for(let k=i;k<i+3;k++)rgb[k]=gray+.75*(rgb[k]-gray);
     }
     ctx.putImageData(pixels,0,0);
   }
