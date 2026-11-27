@@ -35,7 +35,7 @@ import { isCompactViewport } from './game/layout.js';
 import { Flock } from './game/flock.js?v=head-posture-1';
 import { Interactions } from './game/interactions.js?v=pet-clearance-1';
 import { Companions } from './game/companions.js?v=solid-buildings-2';
-import { MeadowAudio } from './game/audio.js?v=popup-sound-2';
+import { MeadowAudio } from './game/audio.js?v=chicken-calls-1';
 import {dryRoute,visitorRoute} from './game/navigation.js?v=birch-route-1';
 import {drawBridgeDeck,drawBridgeRail,pickBridge} from './render/bridge.js?v=ground-shadows-1';
 import { CONFIG,pondPoint,keepDry,bridgePathClear,bridgeHeight,bridgePoint,bridgeLocal,BRIDGES } from './game/config.js?v=hammock-p10';
@@ -969,7 +969,22 @@ function advanceTramBoarding(now){
   $('ride-view').hidden=false;
   $('ride-look-hint').hidden=false;
 }
+function coopGuests(){
+  return companions.chickens.filter(a=>a.hiddenInCoop).map((a,i)=>({...a,x:i%2?1.7:-1.7,z:3.1+Math.floor(i/2)*1.05,walking:false}));
+}
+function chickenHearingDistance(){
+  if(!started||ride||millMode||barnVisit.inside||lodgeVisit.inside)return Infinity;
+  if(farmVisit.inside && farmVisit.kind!=='coop')return Infinity;
+  const birds=farmVisit.inside?coopGuests():companions.chickens;
+  let nearest=Infinity;
+  for(const bird of birds){
+    if(!farmVisit.inside && bird.hiddenInCoop)continue;
+    nearest=Math.min(nearest,Math.hypot(bird.x-player.x,bird.z-player.z));
+  }
+  return nearest;
+}
 function frame(now){
+  audioSystem.chickenNearby(chickenHearingDistance());
   const dt=Math.min((now-last)/1000||.016,.06);
   const rideDelta=Math.min(.5,Math.max(0,(now-last)/1000));
   last=now;
@@ -1753,7 +1768,7 @@ function renderInsideFarmRoom(){
   drawMarker();
   const occupants=[];
   if(farmVisit.kind==='coop'){
-    const guests=companions.chickens.filter(a=>a.hiddenInCoop).map((a,i)=>({...a,x:i%2?1.7:-1.7,z:3.1+Math.floor(i/2)*1.05,walking:false}));
+    const guests=coopGuests();
     for(const guest of guests)occupants.push({x:guest.x,z:guest.z,draw:()=>drawCompanion(c,project(guest.x,guest.z),guest,t)});
   }
   drawRoomOccupants(occupants);

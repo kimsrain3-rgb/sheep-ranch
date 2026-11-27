@@ -12,6 +12,11 @@ export class MeadowAudio {
     this.onCallsReady=onCallsReady;
     this.callsAnnounced=false;
     this.lastBaa=-10;
+    this.chickenBuffers=[];
+    this.chickenLoading=null;
+    this.chickenIndex=0;
+    this.nextChickenTime=0;
+    this.chickenSource=null;
     this.music=null;
     this.pending=null;
     this.attempt=0;
@@ -34,6 +39,7 @@ export class MeadowAudio {
     this.music.pause();
     this.musicPlaying=false;
     this.stopCall();
+    this.stopChicken();
     this.pending=this.context.suspend().then(()=>{
       this.enabled=false;
       return false;
@@ -100,6 +106,41 @@ export class MeadowAudio {
       return this.calls;
     });
     return this.callsLoading;
+  }
+  stopChicken(){
+    const source=this.chickenSource;
+    if(source){this.chickenSource=null;source.stop();}
+  }
+  chickenNearby(distance){
+    const c=this.context;
+    if(!c || c.state!=='running' || distance>6){
+      this.stopChicken();
+      return;
+    }
+    if(!this.chickenLoading && this.fetcher && c.decodeAudioData){
+      const files=['chekin_voice1.mp3','chekin_voice2.mp3'];
+      this.chickenLoading=Promise.all(files.map(async file=>{
+        try{
+          const url=new URL('../assets/sounds/originals/'+file,import.meta.url);
+          const response=await this.fetcher(url.href);
+          if(response.ok)return await c.decodeAudioData(await response.arrayBuffer());
+        }catch{}
+        return null;
+      })).then(buffers=>{this.chickenBuffers=buffers.filter(Boolean);});
+    }
+    if(this.chickenSource || !this.chickenBuffers.length || c.currentTime<this.nextChickenTime)return;
+    const source=c.createBufferSource(),gain=c.createGain();
+    source.buffer=this.chickenBuffers[this.chickenIndex];
+    gain.gain.value=.78/(1+.14*distance);
+    source.connect(gain).connect(c.destination);
+    source.onended=()=>{
+      source.disconnect();gain.disconnect();
+      if(this.chickenSource===source)this.chickenSource=null;
+    };
+    source.start();
+    this.chickenSource=source;
+    this.chickenIndex=(this.chickenIndex+1)%this.chickenBuffers.length;
+    this.nextChickenTime=c.currentTime+source.buffer.duration+3;
   }
   stopCall(){
     const call=this.activeCall;this.activeCall=null;
