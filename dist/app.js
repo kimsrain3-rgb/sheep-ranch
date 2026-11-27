@@ -35,7 +35,7 @@ import { isCompactViewport } from './game/layout.js';
 import { Flock } from './game/flock.js?v=head-posture-1';
 import { Interactions } from './game/interactions.js?v=pet-clearance-1';
 import { Companions } from './game/companions.js?v=solid-buildings-2';
-import { MeadowAudio } from './game/audio.js?v=chicken-calls-1';
+import { MeadowAudio } from './game/audio.js?v=chicken-calls-3x';
 import {dryRoute,visitorRoute} from './game/navigation.js?v=birch-route-1';
 import {drawBridgeDeck,drawBridgeRail,pickBridge} from './render/bridge.js?v=ground-shadows-1';
 import { CONFIG,pondPoint,keepDry,bridgePathClear,bridgeHeight,bridgePoint,bridgeLocal,BRIDGES } from './game/config.js?v=hammock-p10';

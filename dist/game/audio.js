@@ -131,7 +131,7 @@ export class MeadowAudio {
     if(this.chickenSource || !this.chickenBuffers.length || c.currentTime<this.nextChickenTime)return;
     const source=c.createBufferSource(),gain=c.createGain();
     source.buffer=this.chickenBuffers[this.chickenIndex];
-    gain.gain.value=.78/(1+.14*distance);
+    gain.gain.value=2.34/(1+.14*distance);
     source.connect(gain).connect(c.destination);
     source.onended=()=>{
       source.disconnect();gain.disconnect();
