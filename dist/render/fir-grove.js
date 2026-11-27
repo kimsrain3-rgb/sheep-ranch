@@ -130,15 +130,29 @@ export function drawForestFloor(c,project,camera,w,h,weather){
     if(bit.trail && p.s>10)stroke(c,p.x,p.y,p.x+p.s*.074,p.y-p.s*.019,.55+p.s*.012,'#685e4770');
   }
 }
-let foxSheet;
+let foxImage,foxSheet;
 function drawFox(c,p,a,yaw){
-  if(!foxSheet){
-    foxSheet = new Image();
-    foxSheet.src = new URL('../assets/forest-fox-walk.webp', import.meta.url).href;
+  if(!foxImage){
+    foxImage=new Image();
+    foxImage.src=new URL('../assets/forest-fox-walk.webp',import.meta.url).href;
   }
-  if(!foxSheet.complete || !foxSheet.naturalWidth)return;
-  const frameWidth = foxSheet.naturalWidth / 4;
-  const frameHeight = foxSheet.naturalHeight / 5;
+  if(!foxImage.complete||!foxImage.naturalWidth)return;
+  if(!foxSheet){
+    // Tint the entire atlas once so every pose shares the same palette.
+    foxSheet=document.createElement('canvas');
+    foxSheet.width=foxImage.naturalWidth;
+    foxSheet.height=foxImage.naturalHeight;
+    const ctx=foxSheet.getContext('2d');
+    ctx.drawImage(foxImage,0,0);
+    const pixels=ctx.getImageData(0,0,foxSheet.width,foxSheet.height);
+    const rgb=pixels.data;
+    for(let i=0;i<rgb.length;i+=4){
+      const gray=.2126*rgb[i]+.7152*rgb[i+1]+.0722*rgb[i+2];
+      for(let k=i;k<i+3;k++)rgb[k]=gray+.75*(rgb[k]-gray);
+    }
+    ctx.putImageData(pixels,0,0);
+  }
+  const frameWidth=foxSheet.width/4,frameHeight=foxSheet.height/5;
   const width = 1.5 * p.s, height = width * frameHeight / frameWidth;
   const screenVelocity = Math.cos(yaw)*a.velocityX - Math.sin(yaw)*a.velocityZ;
   const forward = Math.sin(yaw)*a.velocityX + Math.cos(yaw)*a.velocityZ;
